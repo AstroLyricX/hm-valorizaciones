@@ -1,6 +1,6 @@
 /** @type {import("jest").Config} */
 const config = {
-	testEnvironment: "jsdom",
+	testEnvironment: "jest-fixed-jsdom",
 	setupFilesAfterEnv: ["<rootDir>/tests/setupTests.ts"],
 	testMatch: ["<rootDir>/tests/**/*.spec.{ts,tsx}"],
 	testPathIgnorePatterns: ["<rootDir>/tests/e2e/"],

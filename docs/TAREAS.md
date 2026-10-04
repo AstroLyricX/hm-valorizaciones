@@ -23,7 +23,7 @@ Todas las fases terminan con estas dos tareas:
 - [ ] Componente `AppLayout`: menú lateral en escritorio (`lg:`) y barra inferior en celular con 4 ítems más "Más"
 - [ ] Botón "+ Nueva valorización" siempre visible
 - [ ] Páginas de las secciones con título y estado vacío ("Aún no hay contratos")
-- [ ] `SessionProvider` con sesión de prueba, la pantalla `/login` y la protección de rutas (`RequireSession`). Debe usar la misma interfaz que tendrá después MSAL.
+- [x] `SessionProvider` con sesión de prueba, la pantalla `/login` y la protección de rutas (`RequireSession`). Debe usar la misma interfaz que tendrá después MSAL.
 - [ ] Indicador de conexión (en línea / sin conexión) en la cabecera
 - [ ] Agregar los componentes de shadcn: `sidebar`, `sheet`, `dropdown-menu`, `avatar`, `separator`, `tooltip`
 - [ ] Pruebas: Jest (el layout muestra los ítems del menú; una ruta protegida redirige a `/login`) y Cypress (navegar las 6 secciones en escritorio y en celular)

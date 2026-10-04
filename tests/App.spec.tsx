@@ -2,8 +2,12 @@ import { render, screen } from "@testing-library/react";
 
 import { App } from "../src/App";
 
-test("muestra el título de la aplicación", () => {
+beforeEach(() => {
+	localStorage.clear();
+});
+
+test("sin sesión redirige a la página de login", async () => {
 	render(<App />);
 
-	expect(screen.getByRole("heading", { name: "Valorizaciones H&M" })).toBeInTheDocument();
+	expect(await screen.findByRole("heading", { name: "Iniciar sesión" })).toBeInTheDocument();
 });
