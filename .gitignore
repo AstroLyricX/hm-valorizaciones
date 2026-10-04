@@ -10,3 +10,10 @@ node_modules/
 
 # Build output
 dist
+
+# PWA (modo desarrollo)
+dev-dist
+
+# Cypress
+tests/e2e/screenshots
+tests/e2e/videos

@@ -1,8 +1,6 @@
-describe("The Home Page", () => {
-	it("successfully loads", () => {
+describe("Página de inicio", () => {
+	it("carga correctamente", () => {
 		cy.visit("/");
-		cy.findByRole("heading", {
-			name: /⚡⚛️ Vite React Best Practices Template \(by Codely\)/i,
-		}).should("exist");
+		cy.findByRole("heading", { name: "Valorizaciones H&M" }).should("exist");
 	});
 });

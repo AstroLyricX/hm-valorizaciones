@@ -1,7 +1,8 @@
-module.exports = {
+/** @type {import("jest").Config} */
+const config = {
 	testEnvironment: "jsdom",
 	setupFilesAfterEnv: ["<rootDir>/tests/setupTests.ts"],
-	testMatch: ["<rootDir>/tests/**/*.(spec).(ts|tsx)"],
+	testMatch: ["<rootDir>/tests/**/*.spec.{ts,tsx}"],
 	testPathIgnorePatterns: ["<rootDir>/tests/e2e/"],
 	transform: {
 		"^.+\\.(js|jsx|ts|tsx)$": [
@@ -23,8 +24,11 @@ module.exports = {
 		],
 	},
 	moduleNameMapper: {
-		"\\.(css|less|scss|sass)$": "identity-obj-proxy",
+		"^@/(.*)$": "<rootDir>/src/$1",
+		"\\.(css|less|scss|sass)$": "jest-transform-stub",
 		"\\.(jpg|jpeg|png|gif|eot|otf|webp|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$":
 			"jest-transform-stub",
 	},
 };
+
+export default config;

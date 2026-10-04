@@ -2,10 +2,8 @@ import { render, screen } from "@testing-library/react";
 
 import { App } from "../src/App";
 
-test("App component display header", () => {
+test("muestra el título de la aplicación", () => {
 	render(<App />);
 
-	const heading = screen.getByText(/⚡⚛️ Vite React Best Practices Template \(by Codely\)/i);
-
-	expect(heading).toBeInTheDocument();
+	expect(screen.getByRole("heading", { name: "Valorizaciones H&M" })).toBeInTheDocument();
 });
