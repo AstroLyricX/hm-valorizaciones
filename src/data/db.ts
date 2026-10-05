@@ -2,6 +2,7 @@ import Dexie, { type EntityTable } from "dexie";
 
 import type { Tercero } from "@/features/clientes/domain/tercero";
 import type { Empresa } from "@/features/configuracion/domain/empresa";
+import type { Equipo } from "@/features/equipos/domain/equipo";
 
 export type OperacionOutbox = "upsert" | "delete";
 
@@ -19,6 +20,7 @@ export interface OutboxEntry {
 export class HmDatabase extends Dexie {
 	empresa!: EntityTable<Empresa, "id">;
 	terceros!: EntityTable<Tercero, "id">;
+	equipos!: EntityTable<Equipo, "id">;
 	outbox!: EntityTable<OutboxEntry, "id">;
 
 	constructor(name = "hm-valorizaciones") {
@@ -29,6 +31,9 @@ export class HmDatabase extends Dexie {
 		});
 		this.version(2).stores({
 			terceros: "id, &ruc, codigo, estado, tipo",
+		});
+		this.version(3).stores({
+			equipos: "id, codigo, estado, tipo",
 		});
 	}
 }

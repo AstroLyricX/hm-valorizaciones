@@ -21,7 +21,7 @@ export function ReloadPrompt() {
 	return (
 		<div
 			role="status"
-			className="fixed inset-x-4 bottom-4 z-50 flex flex-col gap-3 rounded-lg border bg-card p-4 text-card-foreground shadow-lg sm:inset-x-auto sm:right-4 sm:w-96"
+			className="fixed inset-x-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-30 flex flex-col gap-3 rounded-xl border border-navy-100 bg-white p-4 text-navy-900 shadow-lg md:inset-x-auto md:right-6 md:bottom-6 md:w-96"
 		>
 			<p className="text-sm">
 				{needRefresh

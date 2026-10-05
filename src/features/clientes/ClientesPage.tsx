@@ -1,29 +1,8 @@
-import {
-	createColumnHelper,
-	createSortedRowModel,
-	rowSortingFeature,
-	sortFn_alphanumeric as sortFnAlphanumeric,
-	sortFn_text as sortFnText,
-	tableFeatures,
-	useTable,
-} from "@tanstack/react-table";
 import { useLiveQuery } from "dexie-react-hooks";
-import {
-	ArrowDown,
-	ArrowUp,
-	Building2,
-	ChevronsUpDown,
-	MoreHorizontal,
-	Pencil,
-	Plus,
-	Power,
-	Search,
-	SearchX,
-} from "lucide-react";
-import { useMemo, useState } from "react";
+import { Building2, MoreHorizontal, Pencil, Plus, Power, SearchX } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -31,22 +10,17 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from "@/components/ui/table";
 import { useSession } from "@/features/auth/useSession";
-import { cn } from "@/lib/utils";
 import { ConfirmDialog } from "@/shared/components/ConfirmDialog";
+import { DataTable } from "@/shared/components/DataTable";
 import { EmptyState } from "@/shared/components/EmptyState";
+import { ListCard } from "@/shared/components/ListCard";
 import { NativeSelect } from "@/shared/components/NativeSelect";
 import { PageHeader } from "@/shared/components/PageHeader";
+import { Pill } from "@/shared/components/Pill";
+import { crearColumnas } from "@/shared/lib/tabla";
+import { coincide } from "@/shared/lib/texto";
 
 import { terceroRepository, terceroService } from "./application/terceroService.instance";
 import {
@@ -61,49 +35,18 @@ import { TerceroFormSheet } from "./ui/TerceroFormSheet";
 type FiltroEstado = EstadoTercero | "TODOS";
 type FiltroTipo = TipoTercero | "TODOS";
 
-const features = tableFeatures({
-	rowSortingFeature,
-	sortedRowModel: createSortedRowModel(),
-	sortFns: { alphanumeric: sortFnAlphanumeric, text: sortFnText },
-});
-const columnHelper = createColumnHelper<typeof features, Tercero>();
+const columnHelper = crearColumnas<Tercero>();
 
-function normalizar(texto: string): string {
-	return texto.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-}
-
-function EstadoBadge({ estado }: { estado: EstadoTercero }) {
+function EstadoPill({ estado }: { estado: EstadoTercero }) {
 	return (
-		<Badge
-			variant="outline"
-			className={cn(
-				"gap-1.5 border-transparent font-medium",
-				estado === "ACTIVO" ? "bg-emerald-50 text-emerald-700" : "bg-navy-100 text-navy-600",
-			)}
-		>
-			<span
-				className={cn(
-					"size-1.5 rounded-full",
-					estado === "ACTIVO" ? "bg-emerald-500" : "bg-navy-400",
-				)}
-			/>
+		<Pill tone={estado === "ACTIVO" ? "success" : "neutral"} dot>
 			{ETIQUETA_ESTADO[estado]}
-		</Badge>
+		</Pill>
 	);
 }
 
-function TipoBadge({ tipo }: { tipo: TipoTercero }) {
-	return (
-		<Badge
-			variant="outline"
-			className={cn(
-				"border-transparent font-medium",
-				tipo === "CLIENTE" ? "bg-brand-50 text-brand-700" : "bg-indigo-50 text-indigo-700",
-			)}
-		>
-			{ETIQUETA_TIPO[tipo]}
-		</Badge>
-	);
+function TipoPill({ tipo }: { tipo: TipoTercero }) {
+	return <Pill tone={tipo === "CLIENTE" ? "brand" : "indigo"}>{ETIQUETA_TIPO[tipo]}</Pill>;
 }
 
 function AccionesMenu({
@@ -146,131 +89,6 @@ function AccionesMenu({
 	);
 }
 
-function TercerosTabla({
-	terceros,
-	onEditar,
-	onCambiarEstado,
-}: {
-	terceros: Tercero[];
-	onEditar: (tercero: Tercero) => void;
-	onCambiarEstado: (tercero: Tercero) => void;
-}) {
-	const columns = useMemo(
-		() =>
-			columnHelper.columns([
-				columnHelper.accessor("codigo", { header: "Código", sortFn: "alphanumeric" }),
-				columnHelper.accessor("razonSocial", {
-					header: "Razón social",
-					sortFn: "text",
-					cell: ({ row }) => (
-						<div className="flex min-w-0 flex-col">
-							<span className="truncate font-medium text-navy-900">{row.original.razonSocial}</span>
-							{row.original.contacto && (
-								<span className="truncate text-xs text-muted-foreground">
-									{row.original.contacto}
-								</span>
-							)}
-						</div>
-					),
-				}),
-				columnHelper.accessor("ruc", { header: "RUC", enableSorting: false }),
-				columnHelper.accessor("tipo", {
-					header: "Tipo",
-					enableSorting: false,
-					cell: ({ getValue }) => <TipoBadge tipo={getValue()} />,
-				}),
-				columnHelper.accessor("telefono", {
-					header: "Teléfono",
-					enableSorting: false,
-					cell: ({ getValue }) => getValue() || <span className="text-navy-300">—</span>,
-				}),
-				columnHelper.accessor("estado", {
-					header: "Estado",
-					enableSorting: false,
-					cell: ({ getValue }) => <EstadoBadge estado={getValue()} />,
-				}),
-				columnHelper.display({
-					id: "acciones",
-					header: () => <span className="sr-only">Acciones</span>,
-					cell: ({ row }) => (
-						<AccionesMenu
-							tercero={row.original}
-							onEditar={onEditar}
-							onCambiarEstado={onCambiarEstado}
-						/>
-					),
-				}),
-			]),
-		[onEditar, onCambiarEstado],
-	);
-
-	const table = useTable({
-		features,
-		columns,
-		data: terceros,
-		getRowId: (row) => row.id,
-		initialState: { sorting: [{ id: "codigo", desc: false }] },
-	});
-
-	return (
-		<Table>
-			<TableHeader className="bg-navy-50">
-				{table.getHeaderGroups().map((headerGroup) => (
-					<TableRow key={headerGroup.id} className="hover:bg-transparent">
-						{headerGroup.headers.map((header) => {
-							const sorted = header.column.getIsSorted();
-							const SortIcon =
-								sorted === "asc" ? ArrowUp : sorted === "desc" ? ArrowDown : ChevronsUpDown;
-
-							return (
-								<TableHead
-									key={header.id}
-									className="h-10 px-4 text-xs font-medium text-muted-foreground"
-									aria-sort={
-										sorted === "asc" ? "ascending" : sorted === "desc" ? "descending" : undefined
-									}
-								>
-									{header.column.getCanSort() ? (
-										<button
-											type="button"
-											onClick={header.column.getToggleSortingHandler()}
-											className="inline-flex items-center gap-1 hover:text-navy-900"
-										>
-											<table.FlexRender header={header} />
-											<SortIcon className="size-3.5" aria-hidden="true" />
-										</button>
-									) : (
-										<table.FlexRender header={header} />
-									)}
-								</TableHead>
-							);
-						})}
-					</TableRow>
-				))}
-			</TableHeader>
-			<TableBody>
-				{table.getRowModel().rows.map((row) => (
-					<TableRow key={row.id} className="hover:bg-navy-50/50">
-						{row.getAllCells().map((cell) => (
-							<TableCell
-								key={cell.id}
-								className={cn(
-									"px-4 py-3 text-sm text-navy-700",
-									cell.column.id === "razonSocial" && "max-w-80",
-									(cell.column.id === "ruc" || cell.column.id === "codigo") && "tabular-nums",
-									cell.column.id === "acciones" && "w-12 text-right",
-								)}
-							>
-								<table.FlexRender cell={cell} />
-							</TableCell>
-						))}
-					</TableRow>
-				))}
-			</TableBody>
-		</Table>
-	);
-}
-
 function TercerosTarjetas({
 	terceros,
 	onEditar,
@@ -294,8 +112,8 @@ function TercerosTarjetas({
 							{tercero.codigo} · RUC {tercero.ruc}
 						</span>
 						<span className="flex flex-wrap gap-1.5">
-							<TipoBadge tipo={tercero.tipo} />
-							<EstadoBadge estado={tercero.estado} />
+							<TipoPill tipo={tercero.tipo} />
+							<EstadoPill estado={tercero.estado} />
 						</span>
 					</button>
 					<AccionesMenu tercero={tercero} onEditar={onEditar} onCambiarEstado={onCambiarEstado} />
@@ -307,6 +125,7 @@ function TercerosTarjetas({
 
 export function ClientesPage() {
 	const { user } = useSession();
+	const usuario = user?.email ?? "desconocido";
 	const terceros = useLiveQuery(async () => terceroRepository.listar());
 	const [busqueda, setBusqueda] = useState("");
 	const [filtroEstado, setFiltroEstado] = useState<FiltroEstado>("ACTIVO");
@@ -316,25 +135,9 @@ export function ClientesPage() {
 	});
 	const [porDesactivar, setPorDesactivar] = useState<Tercero | null>(null);
 
-	const filtrados = useMemo(() => {
-		const texto = normalizar(busqueda.trim());
-
-		return (terceros ?? []).filter(
-			(tercero) =>
-				(filtroEstado === "TODOS" || tercero.estado === filtroEstado) &&
-				(filtroTipo === "TODOS" || tercero.tipo === filtroTipo) &&
-				(texto === "" ||
-					normalizar(tercero.razonSocial).includes(texto) ||
-					tercero.ruc.includes(texto) ||
-					normalizar(tercero.codigo).includes(texto)),
-		);
-	}, [terceros, busqueda, filtroEstado, filtroTipo]);
-
-	const usuario = user?.email ?? "desconocido";
-	const abrirNuevo = () => setFormulario({ open: true });
-	const editar = useMemo(() => (tercero: Tercero) => setFormulario({ open: true, tercero }), []);
-	const cambiarEstado = useMemo(
-		() => (tercero: Tercero) => {
+	const editar = useCallback((tercero: Tercero) => setFormulario({ open: true, tercero }), []);
+	const cambiarEstado = useCallback(
+		(tercero: Tercero) => {
 			if (tercero.estado === "ACTIVO") {
 				setPorDesactivar(tercero);
 
@@ -347,13 +150,71 @@ export function ClientesPage() {
 		[usuario],
 	);
 
+	const filtrados = useMemo(
+		() =>
+			(terceros ?? []).filter(
+				(tercero) =>
+					(filtroEstado === "TODOS" || tercero.estado === filtroEstado) &&
+					(filtroTipo === "TODOS" || tercero.tipo === filtroTipo) &&
+					coincide(busqueda, [tercero.razonSocial, tercero.ruc, tercero.codigo]),
+			),
+		[terceros, busqueda, filtroEstado, filtroTipo],
+	);
+
+	const columns = useMemo(
+		() =>
+			columnHelper.columns([
+				columnHelper.accessor("codigo", { header: "Código", sortFn: "alphanumeric" }),
+				columnHelper.accessor("razonSocial", {
+					header: "Razón social",
+					sortFn: "text",
+					cell: ({ row }) => (
+						<div className="flex min-w-0 flex-col">
+							<span className="truncate font-medium text-navy-900">{row.original.razonSocial}</span>
+							{row.original.contacto && (
+								<span className="truncate text-xs text-muted-foreground">
+									{row.original.contacto}
+								</span>
+							)}
+						</div>
+					),
+				}),
+				columnHelper.accessor("ruc", { header: "RUC", enableSorting: false }),
+				columnHelper.accessor("tipo", {
+					header: "Tipo",
+					enableSorting: false,
+					cell: ({ getValue }) => <TipoPill tipo={getValue()} />,
+				}),
+				columnHelper.accessor("telefono", {
+					header: "Teléfono",
+					enableSorting: false,
+					cell: ({ getValue }) => getValue() || <span className="text-navy-300">—</span>,
+				}),
+				columnHelper.accessor("estado", {
+					header: "Estado",
+					enableSorting: false,
+					cell: ({ getValue }) => <EstadoPill estado={getValue()} />,
+				}),
+				columnHelper.display({
+					id: "acciones",
+					header: () => <span className="sr-only">Acciones</span>,
+					cell: ({ row }) => (
+						<AccionesMenu
+							tercero={row.original}
+							onEditar={editar}
+							onCambiarEstado={cambiarEstado}
+						/>
+					),
+				}),
+			]),
+		[editar, cambiarEstado],
+	);
+
 	const limpiarFiltros = () => {
 		setBusqueda("");
 		setFiltroEstado("TODOS");
 		setFiltroTipo("TODOS");
 	};
-
-	const hayRegistros = (terceros?.length ?? 0) > 0;
 
 	return (
 		<div className="flex flex-col gap-6">
@@ -361,7 +222,7 @@ export function ClientesPage() {
 				title="Clientes"
 				description="Clientes y proveedores con los que H&M tiene contratos."
 				actions={
-					<Button className="h-9 px-3.5" onClick={abrirNuevo}>
+					<Button className="h-9 px-3.5" onClick={() => setFormulario({ open: true })}>
 						<Plus />
 						Agregar cliente
 					</Button>
@@ -370,30 +231,21 @@ export function ClientesPage() {
 
 			{terceros === undefined ? (
 				<Skeleton aria-label="Cargando" className="h-72 w-full rounded-xl" />
-			) : !hayRegistros ? (
+			) : terceros.length === 0 ? (
 				<EmptyState
 					icon={Building2}
 					title="No hay clientes registrados"
 					description="Registra un cliente con su RUC para poder crear contratos a su nombre."
 				/>
 			) : (
-				<div className="overflow-hidden rounded-xl border border-navy-100 bg-white shadow-[0_1px_3px_rgb(14_30_54/0.06)] dark:bg-card">
-					<div className="flex flex-col gap-3 border-b border-navy-100 p-4 md:flex-row md:items-center">
-						<div className="relative flex-1">
-							<Search
-								className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-navy-400"
-								aria-hidden="true"
-							/>
-							<Input
-								type="search"
-								value={busqueda}
-								onChange={(event) => setBusqueda(event.target.value)}
-								placeholder="Buscar por razón social, RUC o código"
-								aria-label="Buscar"
-								className="h-10 pl-9"
-							/>
-						</div>
-						<div className="grid grid-cols-2 gap-3 md:flex">
+				<ListCard
+					busqueda={busqueda}
+					onBusquedaChange={setBusqueda}
+					placeholder="Buscar por razón social, RUC o código"
+					total={terceros.length}
+					visibles={filtrados.length}
+					filtros={
+						<>
 							<NativeSelect
 								aria-label="Filtrar por tipo"
 								value={filtroTipo}
@@ -414,9 +266,9 @@ export function ClientesPage() {
 								<option value="INACTIVO">Inactivos</option>
 								<option value="TODOS">Todos los estados</option>
 							</NativeSelect>
-						</div>
-					</div>
-
+						</>
+					}
+				>
 					{filtrados.length === 0 ? (
 						<EmptyState
 							icon={SearchX}
@@ -431,10 +283,19 @@ export function ClientesPage() {
 					) : (
 						<>
 							<div className="hidden md:block">
-								<TercerosTabla
-									terceros={filtrados}
-									onEditar={editar}
-									onCambiarEstado={cambiarEstado}
+								<DataTable
+									data={filtrados}
+									columns={columns}
+									initialSorting={[{ id: "codigo", desc: false }]}
+									cellClassName={(id) =>
+										id === "razonSocial"
+											? "max-w-80"
+											: id === "ruc" || id === "codigo"
+												? "tabular-nums"
+												: id === "acciones"
+													? "w-12 text-right"
+													: undefined
+									}
 								/>
 							</div>
 							<div className="md:hidden">
@@ -446,12 +307,7 @@ export function ClientesPage() {
 							</div>
 						</>
 					)}
-
-					<p className="border-t border-navy-100 bg-navy-50/60 px-4 py-2.5 text-[13px] text-muted-foreground">
-						{filtrados.length} de {terceros.length}{" "}
-						{terceros.length === 1 ? "registro" : "registros"}
-					</p>
-				</div>
+				</ListCard>
 			)}
 
 			<TerceroFormSheet

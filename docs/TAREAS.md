@@ -56,15 +56,15 @@ Todas las fases terminan con estas dos tareas:
 - [x] Verificar
 - [x] STOP
 
-## Fase 4: Equipos
+## Fase 4: Equipos ✅
 
-- [ ] `EquipoSchema`, `EquipoRepository` y `EquipoService`, con código `EQ-001`
-- [ ] Listado con filtros por estado y tipo, y tarjetas en celular
-- [ ] Formulario con todos los campos de la hoja EQUIPOS (A:L); el estado sale de una lista cerrada
-- [ ] Insignias de estado: OPERATIVO, EN MANTENIMIENTO, INOPERATIVO, BAJA
-- [ ] Pruebas: el servicio y Cypress (alta de un equipo)
-- [ ] Verificar
-- [ ] STOP
+- [x] `EquipoSchema`, `EquipoRepository` y `EquipoService`, con código `EQ-001`
+- [x] Listado con filtros por estado y tipo, y tarjetas en celular
+- [x] Formulario con todos los campos de la hoja EQUIPOS (A:L); el estado sale de una lista cerrada
+- [x] Insignias de estado: OPERATIVO, EN MANTENIMIENTO, INOPERATIVO, BAJA
+- [x] Pruebas: el servicio y Cypress (alta de un equipo)
+- [x] Verificar
+- [x] STOP
 
 ## Fase 5: Contratos e ítems
 

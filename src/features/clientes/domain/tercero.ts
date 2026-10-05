@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { BaseSchema } from "@/data/base";
+import { siguienteCodigo as siguienteCodigoConPrefijo } from "@/shared/domain/codigo";
 import { rucValido } from "@/shared/domain/ruc";
 
 // Clientes y proveedores (hoja CLIENTES del xlsm). El tipo resuelve la decisión D1 del plan.
@@ -61,19 +62,9 @@ export type TerceroDatos = z.infer<typeof TerceroDatosSchema>;
 export type TerceroDatosInput = z.input<typeof TerceroDatosSchema>;
 export type Tercero = z.infer<typeof TerceroSchema>;
 
-const PREFIJO_CODIGO = "CLI-";
-
 // Siguiente código correlativo (CLI-001, CLI-002…), igual que GenerarCodigoCliente del xlsm.
 export function siguienteCodigo(codigos: readonly string[]): string {
-	const mayor = codigos.reduce((max, codigo) => {
-		const numero = Number(codigo.slice(PREFIJO_CODIGO.length));
-
-		return codigo.startsWith(PREFIJO_CODIGO) && Number.isInteger(numero)
-			? Math.max(max, numero)
-			: max;
-	}, 0);
-
-	return `${PREFIJO_CODIGO}${String(mayor + 1).padStart(3, "0")}`;
+	return siguienteCodigoConPrefijo("CLI-", codigos);
 }
 
 export class RucDuplicadoError extends Error {
