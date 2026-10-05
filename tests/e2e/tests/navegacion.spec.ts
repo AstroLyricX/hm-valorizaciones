@@ -1,13 +1,9 @@
+import { iniciarSesion } from "../support/sesion";
+
 const SECCIONES = ["Valorizaciones", "Contratos", "Equipos", "Clientes", "Configuración", "Inicio"];
 
 function tituloDe(seccion: string): string | RegExp {
 	return seccion === "Inicio" ? /Hola,/ : seccion;
-}
-
-function iniciarSesion() {
-	cy.visit("/");
-	cy.findByRole("button", { name: "Continuar con Microsoft" }).click();
-	cy.findByRole("heading", { level: 1, name: /Hola,/ }).should("exist");
 }
 
 describe("Navegación en escritorio", () => {

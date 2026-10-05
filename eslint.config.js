@@ -37,6 +37,7 @@ export default [
 			"react-refresh/only-export-components": "off",
 			"@typescript-eslint/no-unused-expressions": "off",
 			"no-param-reassign": "off",
+			eqeqeq: "off",
 		},
 	},
 	{

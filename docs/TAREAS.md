@@ -44,17 +44,17 @@ Todas las fases terminan con estas dos tareas:
 - [x] Verificar
 - [x] STOP
 
-## Fase 3: Clientes
+## Fase 3: Clientes ✅
 
-- [ ] `TerceroSchema` (con el tipo según la decisión D1), `TerceroRepository` y `TerceroService`
-- [ ] Código automático `CLI-001`, `CLI-002`… (reemplaza `GenerarCodigoCliente` del xlsm)
-- [ ] Listado con TanStack Table v9: búsqueda por razón social o RUC, filtro por estado; en celular, tarjetas
-- [ ] Formulario de alta y edición (Drawer en celular, Dialog en escritorio). Valida el RUC (11 dígitos y dígito verificador), no permite RUC duplicados y valida el correo.
-- [ ] Desactivar en lugar de borrar, con confirmación (P12)
-- [ ] Teléfono y RUC guardados como texto (P13)
-- [ ] Pruebas: el servicio (alta, RUC duplicado, código correlativo) y Cypress (alta y edición de un cliente)
-- [ ] Verificar
-- [ ] STOP
+- [x] `TerceroSchema` (con el tipo según la decisión D1), `TerceroRepository` y `TerceroService`
+- [x] Código automático `CLI-001`, `CLI-002`… (reemplaza `GenerarCodigoCliente` del xlsm)
+- [x] Listado con TanStack Table v9: búsqueda por razón social o RUC, filtro por estado; en celular, tarjetas
+- [x] Formulario de alta y edición en un panel lateral (desde abajo en celular, desde la derecha en escritorio). Valida el RUC (11 dígitos y dígito verificador), no permite RUC duplicados y valida el correo.
+- [x] Desactivar en lugar de borrar, con confirmación (P12)
+- [x] Teléfono y RUC guardados como texto (P13)
+- [x] Pruebas: el servicio (alta, RUC duplicado, código correlativo) y Cypress (alta y edición de un cliente)
+- [x] Verificar
+- [x] STOP
 
 ## Fase 4: Equipos
 

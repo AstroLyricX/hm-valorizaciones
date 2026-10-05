@@ -1,5 +1,5 @@
 import type { HmDatabase } from "@/data/db";
-import { ahoraIso } from "@/lib/fechas";
+import { guardarConOutbox } from "@/data/outbox";
 
 import { type Empresa, EMPRESA_ID, EmpresaSchema } from "../domain/empresa";
 
@@ -12,20 +12,12 @@ export class EmpresaRepository {
 		return empresa ? EmpresaSchema.parse(empresa) : undefined;
 	}
 
-	// Guarda el registro y deja el cambio en el outbox en la misma transacción.
 	async guardar(empresa: Empresa): Promise<void> {
-		const valida = EmpresaSchema.parse(empresa);
-
-		await this.database.transaction("rw", this.database.empresa, this.database.outbox, async () => {
-			await this.database.empresa.put(valida);
-			await this.database.outbox.add({
-				entidad: "empresa",
-				registroId: valida.id,
-				operacion: "upsert",
-				payload: valida,
-				createdAt: ahoraIso(),
-				intentos: 0,
-			});
-		});
+		await guardarConOutbox(
+			this.database,
+			this.database.empresa,
+			"empresa",
+			EmpresaSchema.parse(empresa),
+		);
 	}
 }

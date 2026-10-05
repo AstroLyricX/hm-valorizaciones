@@ -4,6 +4,8 @@ const config = {
 	setupFilesAfterEnv: ["<rootDir>/tests/setupTests.ts"],
 	testMatch: ["<rootDir>/tests/**/*.spec.{ts,tsx}"],
 	testPathIgnorePatterns: ["<rootDir>/tests/e2e/"],
+	// TanStack Table v9 solo publica módulos ES: se transforman con swc como el resto del código.
+	transformIgnorePatterns: ["/node_modules/(?!@tanstack/)"],
 	transform: {
 		"^.+\\.(js|jsx|ts|tsx)$": [
 			"@swc/jest",
