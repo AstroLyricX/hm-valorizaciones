@@ -1,5 +1,6 @@
 import { render } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router";
+import { Toaster } from "sonner";
 
 import { routes } from "../../src/app/routes";
 import { TooltipProvider } from "../../src/components/ui/tooltip";
@@ -18,6 +19,7 @@ export function renderRoute(path: string) {
 		<SessionProvider>
 			<TooltipProvider>
 				<RouterProvider router={router} />
+				<Toaster />
 			</TooltipProvider>
 		</SessionProvider>,
 	);

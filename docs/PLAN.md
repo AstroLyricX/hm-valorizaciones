@@ -13,7 +13,7 @@ implemented_by:
   model:
     name: "Claude Opus"
     version: "5.5"
-last_implementation_at: "2026-10-04T00:00:00Z"
+last_implementation_at: "2026-10-05T00:00:00Z"
 has_completed_all_phases: "false"
 ---
 

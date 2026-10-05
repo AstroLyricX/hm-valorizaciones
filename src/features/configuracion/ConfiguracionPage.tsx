@@ -1,32 +1,174 @@
-import { Pencil, Settings } from "lucide-react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useLiveQuery } from "dexie-react-hooks";
+import { LoaderCircle } from "lucide-react";
+import { type ReactNode, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/shared/components/EmptyState";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useSession } from "@/features/auth/useSession";
+import { formatearFechaHora } from "@/lib/fechas";
+import { FormField } from "@/shared/components/FormField";
 import { PageHeader } from "@/shared/components/PageHeader";
-import { avisarProximamente } from "@/shared/lib/proximamente";
+
+import { empresaRepository, empresaService } from "./application/empresaService.instance";
+import type { Empresa, EmpresaDatos } from "./domain/empresa";
+import { aFormulario, type EmpresaFormInput, EmpresaFormSchema } from "./ui/empresaForm";
+
+function Seccion({
+	title,
+	description,
+	children,
+}: {
+	title: string;
+	description: string;
+	children: ReactNode;
+}) {
+	return (
+		<section className="grid gap-5 border-b border-navy-100 px-5 py-6 last:border-b-0 md:grid-cols-[16rem_1fr] md:gap-8 md:px-6">
+			<div className="flex flex-col gap-1">
+				<h2 className="text-sm font-semibold text-navy-900">{title}</h2>
+				<p className="text-[13px] text-muted-foreground">{description}</p>
+			</div>
+			<div className="grid gap-4 sm:grid-cols-2">{children}</div>
+		</section>
+	);
+}
+
+function EmpresaForm({ empresa }: { empresa: Empresa }) {
+	const { user } = useSession();
+	const {
+		register,
+		handleSubmit,
+		reset,
+		formState: { errors, isDirty, isSubmitting },
+	} = useForm<EmpresaFormInput, unknown, EmpresaDatos>({
+		resolver: zodResolver(EmpresaFormSchema),
+		defaultValues: aFormulario(empresa),
+	});
+
+	const guardar = async (datos: EmpresaDatos) => {
+		try {
+			await empresaService.actualizar(datos, user?.email ?? "desconocido");
+			toast.success("Datos de la empresa guardados.");
+		} catch {
+			toast.error("No se pudieron guardar los datos. Inténtalo de nuevo.");
+		}
+	};
+
+	return (
+		<form
+			noValidate
+			onSubmit={(event) => void handleSubmit(guardar)(event)}
+			className="overflow-hidden rounded-xl border border-navy-100 bg-white shadow-[0_1px_3px_rgb(14_30_54/0.06)] dark:bg-card"
+		>
+			<Seccion
+				title="Datos de la empresa"
+				description="Aparecen en el encabezado de cada valorización, como contratante."
+			>
+				<FormField
+					label="Razón social"
+					error={errors.razonSocial?.message}
+					className="sm:col-span-2"
+				>
+					{(field) => <Input {...field} {...register("razonSocial")} className="h-10" />}
+				</FormField>
+				<FormField label="RUC" error={errors.ruc?.message} hint="11 dígitos.">
+					{(field) => (
+						<Input
+							{...field}
+							{...register("ruc")}
+							inputMode="numeric"
+							maxLength={11}
+							className="h-10 tabular-nums"
+						/>
+					)}
+				</FormField>
+				<FormField label="Teléfono" error={errors.telefono?.message} hint="Opcional.">
+					{(field) => (
+						<Input {...field} {...register("telefono")} inputMode="tel" className="h-10" />
+					)}
+				</FormField>
+				<FormField
+					label="Dirección legal"
+					error={errors.direccion?.message}
+					className="sm:col-span-2"
+				>
+					{(field) => <Input {...field} {...register("direccion")} className="h-10" />}
+				</FormField>
+			</Seccion>
+
+			<Seccion
+				title="Impuestos"
+				description="El IGV se aplica al subtotal de las valorizaciones nuevas. Las ya emitidas conservan el suyo."
+			>
+				<FormField label="IGV" error={errors.igvPorcentaje?.message}>
+					{(field) => (
+						<div className="relative">
+							<Input
+								{...field}
+								{...register("igvPorcentaje")}
+								inputMode="decimal"
+								className="h-10 pr-9 tabular-nums"
+							/>
+							<span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-muted-foreground">
+								%
+							</span>
+						</div>
+					)}
+				</FormField>
+			</Seccion>
+
+			<div className="flex flex-col gap-3 border-t border-navy-100 bg-navy-50/60 px-5 py-4 sm:flex-row sm:items-center sm:justify-between md:px-6">
+				<p className="text-[13px] text-muted-foreground">
+					Última actualización: {formatearFechaHora(empresa.updatedAt)}
+					{empresa.updatedBy !== "sistema" && ` · ${empresa.updatedBy}`}
+				</p>
+				<div className="flex gap-2">
+					<Button
+						type="button"
+						variant="outline"
+						className="h-9 px-3.5"
+						disabled={!isDirty || isSubmitting}
+						onClick={() => reset()}
+					>
+						Descartar
+					</Button>
+					<Button type="submit" className="h-9 px-3.5" disabled={!isDirty || isSubmitting}>
+						{isSubmitting && <LoaderCircle className="animate-spin" />}
+						Guardar cambios
+					</Button>
+				</div>
+			</div>
+		</form>
+	);
+}
 
 export function ConfiguracionPage() {
+	const empresa = useLiveQuery(async () => empresaRepository.obtener());
+
+	useEffect(() => {
+		// La primera vez crea los datos con los valores de la hoja CONFIG del xlsm.
+		void empresaService.obtener();
+	}, []);
+
 	return (
 		<div className="flex flex-col gap-6">
 			<PageHeader
 				title="Configuración"
 				description="Datos de la empresa que se muestran en las valorizaciones e IGV aplicable."
-				actions={
-					<Button
-						variant="outline"
-						className="h-9 px-3.5"
-						onClick={() => avisarProximamente("Editar datos de la empresa")}
-					>
-						<Pencil />
-						Editar
-					</Button>
-				}
 			/>
-			<EmptyState
-				icon={Settings}
-				title="Datos de la empresa"
-				description="Razón social, RUC, dirección, teléfono e IGV de Maquinarias y Contratistas Generales H&M E.I.R.L."
-			/>
+			{empresa ? (
+				// Al guardarse una nueva versión el formulario se reinicia con los datos guardados.
+				<EmpresaForm key={empresa.version} empresa={empresa} />
+			) : (
+				<div aria-busy="true" aria-label="Cargando" className="flex flex-col gap-3">
+					<Skeleton className="h-64 w-full rounded-xl" />
+					<Skeleton className="h-28 w-full rounded-xl" />
+				</div>
+			)}
 		</div>
 	);
 }

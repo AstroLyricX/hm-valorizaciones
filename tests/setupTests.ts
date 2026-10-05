@@ -1,3 +1,4 @@
+import "fake-indexeddb/auto";
 import "@testing-library/jest-dom";
 
 // jsdom no implementa matchMedia (lo usan el sidebar y useIsMobile). Se simula escritorio.

@@ -30,19 +30,19 @@ Todas las fases terminan con estas dos tareas:
 - [x] Verificar
 - [x] STOP
 
-## Fase 2: Configuración de la empresa (primera porción vertical con datos)
+## Fase 2: Configuración de la empresa (primera porción vertical con datos) ✅
 
-- [ ] `src/data/db.ts`: Dexie con la tabla `empresa` y la tabla `outbox`
-- [ ] Campos comunes (`id`, `createdAt`, `updatedAt`, `updatedBy`, `deletedAt`, `version`) y su `BaseSchema` en Zod
-- [ ] `src/lib/dinero.ts` (centavos y big.js) y `src/lib/fechas.ts` (date-fns en español)
-- [ ] `EmpresaSchema`, `EmpresaRepository` y `EmpresaService`
-- [ ] Datos iniciales, sacados de la hoja CONFIG: razón social, RUC 20602629903, dirección, teléfono, IGV 18 %
-- [ ] Página `/configuracion`: formulario con React Hook Form + Zod; el IGV se edita como porcentaje (P3)
-- [ ] `rucValido` en `src/shared/domain`, con pruebas
-- [ ] `navigator.storage.persist()` al iniciar la app
-- [ ] Pruebas: el repositorio con `fake-indexeddb` y el formulario (guardar y validar el RUC)
-- [ ] Verificar
-- [ ] STOP
+- [x] `src/data/db.ts`: Dexie con la tabla `empresa` y la tabla `outbox`
+- [x] Campos comunes (`id`, `createdAt`, `updatedAt`, `updatedBy`, `deletedAt`, `version`) y su `BaseSchema` en Zod
+- [x] `src/lib/dinero.ts` (centavos y big.js) y `src/lib/fechas.ts` (date-fns en español)
+- [x] `EmpresaSchema`, `EmpresaRepository` y `EmpresaService`
+- [x] Datos iniciales, sacados de la hoja CONFIG: razón social, RUC 20602629903, dirección, teléfono, IGV 18 %
+- [x] Página `/configuracion`: formulario con React Hook Form + Zod; el IGV se edita como porcentaje (P3)
+- [x] `rucValido` en `src/shared/domain`, con pruebas
+- [x] `navigator.storage.persist()` al iniciar la app
+- [x] Pruebas: el repositorio con `fake-indexeddb` y el formulario (guardar y validar el RUC)
+- [x] Verificar
+- [x] STOP
 
 ## Fase 3: Clientes
 
