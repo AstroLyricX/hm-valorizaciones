@@ -2,6 +2,7 @@ import { Calculator, FileText, LoaderCircle, WifiOff } from "lucide-react";
 import { Navigate, useLocation, useNavigate } from "react-router";
 
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { useOnlineStatus } from "@/shared/hooks/useOnlineStatus";
 
 import { BrandArc } from "./BrandArc";
@@ -9,9 +10,9 @@ import { MicrosoftLogo } from "./MicrosoftLogo";
 import { useSession } from "./useSession";
 
 const FEATURES = [
-	{ icon: WifiOff, text: "Trabaja en obra sin conexión; se sincroniza al volver la señal." },
-	{ icon: Calculator, text: "Acumulados, saldos e IGV calculados automáticamente." },
-	{ icon: FileText, text: "Valorizaciones en PDF listas para firmar y enviar." },
+	{ icon: WifiOff, label: "Funciona sin conexión" },
+	{ icon: Calculator, label: "Cálculos automáticos" },
+	{ icon: FileText, label: "PDF listo para firmar" },
 ];
 
 export function LoginPage() {
@@ -31,69 +32,44 @@ export function LoginPage() {
 	};
 
 	return (
-		<div className="grid min-h-svh bg-background lg:grid-cols-[1.1fr_1fr]">
-			<aside className="relative isolate hidden overflow-hidden bg-linear-to-br from-[#1C7BC9] to-[#004A85] p-12 text-white lg:flex lg:flex-col lg:justify-between">
-				<BrandArc className="absolute -right-24 -bottom-10 -z-10 w-[42rem] text-white/15" />
-				<p className="text-sm font-medium tracking-[0.2em] text-white/80 uppercase">
-					Maquinarias y Contratistas Generales H&amp;M
-				</p>
-				<div className="flex max-w-md flex-col gap-8">
-					<h2 className="text-4xl leading-tight font-semibold">
-						Valorización de equipos y canteras, del campo a la factura.
-					</h2>
-					<ul className="flex flex-col gap-4">
-						{FEATURES.map(({ icon: Icon, text }) => (
-							<li key={text} className="flex items-start gap-3 text-white/90">
-								<span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-white/15">
-									<Icon className="size-4" />
-								</span>
-								<span>{text}</span>
-							</li>
-						))}
-					</ul>
-				</div>
-				<p className="text-sm text-white/70">RUC 20602629903 · Ollachea, Carabaya, Puno</p>
-			</aside>
+		<div className="relative isolate flex min-h-svh flex-col overflow-hidden bg-slate-50 dark:bg-background">
+			<div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
+				<div className="absolute -top-48 left-1/2 size-[44rem] -translate-x-1/2 rounded-full bg-primary/15 blur-3xl" />
+				<div className="absolute inset-0 bg-[radial-gradient(circle,var(--color-slate-300)_1px,transparent_1px)] [mask-image:radial-gradient(ellipse_at_center,black_20%,transparent_70%)] bg-size-[22px_22px] opacity-60 dark:opacity-20" />
+				<BrandArc className="absolute -bottom-24 left-1/2 w-[64rem] max-w-none -translate-x-1/2 text-primary/[0.07]" />
+			</div>
 
-			<main className="flex flex-col">
-				<div className="relative h-36 overflow-hidden bg-linear-to-br from-[#1C7BC9] to-[#004A85] px-4 pt-6 lg:hidden">
-					<BrandArc className="absolute -right-12 -bottom-8 w-80 text-white/20" />
-					<p className="relative text-center text-xs font-medium tracking-[0.2em] text-white/85 uppercase">
-						H&amp;M E.I.R.L. · Maquinarias y Contratistas
-					</p>
-				</div>
-
-				<div className="flex flex-1 items-start justify-center px-4 pb-10 lg:items-center lg:px-12">
-					<div className="relative z-10 -mt-14 flex w-full max-w-sm flex-col gap-8 lg:mt-0">
-						<div className="flex flex-col items-center gap-5 text-center lg:items-start lg:text-left">
-							<div className="rounded-2xl bg-white p-2 shadow-lg ring-1 ring-black/5 lg:p-0 lg:shadow-none lg:ring-0">
-								<img
-									src="/logo-hm.png"
-									alt="Maquinarias y Contratistas Generales H&M E.I.R.L."
-									width={112}
-									height={112}
-									className="size-24 lg:size-28"
-								/>
-							</div>
+			<main className="flex flex-1 items-center justify-center px-4 py-12">
+				<div className="flex w-full max-w-[400px] flex-col items-center gap-8">
+					<section className="w-full rounded-3xl border border-white bg-white p-8 shadow-[0_24px_64px_-24px] shadow-primary/25 ring-1 ring-slate-900/5 backdrop-blur-xl sm:p-10 dark:border-white/10 dark:bg-card/80">
+						<div className="flex flex-col items-center gap-6 text-center">
+							<img
+								src="/logo-hm.png"
+								alt="Maquinarias y Contratistas Generales H&M E.I.R.L."
+								width={88}
+								height={88}
+								className="size-22 rounded-2xl dark:bg-white"
+							/>
 							<div className="flex flex-col gap-2">
-								<h1 className="text-2xl font-semibold tracking-tight">Iniciar sesión</h1>
-								<p className="text-muted-foreground">
-									Ingresa con tu cuenta de Microsoft de H&amp;M para gestionar contratos y
-									valorizaciones.
+								<h1 className="text-2xl font-semibold tracking-tight text-balance">
+									Iniciar sesión
+								</h1>
+								<p className="text-sm text-balance text-muted-foreground">
+									Accede al sistema de valorizaciones de H&amp;M con tu cuenta de Microsoft.
 								</p>
 							</div>
 						</div>
 
-						<div className="flex flex-col gap-3">
+						<div className="mt-8 flex flex-col gap-4">
 							<Button
 								size="lg"
 								variant="outline"
-								className="h-12 w-full gap-3 text-base"
+								className="h-12 w-full gap-3 rounded-xl bg-white text-[15px] font-medium shadow-xs transition-all hover:-translate-y-px hover:bg-white hover:shadow-md disabled:translate-y-0 dark:bg-background"
 								disabled={isSigningIn || !isOnline}
 								onClick={() => void handleSignIn()}
 							>
 								{isSigningIn ? (
-									<LoaderCircle className="size-5 animate-spin" />
+									<LoaderCircle className="size-5 animate-spin text-primary" />
 								) : (
 									<MicrosoftLogo className="size-5" />
 								)}
@@ -102,23 +78,49 @@ export function LoginPage() {
 
 							<p
 								role="status"
-								className="flex items-start justify-center gap-2 text-sm text-muted-foreground lg:justify-start"
+								className={cn(
+									"mx-auto inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium",
+									isOnline
+										? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
+										: "bg-amber-50 text-center text-amber-800 dark:bg-amber-500/10 dark:text-amber-300",
+								)}
 							>
-								<span
-									className={`mt-1.5 size-2 shrink-0 rounded-full ${isOnline ? "bg-emerald-500" : "bg-amber-500"}`}
-								/>
-								{isOnline
-									? "Conectado"
-									: "Sin conexión: el primer inicio de sesión necesita internet."}
+								<span className="relative flex size-2 shrink-0">
+									{isOnline && (
+										<span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+									)}
+									<span
+										className={cn(
+											"relative inline-flex size-2 rounded-full",
+											isOnline ? "bg-emerald-500" : "bg-amber-500",
+										)}
+									/>
+								</span>
+								{isOnline ? "Conectado" : "Sin conexión: el primer ingreso necesita internet"}
 							</p>
 						</div>
 
-						<p className="border-t pt-6 text-center text-sm text-muted-foreground lg:text-left">
-							¿No puedes ingresar? Pide acceso al administrador de H&amp;M.
+						<p className="mt-8 border-t border-slate-200/70 pt-6 text-center text-xs text-balance text-muted-foreground dark:border-white/10">
+							¿No tienes acceso? Solicítalo al administrador de H&amp;M.
 						</p>
-					</div>
+					</section>
+
+					<ul className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-muted-foreground sm:flex-nowrap sm:whitespace-nowrap">
+						{FEATURES.map(({ icon: Icon, label }) => (
+							<li key={label} className="inline-flex items-center gap-1.5">
+								<Icon className="size-3.5 text-primary" aria-hidden="true" />
+								{label}
+							</li>
+						))}
+					</ul>
 				</div>
 			</main>
+
+			<footer className="px-4 pb-6 text-center text-xs text-muted-foreground/80">
+				© {new Date().getFullYear()} Maquinarias y Contratistas Generales H&amp;M E.I.R.L.
+				<span className="hidden sm:inline"> · </span>
+				<span className="block sm:inline">RUC 20602629903</span>
+			</footer>
 		</div>
 	);
 }

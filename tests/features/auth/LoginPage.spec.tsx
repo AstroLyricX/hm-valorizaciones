@@ -1,44 +1,43 @@
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { createMemoryRouter, RouterProvider } from "react-router";
 
-import { routes } from "../../../src/app/routes";
-import { SessionProvider } from "../../../src/features/auth/SessionProvider";
-
-function renderAt(path: string) {
-	const router = createMemoryRouter(routes, { initialEntries: [path] });
-
-	render(
-		<SessionProvider>
-			<RouterProvider router={router} />
-		</SessionProvider>,
-	);
-}
+import { renderRoute, signInAs } from "../../support/renderRoute";
 
 beforeEach(() => {
 	localStorage.clear();
 });
 
 test("muestra el botón para continuar con Microsoft", async () => {
-	renderAt("/login");
+	renderRoute("/login");
 
 	expect(await screen.findByRole("button", { name: "Continuar con Microsoft" })).toBeEnabled();
 });
 
 test("al iniciar sesión lleva a la página de inicio", async () => {
 	const user = userEvent.setup();
-	renderAt("/");
+	renderRoute("/");
 
 	await user.click(await screen.findByRole("button", { name: "Continuar con Microsoft" }));
 
 	expect(
-		await screen.findByRole("heading", { name: "Valorizaciones H&M" }, { timeout: 2000 }),
+		await screen.findByRole("heading", { level: 1, name: /Hola,/ }, { timeout: 2000 }),
+	).toBeInTheDocument();
+});
+
+test("al iniciar sesión vuelve a la página que se quería abrir", async () => {
+	const user = userEvent.setup();
+	renderRoute("/contratos");
+
+	await user.click(await screen.findByRole("button", { name: "Continuar con Microsoft" }));
+
+	expect(
+		await screen.findByRole("heading", { name: "Contratos" }, { timeout: 2000 }),
 	).toBeInTheDocument();
 });
 
 test("recuerda la sesión iniciada", async () => {
-	localStorage.setItem("hm.session", JSON.stringify({ name: "Ana", email: "ana@hm.pe" }));
-	renderAt("/login");
+	signInAs({ name: "Ana Quispe", email: "ana@hm.pe" });
+	renderRoute("/login");
 
 	expect(await screen.findByText(/Hola, Ana/)).toBeInTheDocument();
 });

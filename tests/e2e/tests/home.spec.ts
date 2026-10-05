@@ -3,6 +3,6 @@ describe("Login", () => {
 		cy.visit("/");
 		cy.findByRole("heading", { name: "Iniciar sesión" }).should("exist");
 		cy.findByRole("button", { name: "Continuar con Microsoft" }).click();
-		cy.findByRole("heading", { name: "Valorizaciones H&M" }).should("exist");
+		cy.findByRole("heading", { level: 1, name: /Hola,/ }).should("exist");
 	});
 });

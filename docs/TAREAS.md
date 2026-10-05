@@ -16,19 +16,19 @@ Todas las fases terminan con estas dos tareas:
 - [x] PWA: manifiesto, íconos desde el logo y aviso de actualización
 - [x] Marca: logo oficial, azul `#005A9C` y favicon SVG
 
-## Fase 1: Layout, menú y rutas
+## Fase 1: Layout, menú y rutas ✅
 
-- [ ] Agregar el script `verify` en `package.json`
-- [ ] Configurar React Router con las rutas `/`, `/valorizaciones`, `/valorizaciones/nueva`, `/contratos`, `/equipos`, `/clientes`, `/configuracion` y `/login`
-- [ ] Componente `AppLayout`: menú lateral en escritorio (`lg:`) y barra inferior en celular con 4 ítems más "Más"
-- [ ] Botón "+ Nueva valorización" siempre visible
-- [ ] Páginas de las secciones con título y estado vacío ("Aún no hay contratos")
+- [x] Agregar el script `verify` en `package.json`
+- [x] Configurar React Router con las rutas `/`, `/valorizaciones`, `/valorizaciones/nueva`, `/contratos`, `/equipos`, `/clientes`, `/configuracion` y `/login`
+- [x] Componente `AppLayout`: menú lateral en escritorio y tablet (`md:`, el punto de quiebre del sidebar de shadcn) y barra inferior en celular con 4 ítems más "Más"
+- [x] Botón "+ Nueva valorización" siempre visible
+- [x] Páginas de las secciones con título y estado vacío ("Aún no hay contratos")
 - [x] `SessionProvider` con sesión de prueba, la pantalla `/login` y la protección de rutas (`RequireSession`). Debe usar la misma interfaz que tendrá después MSAL.
-- [ ] Indicador de conexión (en línea / sin conexión) en la cabecera
-- [ ] Agregar los componentes de shadcn: `sidebar`, `sheet`, `dropdown-menu`, `avatar`, `separator`, `tooltip`
-- [ ] Pruebas: Jest (el layout muestra los ítems del menú; una ruta protegida redirige a `/login`) y Cypress (navegar las 6 secciones en escritorio y en celular)
-- [ ] Verificar
-- [ ] STOP
+- [x] Indicador de conexión (en línea / sin conexión) en la cabecera
+- [x] Agregar los componentes de shadcn: `sidebar`, `sheet`, `dropdown-menu`, `avatar`, `separator`, `tooltip`
+- [x] Pruebas: Jest (el layout muestra los ítems del menú; una ruta protegida redirige a `/login`) y Cypress (navegar las 6 secciones en escritorio y en celular)
+- [x] Verificar
+- [x] STOP
 
 ## Fase 2: Configuración de la empresa (primera porción vertical con datos)
 

@@ -16,7 +16,8 @@
     "cy:run": "cypress run",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tests/e2e",
     "lint": "eslint .",
-    "lint:fix": "eslint --fix ."
+    "lint:fix": "eslint --fix .",
+    "verify": "npm run lint && npm run typecheck && npm run test:ci && npm run build"
   },
   "browserslist": {
     "production": [

@@ -31,9 +31,12 @@ export default [
 		},
 	},
 	{
+		// Código generado por shadcn/ui: se mantiene igual al original para poder actualizarlo.
 		files: ["src/components/ui/**/*.tsx"],
 		rules: {
 			"react-refresh/only-export-components": "off",
+			"@typescript-eslint/no-unused-expressions": "off",
+			"no-param-reassign": "off",
 		},
 	},
 	{
