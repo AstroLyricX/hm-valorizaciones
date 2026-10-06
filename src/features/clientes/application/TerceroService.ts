@@ -28,7 +28,6 @@ export class TerceroService {
 			id: uuidv7(),
 			codigo: siguienteCodigo(await this.repository.codigos()),
 			...validos,
-			estado: "ACTIVO",
 			createdAt: ahora,
 			updatedAt: ahora,
 			updatedBy: usuario,

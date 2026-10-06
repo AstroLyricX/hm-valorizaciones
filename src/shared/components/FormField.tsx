@@ -3,23 +3,28 @@ import { type ReactNode, useId } from "react";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
-// Campo de formulario con etiqueta, ayuda y mensaje de error accesibles.
+export interface CampoProps {
+	id: string;
+	"aria-invalid": boolean;
+	"aria-required"?: boolean;
+	"aria-describedby"?: string;
+}
+
+// Campo de formulario: etiqueta (con * si es obligatorio), control, ayuda y error accesibles.
 export function FormField({
 	label,
+	required = false,
 	hint,
 	error,
 	className,
 	children,
 }: {
 	label: string;
+	required?: boolean;
 	hint?: string;
 	error?: string;
 	className?: string;
-	children: (props: {
-		id: string;
-		"aria-invalid": boolean;
-		"aria-describedby"?: string;
-	}) => ReactNode;
+	children: (props: CampoProps) => ReactNode;
 }) {
 	const id = useId();
 	const hintId = `${id}-hint`;
@@ -28,21 +33,27 @@ export function FormField({
 
 	return (
 		<div className={cn("flex flex-col gap-1.5", className)}>
-			<Label htmlFor={id} className="text-navy-700">
+			<Label htmlFor={id} className="text-[13px] font-medium text-navy-500">
 				{label}
+				{required && (
+					<span aria-hidden="true" className="-ml-1 text-red-500">
+						*
+					</span>
+				)}
 			</Label>
 			{children({
 				id,
 				"aria-invalid": Boolean(error),
+				"aria-required": required || undefined,
 				"aria-describedby": describedBy || undefined,
 			})}
 			{error ? (
-				<p id={errorId} className="text-[13px] text-destructive">
+				<p id={errorId} className="text-xs text-destructive">
 					{error}
 				</p>
 			) : (
 				hint && (
-					<p id={hintId} className="text-[13px] text-muted-foreground">
+					<p id={hintId} className="text-xs text-navy-400">
 						{hint}
 					</p>
 				)

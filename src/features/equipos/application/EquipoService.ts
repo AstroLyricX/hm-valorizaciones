@@ -3,22 +3,14 @@ import { uuidv7 } from "uuidv7";
 import { ahoraIso } from "@/lib/fechas";
 
 import {
+	ActivoFijoDuplicadoError,
 	type Equipo,
+	type EquipoDatos,
 	type EquipoDatosInput,
 	EquipoDatosSchema,
-	siguienteCodigoEquipo,
+	PlacaDuplicadaError,
 } from "../domain/equipo";
 import type { EquipoRepository } from "../infrastructure/EquipoRepository";
-
-export class PlacaDuplicadaError extends Error {
-	constructor(
-		readonly placa: string,
-		readonly codigoExistente: string,
-	) {
-		super(`La placa ${placa} ya está registrada (${codigoExistente}).`);
-		this.name = "PlacaDuplicadaError";
-	}
-}
 
 export class EquipoService {
 	constructor(private readonly repository: EquipoRepository) {}
@@ -29,12 +21,11 @@ export class EquipoService {
 
 	async crear(datos: EquipoDatosInput, usuario: string): Promise<Equipo> {
 		const validos = EquipoDatosSchema.parse(datos);
-		await this.asegurarPlacaDisponible(validos.placa);
+		await this.asegurarUnicos(validos);
 
 		const ahora = ahoraIso();
 		const equipo: Equipo = {
 			id: uuidv7(),
-			codigo: siguienteCodigoEquipo(await this.repository.codigos()),
 			...validos,
 			createdAt: ahora,
 			updatedAt: ahora,
@@ -54,7 +45,7 @@ export class EquipoService {
 		if (!actual || actual.deletedAt !== null) {
 			throw new Error(`No existe el equipo ${id}.`);
 		}
-		await this.asegurarPlacaDisponible(validos.placa, id);
+		await this.asegurarUnicos(validos, id);
 
 		const actualizado: Equipo = {
 			...actual,
@@ -68,17 +59,16 @@ export class EquipoService {
 		return actualizado;
 	}
 
-	// La placa es opcional (no toda la maquinaria la tiene), pero si se ingresa no puede repetirse.
-	private async asegurarPlacaDisponible(placa: string, idPropio?: string): Promise<void> {
-		if (placa === "") {
-			return;
-		}
-		const existente = (await this.repository.listar()).find(
-			(equipo) => equipo.placa === placa && equipo.id !== idPropio,
-		);
+	// El activo fijo y la placa identifican al equipo: no pueden repetirse.
+	private async asegurarUnicos(datos: EquipoDatos, idPropio?: string): Promise<void> {
+		const otros = (await this.repository.listar()).filter((equipo) => equipo.id !== idPropio);
 
-		if (existente) {
-			throw new PlacaDuplicadaError(placa, existente.codigo);
+		if (otros.some((equipo) => equipo.activoFijo === datos.activoFijo)) {
+			throw new ActivoFijoDuplicadoError(datos.activoFijo);
+		}
+		const conPlaca = otros.find((equipo) => equipo.placa === datos.placa);
+		if (conPlaca) {
+			throw new PlacaDuplicadaError(datos.placa, conPlaca.activoFijo);
 		}
 	}
 }

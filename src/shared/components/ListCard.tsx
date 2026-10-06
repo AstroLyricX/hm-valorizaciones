@@ -16,7 +16,7 @@ export function ListCard({
 	busqueda: string;
 	onBusquedaChange: (valor: string) => void;
 	placeholder: string;
-	filtros: ReactNode;
+	filtros?: ReactNode;
 	children: ReactNode;
 	total: number;
 	visibles: number;
@@ -38,7 +38,7 @@ export function ListCard({
 						className="h-10 pl-9"
 					/>
 				</div>
-				<div className="grid grid-cols-2 gap-3 md:flex">{filtros}</div>
+				{filtros && <div className="grid grid-cols-2 gap-3 md:flex">{filtros}</div>}
 			</div>
 			{children}
 			<p className="border-t border-navy-100 bg-navy-50/60 px-4 py-2.5 text-[13px] text-muted-foreground">

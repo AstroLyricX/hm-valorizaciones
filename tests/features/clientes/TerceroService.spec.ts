@@ -2,22 +2,9 @@ import { HmDatabase } from "../../../src/data/db";
 import { TerceroService } from "../../../src/features/clientes/application/TerceroService";
 import { RucDuplicadoError } from "../../../src/features/clientes/domain/tercero";
 import { TerceroRepository } from "../../../src/features/clientes/infrastructure/TerceroRepository";
+import { CLIENTE, HUISE } from "../../support/fixtures";
 
-const HUISE = {
-	tipo: "PROVEEDOR" as const,
-	razonSocial: "Huise Quea Antolin",
-	ruc: "10098637074",
-	direccion: "Jr. Bellavista S/N - Ollachea",
-	contacto: "",
-	telefono: "931 161 371",
-	correo: "",
-};
-const HM = {
-	...HUISE,
-	tipo: "CLIENTE" as const,
-	razonSocial: "Cliente de prueba",
-	ruc: "20602629903",
-};
+const HM = { ...CLIENTE, razonSocial: "Cliente de prueba" };
 
 let database: HmDatabase;
 let service: TerceroService;
@@ -32,7 +19,7 @@ afterEach(async () => {
 });
 
 describe("TerceroService", () => {
-	it("registra con código correlativo, estado activo y versión 1", async () => {
+	it("registra con código correlativo, el estado elegido y versión 1", async () => {
 		const primero = await service.crear(HUISE, "ana@hm.pe");
 		const segundo = await service.crear(HM, "ana@hm.pe");
 
@@ -59,13 +46,9 @@ describe("TerceroService", () => {
 		const huise = await service.crear(HUISE, "ana@hm.pe");
 		await service.crear(HM, "ana@hm.pe");
 
-		const editado = await service.actualizar(
-			huise.id,
-			{ ...HUISE, contacto: "Antolín" },
-			"luis@hm.pe",
-		);
+		const editado = await service.actualizar(huise.id, { ...HUISE, banco: "BCP" }, "luis@hm.pe");
 		expect(editado).toMatchObject({
-			contacto: "Antolín",
+			banco: "BCP",
 			version: 2,
 			updatedBy: "luis@hm.pe",
 			codigo: "CLI-001",

@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useLiveQuery } from "dexie-react-hooks";
 import { LoaderCircle } from "lucide-react";
-import { type ReactNode, useEffect } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -11,31 +11,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useSession } from "@/features/auth/useSession";
 import { formatearFechaHora } from "@/lib/fechas";
 import { FormField } from "@/shared/components/FormField";
+import { FormSection } from "@/shared/components/FormSection";
 import { PageHeader } from "@/shared/components/PageHeader";
 
 import { empresaRepository, empresaService } from "./application/empresaService.instance";
 import type { Empresa, EmpresaDatos } from "./domain/empresa";
 import { aFormulario, type EmpresaFormInput, EmpresaFormSchema } from "./ui/empresaForm";
-
-function Seccion({
-	title,
-	description,
-	children,
-}: {
-	title: string;
-	description: string;
-	children: ReactNode;
-}) {
-	return (
-		<section className="grid gap-5 border-b border-navy-100 px-5 py-6 last:border-b-0 md:grid-cols-[16rem_1fr] md:gap-8 md:px-6">
-			<div className="flex flex-col gap-1">
-				<h2 className="text-sm font-semibold text-navy-900">{title}</h2>
-				<p className="text-[13px] text-muted-foreground">{description}</p>
-			</div>
-			<div className="grid gap-4 sm:grid-cols-2">{children}</div>
-		</section>
-	);
-}
 
 function EmpresaForm({ empresa }: { empresa: Empresa }) {
 	const { user } = useSession();
@@ -64,54 +45,78 @@ function EmpresaForm({ empresa }: { empresa: Empresa }) {
 			onSubmit={(event) => void handleSubmit(guardar)(event)}
 			className="overflow-hidden rounded-xl border border-navy-100 bg-white shadow-[0_1px_3px_rgb(14_30_54/0.06)] dark:bg-card"
 		>
-			<Seccion
+			<FormSection
 				title="Datos de la empresa"
 				description="Aparecen en el encabezado de cada valorización, como contratante."
 			>
 				<FormField
 					label="Razón social"
+					required
 					error={errors.razonSocial?.message}
 					className="sm:col-span-2"
 				>
-					{(field) => <Input {...field} {...register("razonSocial")} className="h-10" />}
+					{(field) => (
+						<Input
+							{...field}
+							{...register("razonSocial")}
+							placeholder="Ingresar razón social"
+							className="h-10"
+						/>
+					)}
 				</FormField>
-				<FormField label="RUC" error={errors.ruc?.message} hint="11 dígitos.">
+				<FormField label="RUC" required error={errors.ruc?.message} hint="11 dígitos.">
 					{(field) => (
 						<Input
 							{...field}
 							{...register("ruc")}
+							placeholder="Ingresar RUC"
 							inputMode="numeric"
 							maxLength={11}
-							className="h-10 tabular-nums"
+							className="tabular-nums"
 						/>
 					)}
 				</FormField>
-				<FormField label="Teléfono" error={errors.telefono?.message} hint="Opcional.">
+				<FormField label="Teléfono" error={errors.telefono?.message}>
 					{(field) => (
-						<Input {...field} {...register("telefono")} inputMode="tel" className="h-10" />
+						<Input
+							{...field}
+							{...register("telefono")}
+							placeholder="Ingresar teléfono"
+							inputMode="tel"
+							className="h-10"
+						/>
 					)}
 				</FormField>
 				<FormField
 					label="Dirección legal"
+					required
 					error={errors.direccion?.message}
 					className="sm:col-span-2"
 				>
-					{(field) => <Input {...field} {...register("direccion")} className="h-10" />}
+					{(field) => (
+						<Input
+							{...field}
+							{...register("direccion")}
+							placeholder="Ingresar dirección legal"
+							className="h-10"
+						/>
+					)}
 				</FormField>
-			</Seccion>
+			</FormSection>
 
-			<Seccion
+			<FormSection
 				title="Impuestos"
 				description="El IGV se aplica al subtotal de las valorizaciones nuevas. Las ya emitidas conservan el suyo."
 			>
-				<FormField label="IGV" error={errors.igvPorcentaje?.message}>
+				<FormField label="IGV" required error={errors.igvPorcentaje?.message}>
 					{(field) => (
 						<div className="relative">
 							<Input
 								{...field}
 								{...register("igvPorcentaje")}
+								placeholder="Ingresar IGV"
 								inputMode="decimal"
-								className="h-10 pr-9 tabular-nums"
+								className="pr-9 tabular-nums"
 							/>
 							<span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-muted-foreground">
 								%
@@ -119,7 +124,7 @@ function EmpresaForm({ empresa }: { empresa: Empresa }) {
 						</div>
 					)}
 				</FormField>
-			</Seccion>
+			</FormSection>
 
 			<div className="flex flex-col gap-3 border-t border-navy-100 bg-navy-50/60 px-5 py-4 sm:flex-row sm:items-center sm:justify-between md:px-6">
 				<p className="text-[13px] text-muted-foreground">

@@ -66,17 +66,22 @@ Todas las fases terminan con estas dos tareas:
 - [x] Verificar
 - [x] STOP
 
-## Fase 5: Contratos e ítems
+## Fase 5: Contratos ✅
 
-- [ ] `ContratoSchema` y `ContratoItemSchema` (la unidad sale de una lista cerrada: HM, DIA, MES, M3, GLB, UND), con sus repositorios y `ContratoService`
-- [ ] Formulario de cabecera. El cliente se elige con un buscador (Command + Popover); hay fechas, moneda, plazo de pago y los porcentajes de gastos generales, utilidad y retenciones. El documento contractual se guarda como texto (P13).
-- [ ] Editor de ítems ilimitados (P14), con `useFieldArray` y un equipo opcional por ítem
-- [ ] Monto contractual = suma de los parciales de todos los ítems (P2)
-- [ ] Detalle del contrato: datos, ítems, resumen y sus valorizaciones (vacío por ahora)
-- [ ] Estados ACTIVO, CULMINADO y SUSPENDIDO
-- [ ] Pruebas: el monto contractual con varios ítems, el esquema (unidad inválida) y Cypress (contrato con 2 ítems)
-- [ ] Verificar
-- [ ] STOP
+Rediseñada según `VALORIZACIONES.txt`: el contrato son equipos con horas mínimas × costo por hora.
+
+- [x] Formularios en ventanas (cabecera azul del logo, Cancelar/Guardar), obligatorios con `*` rojo.
+- [x] Selectores y fechas propios (no los del navegador), también en los filtros de las tablas.
+- [x] Clientes con representante y datos bancarios; equipos con activo fijo, motor, categoría, dueño y estados SB/FM/FO/OP/P/D.
+
+- [x] `ContratoSchema` y `ContratoEquipoSchema`, `ContratoRepository` y `ContratoService` (código CTR-001)
+- [x] Formulario en una sola página: cliente, proyecto, ubicación, fecha de inicio y fin, moneda, fondo de garantía (opcional), n.° de documento (opcional) y observaciones
+- [x] Equipos del contrato: equipo, horas mínimas y costo por hora; parcial y monto contractual en vivo (P2)
+- [x] Estado calculado: Activo o Vencido según la fecha de fin
+- [x] Ficha del contrato: datos, equipos, resumen y valorizaciones (vacío por ahora)
+- [x] Pruebas: cálculos, esquemas, servicio, pantalla y Cypress (contrato con 2 equipos)
+- [x] Verificar
+- [x] STOP
 
 ## Fase 6: Valorización (borrador y cálculos)
 

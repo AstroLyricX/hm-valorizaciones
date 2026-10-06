@@ -1,14 +1,5 @@
 import { siguienteCodigo, TerceroDatosSchema } from "../../../src/features/clientes/domain/tercero";
-
-const DATOS = {
-	tipo: "CLIENTE",
-	razonSocial: "Huise Quea Antolin",
-	ruc: "10098637074",
-	direccion: "",
-	contacto: "",
-	telefono: "",
-	correo: "",
-};
+import { HUISE } from "../../support/fixtures";
 
 describe("siguienteCodigo", () => {
 	it("empieza en CLI-001", () => {
@@ -25,19 +16,30 @@ describe("siguienteCodigo", () => {
 });
 
 describe("TerceroDatosSchema", () => {
-	it("guarda la razón social en mayúsculas y el correo en minúsculas", () => {
-		const datos = TerceroDatosSchema.parse({ ...DATOS, correo: "Ventas@Empresa.PE" });
+	it("guarda la razón social y el representante en mayúsculas y el correo en minúsculas", () => {
+		const datos = TerceroDatosSchema.parse({ ...HUISE, correo: "Ventas@Empresa.PE" });
 
 		expect(datos.razonSocial).toBe("HUISE QUEA ANTOLIN");
+		expect(datos.representanteNombre).toBe("ANTOLIN HUISE QUEA");
 		expect(datos.correo).toBe("ventas@empresa.pe");
 	});
 
-	it("acepta campos opcionales vacíos", () => {
-		expect(TerceroDatosSchema.safeParse(DATOS).success).toBe(true);
+	it("acepta vacíos los datos bancarios y los opcionales del representante", () => {
+		expect(TerceroDatosSchema.safeParse(HUISE).success).toBe(true);
 	});
 
-	it("rechaza un correo inválido y un RUC con dígito verificador incorrecto", () => {
-		expect(TerceroDatosSchema.safeParse({ ...DATOS, correo: "ventas@" }).success).toBe(false);
-		expect(TerceroDatosSchema.safeParse({ ...DATOS, ruc: "20123456789" }).success).toBe(false);
+	it("exige correo, DNI de 8 dígitos y teléfono del representante", () => {
+		expect(TerceroDatosSchema.safeParse({ ...HUISE, correo: "" }).success).toBe(false);
+		expect(TerceroDatosSchema.safeParse({ ...HUISE, representanteDni: "1234" }).success).toBe(
+			false,
+		);
+		expect(TerceroDatosSchema.safeParse({ ...HUISE, representanteTelefono: "" }).success).toBe(
+			false,
+		);
+	});
+
+	it("rechaza un RUC con dígito verificador incorrecto y un CCI incompleto", () => {
+		expect(TerceroDatosSchema.safeParse({ ...HUISE, ruc: "20123456789" }).success).toBe(false);
+		expect(TerceroDatosSchema.safeParse({ ...HUISE, cci: "0021" }).success).toBe(false);
 	});
 });

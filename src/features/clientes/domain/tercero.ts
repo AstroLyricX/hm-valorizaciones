@@ -4,58 +4,91 @@ import { BaseSchema } from "@/data/base";
 import { siguienteCodigo as siguienteCodigoConPrefijo } from "@/shared/domain/codigo";
 import { rucValido } from "@/shared/domain/ruc";
 
-// Clientes y proveedores (hoja CLIENTES del xlsm). El tipo resuelve la decisión D1 del plan.
-export const TIPOS_TERCERO = ["CLIENTE", "PROVEEDOR"] as const;
+// Clientes según VALORIZACIONES.txt (hoja CLIENTES del xlsm). También son los dueños de los equipos.
 export const ESTADOS_TERCERO = ["ACTIVO", "INACTIVO"] as const;
+export const ESTADOS_CIVILES = ["SOLTERO", "CASADO", "CONVIVIENTE", "DIVORCIADO", "VIUDO"] as const;
+export const BANCOS = [
+	"BCP",
+	"BBVA",
+	"INTERBANK",
+	"SCOTIABANK",
+	"BANCO DE LA NACIÓN",
+	"BANBIF",
+	"PICHINCHA",
+	"CAJA AREQUIPA",
+	"CAJA CUSCO",
+	"OTRO",
+] as const;
 
-export type TipoTercero = (typeof TIPOS_TERCERO)[number];
 export type EstadoTercero = (typeof ESTADOS_TERCERO)[number];
-
-export const ETIQUETA_TIPO: Record<TipoTercero, string> = {
-	CLIENTE: "Cliente",
-	PROVEEDOR: "Proveedor",
-};
+export type EstadoCivil = (typeof ESTADOS_CIVILES)[number];
 
 export const ETIQUETA_ESTADO: Record<EstadoTercero, string> = {
 	ACTIVO: "Activo",
 	INACTIVO: "Inactivo",
 };
 
-const textoOpcional = (max: number) =>
-	z.string().trim().max(max, `Máximo ${max} caracteres.`).or(z.literal(""));
+export const ETIQUETA_ESTADO_CIVIL: Record<EstadoCivil, string> = {
+	SOLTERO: "Soltero(a)",
+	CASADO: "Casado(a)",
+	CONVIVIENTE: "Conviviente",
+	DIVORCIADO: "Divorciado(a)",
+	VIUDO: "Viudo(a)",
+};
 
-export const TerceroDatosSchema = z.object({
-	tipo: z.enum(TIPOS_TERCERO, { error: "Elige si es cliente o proveedor." }),
-	razonSocial: z
+const mayusculas = (min: number, max: number, mensaje: string) =>
+	z
 		.string()
 		.trim()
-		.min(3, "Ingresa la razón social o el nombre completo.")
-		.max(150, "Máximo 150 caracteres.")
-		.transform((valor) => valor.toUpperCase()),
+		.min(min, mensaje)
+		.max(max, `Máximo ${max} caracteres.`)
+		.transform((valor) => valor.toUpperCase());
+
+const opcional = (max: number) => z.string().trim().max(max, `Máximo ${max} caracteres.`);
+
+export const TerceroDatosSchema = z.object({
+	razonSocial: mayusculas(3, 150, "Ingresa la razón social."),
 	ruc: z
 		.string()
 		.trim()
 		.regex(/^\d{11}$/, "El RUC debe tener 11 dígitos.")
 		.refine(rucValido, "El RUC no es válido. Revisa los dígitos."),
-	direccion: textoOpcional(200),
-	contacto: textoOpcional(100),
-	telefono: z
-		.string()
-		.trim()
-		.regex(/^[\d\s+-]{6,20}$/, "Ingresa solo números, espacios o guiones.")
-		.or(z.literal("")),
+	direccion: mayusculas(5, 200, "Ingresa la dirección."),
 	correo: z
 		.string()
 		.trim()
 		.toLowerCase()
-		.pipe(z.email("Ingresa un correo válido, por ejemplo nombre@empresa.com."))
+		.pipe(z.email("Ingresa un correo válido, por ejemplo empresa@correo.com.")),
+	estado: z.enum(ESTADOS_TERCERO, { error: "Selecciona el estado." }),
+	// Representante legal o contacto.
+	representanteNombre: mayusculas(3, 150, "Ingresa el nombre completo del representante."),
+	representanteDni: z
+		.string()
+		.trim()
+		.regex(/^\d{8}$/, "El DNI debe tener 8 dígitos."),
+	representanteTelefono: z
+		.string()
+		.trim()
+		.regex(/^[\d\s+-]{6,20}$/, "Ingresa un teléfono válido."),
+	representanteDireccion: opcional(200),
+	representanteEstadoCivil: z.enum(ESTADOS_CIVILES).or(z.literal("")),
+	// Datos bancarios (opcionales).
+	banco: z.enum(BANCOS).or(z.literal("")),
+	numeroCuenta: z
+		.string()
+		.trim()
+		.regex(/^[\d-]{8,24}$/, "Ingresa solo números y guiones.")
+		.or(z.literal("")),
+	cci: z
+		.string()
+		.trim()
+		.regex(/^\d{20}$/, "El CCI debe tener 20 dígitos.")
 		.or(z.literal("")),
 });
 
 export const TerceroSchema = BaseSchema.extend({
 	...TerceroDatosSchema.shape,
 	codigo: z.string().regex(/^CLI-\d{3,}$/),
-	estado: z.enum(ESTADOS_TERCERO),
 });
 
 export type TerceroDatos = z.infer<typeof TerceroDatosSchema>;

@@ -14,15 +14,15 @@ beforeEach(async () => {
 async function abrirConfiguracion() {
 	renderRoute("/configuracion");
 
-	return screen.findByLabelText("Razón social");
+	return screen.findByLabelText(/Razón social/);
 }
 
 test("muestra los datos iniciales de la empresa", async () => {
 	expect(await abrirConfiguracion()).toHaveValue(
 		"MAQUINARIAS Y CONTRATISTAS GENERALES H & M E.I.R.L.",
 	);
-	expect(screen.getByLabelText("RUC")).toHaveValue("20602629903");
-	expect(screen.getByLabelText("IGV")).toHaveValue("18");
+	expect(screen.getByLabelText(/RUC/)).toHaveValue("20602629903");
+	expect(screen.getByLabelText(/IGV/)).toHaveValue("18");
 	expect(screen.getByRole("button", { name: "Guardar cambios" })).toBeDisabled();
 });
 
@@ -30,7 +30,7 @@ test("muestra un error si el RUC no es válido y no guarda", async () => {
 	const user = userEvent.setup();
 	await abrirConfiguracion();
 
-	const ruc = screen.getByLabelText("RUC");
+	const ruc = screen.getByLabelText(/RUC/);
 	await user.clear(ruc);
 	await user.type(ruc, "20123456789");
 	await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
@@ -44,7 +44,7 @@ test("guarda los cambios y los conserva", async () => {
 	const user = userEvent.setup();
 	await abrirConfiguracion();
 
-	const igv = screen.getByLabelText("IGV");
+	const igv = screen.getByLabelText(/IGV/);
 	await user.clear(igv);
 	await user.type(igv, "10,5");
 	await user.click(screen.getByRole("button", { name: "Guardar cambios" }));

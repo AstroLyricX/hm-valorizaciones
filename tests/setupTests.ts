@@ -16,3 +16,7 @@ Object.defineProperty(window, "matchMedia", {
 			dispatchEvent: () => false,
 		}) as MediaQueryList,
 });
+
+// jsdom tampoco implementa scrollTo (lo usa ScrollRestoration y el selector al abrirse).
+window.scrollTo = () => undefined;
+Element.prototype.scrollTo = () => undefined;

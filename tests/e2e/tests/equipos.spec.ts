@@ -1,30 +1,33 @@
+import { abrirNuevo, datosDelEquipo, registrarCliente, seleccionar } from "../support/datos";
 import { iniciarSesion } from "../support/sesion";
 
 describe("Equipos", () => {
 	beforeEach(() => {
 		cy.viewport(1280, 800);
 		iniciarSesion();
+		registrarCliente("Constructora Andina SAC", "20602629903");
 		cy.get("[data-sidebar=sidebar]").findByRole("link", { name: "Equipos" }).click();
 	});
 
-	it("registra un equipo y luego lo pone en mantenimiento", () => {
-		cy.findByRole("button", { name: "Agregar equipo" }).click();
-		cy.findByRole("dialog").within(() => {
-			cy.findByLabelText("Tipo de equipo").type("Excavadora");
-			cy.findByLabelText("Marca").type("CAT");
-			cy.findByLabelText("Modelo").type("340");
-			cy.findByLabelText("Placa").type("EXC-340");
-			cy.findByLabelText("Horómetro").type("1250.5");
-			cy.findByRole("button", { name: "Registrar" }).click();
+	it("registra un equipo y luego cambia su estado a falla mecánica", () => {
+		abrirNuevo("Agregar equipo");
+		datosDelEquipo({
+			activoFijo: "AF-001",
+			descripcion: "Excavadora",
+			fabricante: "CAT",
+			modelo: "340",
+			placa: "EXC-340",
+			dueno: "CONSTRUCTORA ANDINA SAC",
 		});
-		cy.findByText("Equipo EQ-001 registrado.").should("exist");
+		cy.findByRole("dialog").findByRole("button", { name: "Guardar" }).click();
+		cy.findByText("Equipo AF-001 registrado.").should("exist");
 		cy.findByRole("table").findByText("EXCAVADORA CAT 340").should("exist");
 
-		cy.findByRole("button", { name: "Editar EXCAVADORA CAT 340" }).click();
-		cy.findByRole("dialog", { name: "Editar EQ-001" }).within(() => {
-			cy.findByLabelText("Estado").select("En mantenimiento");
-			cy.findByRole("button", { name: "Guardar cambios" }).click();
-		});
-		cy.findByRole("table").findByText("En mantenimiento").should("exist");
+		cy.findByRole("button", { name: "Editar AF-001" }).click();
+		seleccionar(/^Estado/, /Falla mecánica/);
+		cy.findByRole("dialog", { name: "Editar equipo AF-001" })
+			.findByRole("button", { name: "Guardar" })
+			.click();
+		cy.get("tbody").findByText("Falla mecánica").should("exist");
 	});
 });
