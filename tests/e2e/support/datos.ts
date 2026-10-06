@@ -91,3 +91,23 @@ export function llenarEquipo(numero: number, equipo: RegExp, horas: string, cost
 	cy.findByLabelText(`Horas mínimas del ítem ${numero}`).type(horas);
 	cy.findByLabelText(`Costo por hora del ítem ${numero}`).type(costo);
 }
+
+// Cliente, excavadora y contrato de 150 h a USD 47.00 (USD 7,050.00), como el xlsm.
+export function registrarContratoDelXlsm(): void {
+	registrarCliente("Constructora Andina SAC", "20602629903");
+	registrarEquipo({
+		activoFijo: "AF-001",
+		descripcion: "Excavadora",
+		fabricante: "CAT",
+		modelo: "340",
+		placa: "EXC-340",
+		dueno: "CONSTRUCTORA ANDINA SAC",
+	});
+	cy.visit("/contratos");
+	cy.findByRole("table").findByRole("button", { name: "Nuevo" }).click();
+	datosGeneralesDelContrato();
+	cy.findByRole("button", { name: "Agregar equipo" }).click();
+	llenarEquipo(1, /EXCAVADORA CAT 340/, "150", "47");
+	cy.findByRole("dialog").findByRole("button", { name: "Guardar" }).click();
+	cy.findByText("Contrato CTR-001 registrado.").should("exist");
+}

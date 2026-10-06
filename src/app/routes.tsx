@@ -10,6 +10,7 @@ import { EquiposPage } from "@/features/equipos/EquiposPage";
 import { InicioPage } from "@/features/inicio/InicioPage";
 import { NuevaValorizacionPage } from "@/features/valorizaciones/NuevaValorizacionPage";
 import { ValorizacionesPage } from "@/features/valorizaciones/ValorizacionesPage";
+import { ValorizacionPage } from "@/features/valorizaciones/ValorizacionPage";
 
 import { AppLayout } from "./layout/AppLayout";
 
@@ -24,6 +25,7 @@ export const routes: RouteObject[] = [
 					{ path: "/", element: <InicioPage /> },
 					{ path: "/valorizaciones", element: <ValorizacionesPage /> },
 					{ path: "/valorizaciones/nueva", element: <NuevaValorizacionPage /> },
+					{ path: "/valorizaciones/:id", element: <ValorizacionPage /> },
 					{ path: "/contratos", element: <ContratosPage /> },
 					{ path: "/contratos/:id", element: <ContratoDetallePage /> },
 					{ path: "/equipos", element: <EquiposPage /> },

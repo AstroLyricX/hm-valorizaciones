@@ -11,11 +11,16 @@ export function deCentavos(centavos: number): string {
 	return new Big(centavos).div(100).toFixed(2);
 }
 
-export function formatearMoneda(centavos: number, moneda: Moneda): string {
-	const monto = new Intl.NumberFormat("es-PE", {
-		minimumFractionDigits: 2,
-		maximumFractionDigits: 2,
-	}).format(new Big(centavos).div(100).toNumber());
+const formatoMonto = new Intl.NumberFormat("es-PE", {
+	minimumFractionDigits: 2,
+	maximumFractionDigits: 2,
+});
 
-	return `${moneda === "PEN" ? "S/" : "USD"} ${monto}`;
+// Monto sin símbolo, para tablas cuya cabecera ya indica la moneda.
+export function formatearMonto(centavos: number): string {
+	return formatoMonto.format(new Big(centavos).div(100).toNumber());
+}
+
+export function formatearMoneda(centavos: number, moneda: Moneda): string {
+	return `${moneda === "PEN" ? "S/" : "USD"} ${formatearMonto(centavos)}`;
 }

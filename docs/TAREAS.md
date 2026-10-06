@@ -83,20 +83,21 @@ Rediseñada según `VALORIZACIONES.txt`: el contrato son equipos con horas míni
 - [x] Verificar
 - [x] STOP
 
-## Fase 6: Valorización (borrador y cálculos)
+## Fase 6: Valorización (borrador y cálculos) ✅
 
-- [ ] `calcularValorizacion` (función pura con big.js): parcial, anterior, actual, acumulado, subtotal 1, gastos generales, utilidad, subtotal 2, IGV, total, retenciones, neto pagable, saldo y avance %
-- [ ] Prueba con el caso real del xlsm: actual 2,501.81, IGV 450.33, total 2,952.14, acumulado 7,878.61, saldo −828.61, avance 111.75 %
-- [ ] Cantidad anterior = suma de las cantidades actuales de las valorizaciones EMITIDAS del contrato (P5)
-- [ ] `ValorizacionService.crearBorrador` y `actualizarCantidades`
-- [ ] Pantalla de la planilla de medición: tabla en escritorio y tarjetas por ítem en celular. Solo se edita la cantidad actual; lo demás se calcula.
-- [ ] La cabecera se llena sola con los datos del contrato y de la empresa (P11)
-- [ ] Alerta de exceso por ítem y en el resumen (P4)
-- [ ] Saldo contractual correcto (P1) y cálculo de retenciones (P10, según la decisión D5)
-- [ ] El borrador se guarda solo, también sin conexión
-- [ ] Pruebas: `calcularValorizacion` (todos los casos del plan) y Cypress (crear un borrador y ver la alerta de exceso)
-- [ ] Verificar
-- [ ] STOP
+- [x] `calcularValorizacion` (función pura con big.js): parcial, anterior, actual, acumulado, subtotal 1, gastos generales, utilidad, subtotal 2, IGV, total, fondo de garantía, neto a pagar, saldo y avance %
+- [x] Prueba con el caso real del xlsm: actual 2,501.81, IGV 450.33, total 2,952.14, acumulado 7,878.61, saldo −828.61, avance 111.75 %
+- [x] Cantidad anterior = suma de las horas de las valorizaciones EMITIDAS del contrato de periodos anteriores (P5)
+- [x] `ValorizacionService.crearBorrador` (no duplica contrato + periodo), `actualizarCantidad`, `actualizarCabecera` y `eliminarBorrador`
+- [x] Nueva valorización: contrato vigente y periodo (mes y año); también desde la ficha del contrato
+- [x] Planilla de medición: tabla como la hoja VALORIZACION en escritorio y tarjetas por equipo en celular. Solo se escriben las horas del periodo.
+- [x] Cabecera llena sola con los datos de la empresa, del proveedor y del contrato (P11)
+- [x] Alerta de exceso por equipo y en el resumen (P4)
+- [x] Saldo contractual correcto (P1) y fondo de garantía sobre el subtotal 2 (P10, supuesto D5). Fiel cumplimiento queda para cuando el contrato lo registre.
+- [x] El borrador se guarda solo al escribir, también sin conexión
+- [x] Pruebas: cálculo, servicio, pantallas y Cypress (crear un borrador y ver la alerta de exceso)
+- [x] Verificar
+- [x] STOP
 
 ## Fase 7: Emisión, monto en letras e historial
 

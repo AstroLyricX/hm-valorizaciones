@@ -1,5 +1,5 @@
 import { useLiveQuery } from "dexie-react-hooks";
-import { ArrowLeft, ClipboardList, FileSignature, Pencil } from "lucide-react";
+import { ArrowLeft, ChevronRight, ClipboardList, FileSignature, Pencil, Plus } from "lucide-react";
 import { useState } from "react";
 import { Link, useParams } from "react-router";
 
@@ -8,6 +8,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { terceroRepository } from "@/features/clientes/application/terceroService.instance";
 import { equipoRepository } from "@/features/equipos/application/equipoService.instance";
 import { type Equipo, nombreEquipo } from "@/features/equipos/domain/equipo";
+import { valorizacionRepository } from "@/features/valorizaciones/application/valorizacionService.instance";
+import { formatearPeriodo } from "@/features/valorizaciones/domain/valorizacion";
+import { EstadoValorizacionPill } from "@/features/valorizaciones/ui/EstadoValorizacionPill";
 import { formatearMoneda } from "@/lib/dinero";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/shared/components/EmptyState";
@@ -182,16 +185,18 @@ export function ContratoDetallePage() {
 		if (!detalle) {
 			return { detalle: null };
 		}
-		const [cliente, equipos, terceros] = await Promise.all([
+		const [cliente, equipos, terceros, valorizaciones] = await Promise.all([
 			terceroRepository.obtener(detalle.contrato.terceroId),
 			equipoRepository.listar(),
 			terceroRepository.listar(),
+			valorizacionRepository.delContrato(id),
 		]);
 
 		return {
 			detalle,
 			cliente,
 			listaEquipos: equipos,
+			valorizaciones: valorizaciones.sort((a, b) => b.periodo.localeCompare(a.periodo)),
 			equipos: new Map(equipos.map((equipo) => [equipo.id, equipo])),
 			// Clientes activos, más el del contrato aunque se haya desactivado.
 			clientes: terceros.filter(
@@ -286,14 +291,47 @@ export function ContratoDetallePage() {
 			<TablaEquipos contrato={contrato} filas={filas} equipos={datos.equipos} />
 
 			<section aria-labelledby="valorizaciones-contrato" className="flex flex-col gap-3">
-				<h2 id="valorizaciones-contrato" className="text-sm font-semibold text-navy-900">
-					Valorizaciones
-				</h2>
-				<EmptyState
-					icon={ClipboardList}
-					title="Sin valorizaciones"
-					description="Las valorizaciones de este contrato aparecerán aquí con su periodo, monto y avance."
-				/>
+				<div className="flex items-center justify-between gap-3">
+					<h2 id="valorizaciones-contrato" className="text-sm font-semibold text-navy-900">
+						Valorizaciones
+					</h2>
+					<Link
+						to={`/valorizaciones/nueva?contrato=${contrato.id}`}
+						className={cn(buttonVariants({ variant: "outline" }), "h-9 px-3.5")}
+					>
+						<Plus />
+						Nueva valorización
+					</Link>
+				</div>
+				{datos.valorizaciones.length === 0 ? (
+					<EmptyState
+						icon={ClipboardList}
+						title="Sin valorizaciones"
+						description="Las valorizaciones de este contrato aparecerán aquí con su periodo y estado."
+					/>
+				) : (
+					<ul className={cn(tarjeta, "divide-y divide-navy-100")}>
+						{datos.valorizaciones.map((valorizacion) => (
+							<li key={valorizacion.id}>
+								<Link
+									to={`/valorizaciones/${valorizacion.id}`}
+									className="flex items-center gap-3 px-5 py-3.5 hover:bg-navy-50/60"
+								>
+									<span className="flex flex-1 flex-col gap-0.5">
+										<span className="font-medium text-navy-900">
+											{formatearPeriodo(valorizacion.periodo)}
+										</span>
+										<span className="text-[13px] text-muted-foreground tabular-nums">
+											{valorizacion.numero ?? "Sin número"}
+										</span>
+									</span>
+									<EstadoValorizacionPill estado={valorizacion.estado} />
+									<ChevronRight className="size-4 text-navy-400" aria-hidden="true" />
+								</Link>
+							</li>
+						))}
+					</ul>
+				)}
 			</section>
 
 			<ContratoFormDialog

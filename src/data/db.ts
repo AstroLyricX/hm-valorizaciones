@@ -4,6 +4,7 @@ import type { Tercero } from "@/features/clientes/domain/tercero";
 import type { Empresa } from "@/features/configuracion/domain/empresa";
 import type { Contrato, ContratoEquipo } from "@/features/contratos/domain/contrato";
 import type { Equipo } from "@/features/equipos/domain/equipo";
+import type { Valorizacion, ValorizacionItem } from "@/features/valorizaciones/domain/valorizacion";
 
 export type OperacionOutbox = "upsert" | "delete";
 
@@ -24,6 +25,8 @@ export class HmDatabase extends Dexie {
 	equipos!: EntityTable<Equipo, "id">;
 	contratos!: EntityTable<Contrato, "id">;
 	contratoEquipos!: EntityTable<ContratoEquipo, "id">;
+	valorizaciones!: EntityTable<Valorizacion, "id">;
+	valorizacionItems!: EntityTable<ValorizacionItem, "id">;
 	outbox!: EntityTable<OutboxEntry, "id">;
 
 	constructor(name = "hm-valorizaciones") {
@@ -67,6 +70,11 @@ export class HmDatabase extends Dexie {
 					),
 				);
 			});
+		// Valorizaciones (fase 6): cabecera y horas del periodo por equipo del contrato.
+		this.version(7).stores({
+			valorizaciones: "id, contratoId, estado, periodo, numero",
+			valorizacionItems: "id, valorizacionId, contratoEquipoId",
+		});
 	}
 }
 
