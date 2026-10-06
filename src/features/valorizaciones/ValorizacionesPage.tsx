@@ -6,6 +6,7 @@ import { useNavigate } from "react-router";
 import { Skeleton } from "@/components/ui/skeleton";
 import { terceroRepository } from "@/features/clientes/application/terceroService.instance";
 import { contratoRepository } from "@/features/contratos/application/contratoService.instance";
+import { formatearMoneda } from "@/lib/dinero";
 import { AccionesFila } from "@/shared/components/AccionesFila";
 import { DataTable } from "@/shared/components/DataTable";
 import { EmptyState } from "@/shared/components/EmptyState";
@@ -33,6 +34,8 @@ interface FilaValorizacion {
 	proveedor: string;
 	estado: EstadoValorizacion;
 	moneda: "USD" | "PEN";
+	// Total de la factura congelado al emitir; null en los borradores.
+	total: number | null;
 }
 
 const columnHelper = crearColumnas<FilaValorizacion>();
@@ -61,6 +64,7 @@ export function ValorizacionesPage() {
 				proveedor: (contrato && nombres.get(contrato.terceroId)) ?? "—",
 				estado: valorizacion.estado,
 				moneda: valorizacion.moneda,
+				total: valorizacion.totales?.total ?? null,
 			};
 		});
 	});
@@ -99,6 +103,23 @@ export function ValorizacionesPage() {
 					header: "Proveedor",
 					filterFn: "contiene",
 					meta: { filtro: { tipo: "texto" }, alineacion: "izquierda", celda: "min-w-40" },
+				}),
+				columnHelper.accessor("total", {
+					header: "Total",
+					enableColumnFilter: false,
+					meta: {
+						alineacion: "derecha",
+						celda: "whitespace-nowrap tabular-nums font-medium text-navy-900",
+					},
+					cell: ({ getValue, row }) => {
+						const total = getValue();
+
+						return total === null ? (
+							<span className="text-navy-300">—</span>
+						) : (
+							formatearMoneda(total, row.original.moneda)
+						);
+					},
 				}),
 				columnHelper.accessor("estado", {
 					header: "Estado",

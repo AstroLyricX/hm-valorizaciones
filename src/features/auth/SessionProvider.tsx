@@ -4,14 +4,20 @@ import { type Session, SessionContext, type SessionUser } from "./SessionContext
 
 // Sesión de prueba hasta la fase 11 (MSAL). Mantiene la misma interfaz que tendrá el login real.
 const STORAGE_KEY = "hm.session";
-const DEMO_USER: SessionUser = { name: "Usuario de prueba", email: "demo@hm.local" };
+const DEMO_USER: SessionUser = { name: "Usuario de prueba", email: "demo@hm.local", rol: "ADMIN" };
 const DEMO_SIGN_IN_DELAY_MS = 600;
 
 function readStoredUser(): SessionUser | null {
 	try {
 		const raw = localStorage.getItem(STORAGE_KEY);
 
-		return raw ? (JSON.parse(raw) as SessionUser) : null;
+		if (!raw) {
+			return null;
+		}
+		const guardado = JSON.parse(raw) as Partial<SessionUser>;
+
+		// Las sesiones guardadas antes de los roles no lo traen.
+		return { ...guardado, rol: guardado.rol ?? "ADMIN" } as SessionUser;
 	} catch {
 		return null;
 	}

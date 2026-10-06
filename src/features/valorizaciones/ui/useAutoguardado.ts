@@ -7,7 +7,11 @@ export type EstadoGuardado = "guardado" | "pendiente" | "error";
 export function useAutoguardado(
 	guardar: (clave: string, valor: string) => Promise<void>,
 	espera = 500,
-): { programar: (clave: string, valor: string) => void; estado: EstadoGuardado } {
+): {
+	programar: (clave: string, valor: string) => void;
+	vaciar: () => Promise<void>;
+	estado: EstadoGuardado;
+} {
 	const [estado, setEstado] = useState<EstadoGuardado>("guardado");
 	const pendientes = useRef(new Map<string, string>());
 	const temporizador = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -42,5 +46,5 @@ export function useAutoguardado(
 
 	useEffect(() => () => void vaciar(), [vaciar]);
 
-	return { programar, estado };
+	return { programar, vaciar, estado };
 }

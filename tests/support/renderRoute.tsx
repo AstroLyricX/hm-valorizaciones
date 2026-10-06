@@ -4,11 +4,13 @@ import { Toaster } from "sonner";
 
 import { routes } from "../../src/app/routes";
 import { TooltipProvider } from "../../src/components/ui/tooltip";
+import type { Rol, SessionUser } from "../../src/features/auth/SessionContext";
 import { SessionProvider } from "../../src/features/auth/SessionProvider";
 
-export const DEMO_SESSION = { name: "Ana Quispe", email: "ana@hm.pe" };
+export const DEMO_SESSION: SessionUser = { name: "Ana Quispe", email: "ana@hm.pe", rol: "ADMIN" };
 
-export function signInAs(user = DEMO_SESSION): void {
+// Sin rol, como las sesiones guardadas antes de los roles.
+export function signInAs(user: Omit<SessionUser, "rol"> & { rol?: Rol } = DEMO_SESSION): void {
 	localStorage.setItem("hm.session", JSON.stringify(user));
 }
 

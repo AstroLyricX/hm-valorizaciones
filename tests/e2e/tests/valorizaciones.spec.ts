@@ -8,7 +8,7 @@ describe("Valorizaciones", () => {
 		registrarContratoDelXlsm();
 	});
 
-	it("crea un borrador, avisa el exceso de horas y conserva lo escrito", () => {
+	it("crea un borrador, avisa el exceso, conserva lo escrito y lo emite", () => {
 		cy.visit("/valorizaciones/nueva");
 		cy.findByLabelText(/Contrato/).click();
 		cy.findByRole("option", { name: /CTR-001/ }).click();
@@ -32,7 +32,14 @@ describe("Valorizaciones", () => {
 		cy.findAllByLabelText("Horas del periodo del ítem 1")
 			.filter(":visible")
 			.should("have.value", "160");
+		cy.findByRole("button", { name: "Emitir valorización" }).click();
+		cy.findByRole("alertdialog").should("contain.text", "un equipo supera las horas contratadas");
+		cy.findByRole("alertdialog").findByRole("button", { name: "Emitir" }).click();
+		cy.findByText(/Valorización 0001-\d{4} emitida\./).should("exist");
+		cy.findAllByLabelText("Horas del periodo del ítem 1").filter(":visible").should("be.disabled");
+
 		cy.get("[data-sidebar=sidebar]").findByRole("link", { name: "Valorizaciones" }).click();
 		cy.findByRole("table").findByText("Agosto 2026").should("exist");
+		cy.findByRole("table").findByText("USD 8,873.60").should("exist");
 	});
 });

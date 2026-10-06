@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 import type { FilaPlanilla } from "../application/ValorizacionService";
 import type { ColumnaResumen, ValorizacionCalculada } from "../domain/valorizacion";
-import { descripcionFila, horas } from "./formato";
+import { horas } from "./formato";
 
 const celda = "border border-navy-100 px-1.5 py-2";
 const numero = "text-right tabular-nums whitespace-nowrap";
@@ -38,7 +38,7 @@ function CampoHoras({
 	editable: boolean;
 	className?: string;
 }) {
-	const idError = `error-horas-${fila.contratoEquipo.id}`;
+	const idError = `error-horas-${fila.contratoEquipoId}`;
 
 	return (
 		<div className="flex flex-col gap-1">
@@ -52,7 +52,7 @@ function CampoHoras({
 				disabled={!editable}
 				onFocus={(event) => event.target.select()}
 				onChange={(event) =>
-					onCantidad(fila.contratoEquipo.id, event.target.value.replace(",", "."))
+					onCantidad(fila.contratoEquipoId, event.target.value.replace(",", "."))
 				}
 				className={cn(
 					"h-9 w-full min-w-20 rounded-md border border-brand-500/40 bg-brand-50/60 px-2 text-right text-sm font-semibold text-navy-900 tabular-nums outline-none focus-visible:border-ring focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-ring/40 disabled:border-navy-100 disabled:bg-transparent aria-invalid:border-destructive aria-invalid:bg-red-50",
@@ -144,7 +144,7 @@ export function PlanillaMedicion(props: PropsPlanilla) {
 							<th className={cn(celda, "text-right")}>Parcial</th>
 							<th className={cn(celda, "text-right")}>Anterior</th>
 							<th className={cn(celda, "w-24 bg-brand-50 text-center text-brand-700")}>
-								Actual <span className="text-red-500">*</span>
+								Actual {editable && <span className="text-red-500">*</span>}
 							</th>
 							<th className={cn(celda, "text-right")}>Acumulado</th>
 							<th className={cn(celda, "text-right")}>Anterior</th>
@@ -158,10 +158,10 @@ export function PlanillaMedicion(props: PropsPlanilla) {
 							const excede = item.exceso !== "0";
 
 							return (
-								<tr key={fila.contratoEquipo.id} className="align-top">
+								<tr key={fila.contratoEquipoId} className="align-top">
 									<td className={cn(celda, "text-center")}>{indice + 1}</td>
 									<td className={cn(celda, "font-medium text-navy-900")}>
-										{descripcionFila(fila)}
+										{fila.descripcion}
 										{excede && (
 											<span className="mt-1 flex items-center gap-1 text-xs font-medium text-amber-700">
 												<TriangleAlert className="size-3.5" aria-hidden="true" />
@@ -170,18 +170,16 @@ export function PlanillaMedicion(props: PropsPlanilla) {
 										)}
 									</td>
 									<td className={cn(celda, "text-center")}>H</td>
-									<td className={cn(celda, numero)}>{horas(fila.contratoEquipo.horasMinimas)}</td>
-									<td className={cn(celda, numero)}>
-										{formatearMonto(fila.contratoEquipo.costoHora)}
-									</td>
+									<td className={cn(celda, numero)}>{horas(fila.cantidadContractual)}</td>
+									<td className={cn(celda, numero)}>{formatearMonto(fila.precioUnitario)}</td>
 									<td className={cn(celda, numero)}>{formatearMonto(item.parcial)}</td>
 									<td className={cn(celda, numero)}>{horas(fila.cantidadAnterior)}</td>
 									<td className={cn(celda, "bg-brand-50/50 p-1.5")}>
 										<CampoHoras
 											fila={fila}
 											indice={indice}
-											valor={cantidades[fila.contratoEquipo.id] ?? ""}
-											error={errores[fila.contratoEquipo.id]}
+											valor={cantidades[fila.contratoEquipoId] ?? ""}
+											error={errores[fila.contratoEquipoId]}
 											onCantidad={onCantidad}
 											editable={editable}
 										/>
@@ -213,14 +211,14 @@ export function PlanillaMedicion(props: PropsPlanilla) {
 						const excede = item.exceso !== "0";
 
 						return (
-							<li key={fila.contratoEquipo.id} className="flex flex-col gap-3 px-4 py-4">
+							<li key={fila.contratoEquipoId} className="flex flex-col gap-3 px-4 py-4">
 								<div className="flex flex-col gap-0.5">
 									<span className="font-medium text-navy-900">
-										{indice + 1}. {descripcionFila(fila)}
+										{indice + 1}. {fila.descripcion}
 									</span>
 									<span className="text-[13px] text-muted-foreground tabular-nums">
-										{horas(fila.contratoEquipo.horasMinimas)} h ×{" "}
-										{formatearMoneda(fila.contratoEquipo.costoHora, moneda)}
+										{horas(fila.cantidadContractual)} h ×{" "}
+										{formatearMoneda(fila.precioUnitario, moneda)}
 									</span>
 								</div>
 								<div className="grid grid-cols-3 gap-2 text-[13px] tabular-nums">
@@ -230,13 +228,13 @@ export function PlanillaMedicion(props: PropsPlanilla) {
 									</div>
 									<div className="flex flex-col gap-1">
 										<span className="font-medium text-brand-700">
-											Actual <span className="text-red-500">*</span>
+											Actual {editable && <span className="text-red-500">*</span>}
 										</span>
 										<CampoHoras
 											fila={fila}
 											indice={indice}
-											valor={cantidades[fila.contratoEquipo.id] ?? ""}
-											error={errores[fila.contratoEquipo.id]}
+											valor={cantidades[fila.contratoEquipoId] ?? ""}
+											error={errores[fila.contratoEquipoId]}
 											onCantidad={onCantidad}
 											editable={editable}
 										/>

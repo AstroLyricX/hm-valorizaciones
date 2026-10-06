@@ -1,4 +1,4 @@
-import { LoaderCircle, Plus, Save, X } from "lucide-react";
+import { LoaderCircle, type LucideIcon, Plus, Save, X } from "lucide-react";
 import type { FormEventHandler, ReactNode } from "react";
 
 import {
@@ -23,6 +23,7 @@ export function FormDialog({
 	submitLabel = "Guardar",
 	isSubmitting = false,
 	size = "md",
+	icon: Icono = Plus,
 	children,
 }: {
 	open: boolean;
@@ -33,6 +34,7 @@ export function FormDialog({
 	submitLabel?: string;
 	isSubmitting?: boolean;
 	size?: keyof typeof ANCHO;
+	icon?: LucideIcon;
 	children: ReactNode;
 }) {
 	return (
@@ -45,7 +47,7 @@ export function FormDialog({
 				)}
 			>
 				<div className="flex items-center gap-2 bg-brand-600 px-5 py-4 text-white">
-					<Plus className="size-5 shrink-0" aria-hidden="true" />
+					<Icono className="size-5 shrink-0" aria-hidden="true" />
 					<DialogTitle className="flex-1 text-base font-semibold text-white">{title}</DialogTitle>
 					<DialogClose
 						aria-label="Cerrar"

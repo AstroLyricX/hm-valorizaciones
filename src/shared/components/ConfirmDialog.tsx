@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -16,6 +18,8 @@ export function ConfirmDialog({
 	description,
 	confirmLabel,
 	onConfirm,
+	tono = "peligro",
+	children,
 }: {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
@@ -23,6 +27,9 @@ export function ConfirmDialog({
 	description: string;
 	confirmLabel: string;
 	onConfirm: () => void;
+	// "primario" para confirmar una acción normal (emitir); "peligro" para quitar o desactivar.
+	tono?: "peligro" | "primario";
+	children?: ReactNode;
 }) {
 	return (
 		<AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -31,10 +38,12 @@ export function ConfirmDialog({
 					<AlertDialogTitle>{title}</AlertDialogTitle>
 					<AlertDialogDescription>{description}</AlertDialogDescription>
 				</AlertDialogHeader>
+				{children}
 				<AlertDialogFooter>
 					<AlertDialogCancel>Cancelar</AlertDialogCancel>
 					<AlertDialogAction
-						variant="destructive"
+						variant={tono === "peligro" ? "destructive" : "default"}
+						className={tono === "primario" ? "bg-brand-600 hover:bg-brand-700" : undefined}
 						onClick={() => {
 							onConfirm();
 							onOpenChange(false);

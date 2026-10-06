@@ -21,6 +21,13 @@ export class ValorizacionRepository {
 		return valorizaciones.filter((valorizacion) => valorizacion.deletedAt === null);
 	}
 
+	// Incluye anuladas: sus números no se vuelven a usar.
+	async todas(): Promise<Valorizacion[]> {
+		return (await this.database.valorizaciones.toArray()).filter(
+			(valorizacion) => valorizacion.deletedAt === null,
+		);
+	}
+
 	async delContrato(contratoId: string): Promise<Valorizacion[]> {
 		const valorizaciones = await this.database.valorizaciones
 			.where("contratoId")

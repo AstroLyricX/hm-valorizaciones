@@ -36,11 +36,11 @@ async function julioEmitido() {
 	const [fila] = (await valorizacionService.obtenerPlanilla(julio.id))?.filas ?? [];
 	await valorizacionService.actualizarCantidad(
 		julio.id,
-		fila.contratoEquipo.id,
+		fila.contratoEquipoId,
 		"114.4",
 		"ana@hm.pe",
 	);
-	await valorizacionRepository.guardar({ ...julio, estado: "EMITIDA", numero: "0001-2026" });
+	await valorizacionService.emitir(julio.id, "ana@hm.pe", "2026-08-03");
 }
 
 test("crea el borrador eligiendo contrato y periodo, y abre la planilla", async () => {
@@ -124,11 +124,119 @@ test("el listado muestra el borrador y lo descarta desde la planilla", async () 
 	expect(within(screen.getAllByRole("rowgroup")[1]).getByText("Borrador")).toBeInTheDocument();
 	await user.click(within(tabla).getByRole("button", { name: "Continuar Agosto 2026 de CTR-001" }));
 
-	await user.click(await screen.findByRole("button", { name: "Descartar borrador" }));
+	await user.click(await screen.findByRole("button", { name: "Descartar" }));
 	await user.click(
 		within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Descartar" }),
 	);
 
 	expect(await screen.findByText("Borrador descartado.")).toBeInTheDocument();
 	expect(await screen.findByText("No hay valorizaciones")).toBeInTheDocument();
+});
+
+async function agostoEmitido() {
+	await julioEmitido();
+	const agosto = await valorizacionService.crearBorrador(
+		{ contratoId, periodo: "2026-08" },
+		"ana@hm.pe",
+	);
+	const [fila] = (await valorizacionService.obtenerPlanilla(agosto.id))?.filas ?? [];
+	await valorizacionService.actualizarCantidad(
+		agosto.id,
+		fila.contratoEquipoId,
+		"53.23",
+		"ana@hm.pe",
+	);
+
+	return valorizacionService.emitir(agosto.id, "ana@hm.pe", "2026-09-17");
+}
+
+test("emite con confirmación, avisa el exceso y deja la planilla en solo lectura", async () => {
+	const user = userEvent.setup();
+	await julioEmitido();
+	const agosto = await valorizacionService.crearBorrador(
+		{ contratoId, periodo: "2026-08" },
+		"ana@hm.pe",
+	);
+	renderRoute(`/valorizaciones/${agosto.id}`);
+
+	const [horas] = await screen.findAllByLabelText("Horas del periodo del ítem 1");
+	await user.clear(horas);
+	await user.type(horas, "53.23");
+	await user.click(screen.getByRole("button", { name: "Emitir valorización" }));
+	const confirmacion = await screen.findByRole("alertdialog");
+	expect(confirmacion).toHaveTextContent("un equipo supera las horas contratadas");
+	expect(confirmacion).toHaveTextContent("USD 2,952.14");
+	await user.click(within(confirmacion).getByRole("button", { name: "Emitir" }));
+
+	expect(await screen.findByText("Valorización 0002-2026 emitida.")).toBeInTheDocument();
+	expect(await screen.findByText(/Emitida el/)).toBeInTheDocument();
+	expect(screen.getAllByLabelText("Horas del periodo del ítem 1")[0]).toBeDisabled();
+	expect(
+		screen.getByText("DOS MIL NOVECIENTOS CINCUENTA Y DOS CON 14/100 DÓLARES AMERICANOS."),
+	).toBeInTheDocument();
+	expect(screen.queryByRole("button", { name: "Emitir valorización" })).not.toBeInTheDocument();
+});
+
+test("no emite si no hay horas", async () => {
+	const user = userEvent.setup();
+	const borrador = await valorizacionService.crearBorrador(
+		{ contratoId, periodo: "2026-08" },
+		"ana@hm.pe",
+	);
+	renderRoute(`/valorizaciones/${borrador.id}`);
+
+	await user.click(await screen.findByRole("button", { name: "Emitir valorización" }));
+
+	expect(
+		await screen.findByText("Ingresa las horas de al menos un equipo antes de emitir."),
+	).toBeInTheDocument();
+	expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+});
+
+test("un administrador anula con motivo y la valorización muestra el motivo", async () => {
+	const user = userEvent.setup();
+	const emitida = await agostoEmitido();
+	renderRoute(`/valorizaciones/${emitida.id}`);
+
+	await user.click(await screen.findByRole("button", { name: "Anular" }));
+	const dialogo = await screen.findByRole("dialog", { name: "Anular valorización 0002-2026" });
+	await user.click(within(dialogo).getByRole("button", { name: "Anular" }));
+	expect(
+		await within(dialogo).findByText("Escribe el motivo de la anulación."),
+	).toBeInTheDocument();
+	await user.type(within(dialogo).getByLabelText(/Motivo/), "Horas mal cargadas");
+	await user.click(within(dialogo).getByRole("button", { name: "Anular" }));
+
+	expect(await screen.findByText("Valorización 0002-2026 anulada.")).toBeInTheDocument();
+	expect(await screen.findByText("Motivo: Horas mal cargadas")).toBeInTheDocument();
+	expect((await db.valorizaciones.get(emitida.id))?.estado).toBe("ANULADA");
+});
+
+test("un operador no ve el botón para anular", async () => {
+	const emitida = await agostoEmitido();
+	signInAs({ name: "Luis Mamani", email: "luis@hm.pe", rol: "OPERADOR" });
+	renderRoute(`/valorizaciones/${emitida.id}`);
+
+	expect(await screen.findByText(/Emitida el/)).toBeInTheDocument();
+	expect(screen.queryByRole("button", { name: "Anular" })).not.toBeInTheDocument();
+});
+
+test("el historial muestra el número y el total, y la ficha del contrato el avance", async () => {
+	await agostoEmitido();
+	renderRoute("/valorizaciones");
+
+	const filas = within((await screen.findAllByRole("rowgroup"))[1]);
+	expect(filas.getByText("0002-2026")).toBeInTheDocument();
+	expect(filas.getByText("USD 2,952.14")).toBeInTheDocument();
+	expect(filas.getAllByText("Emitida")).toHaveLength(2);
+});
+
+test("la ficha del contrato suma lo valorizado de las emitidas", async () => {
+	await agostoEmitido();
+	renderRoute(`/contratos/${contratoId}`);
+
+	const resumen = await screen.findByRole("region", { name: "Resumen del contrato" });
+	expect(resumen).toHaveTextContent("USD 7,878.61");
+	expect(resumen).toHaveTextContent("USD -828.61");
+	expect(resumen).toHaveTextContent("111.75 %");
 });

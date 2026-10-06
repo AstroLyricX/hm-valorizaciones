@@ -31,6 +31,11 @@ export class ContratoRepository {
 		return equipos.filter((equipo) => equipo.deletedAt === null).sort((a, b) => a.orden - b.orden);
 	}
 
+	// Incluye los quitados del contrato: una valorización emitida puede referirse a ellos.
+	async todosLosEquiposDe(contratoId: string): Promise<ContratoEquipo[]> {
+		return this.database.contratoEquipos.where("contratoId").equals(contratoId).toArray();
+	}
+
 	async todosLosEquipos(): Promise<ContratoEquipo[]> {
 		return (await this.database.contratoEquipos.toArray()).filter(
 			(equipo) => equipo.deletedAt === null,

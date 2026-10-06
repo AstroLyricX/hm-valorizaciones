@@ -99,17 +99,18 @@ Rediseñada según `VALORIZACIONES.txt`: el contrato son equipos con horas míni
 - [x] Verificar
 - [x] STOP
 
-## Fase 7: Emisión, monto en letras e historial
+## Fase 7: Emisión, monto en letras e historial ✅
 
-- [ ] `montoEnLetras(centavos, moneda)`, con pruebas (P6)
-- [ ] `siguienteNumero`: correlativo `NNNN-YYYY` por año (P7)
-- [ ] `ValorizacionService.emitir`: confirmación (con advertencia adicional si hay exceso), número asignado y totales e IGV congelados
-- [ ] `ValorizacionService.anular` con motivo, solo para ADMIN (decisión D2)
-- [ ] Historial `/valorizaciones` con filtros por contrato, periodo y estado (P8)
-- [ ] Detalle en modo lectura de una valorización emitida
-- [ ] Pruebas: el número correlativo, que una valorización emitida no se pueda editar, y que la siguiente valorización tome el acumulado anterior
-- [ ] Verificar
-- [ ] STOP
+- [x] `montoEnLetras(centavos, moneda)`, con pruebas (P6): "DOS MIL NOVECIENTOS CINCUENTA Y DOS CON 14/100 DÓLARES AMERICANOS."
+- [x] `siguienteNumero`: correlativo `NNNN-YYYY` por año de emisión; las anuladas conservan su número (P7)
+- [x] `ValorizacionService.emitir`: confirmación (con advertencia si hay exceso), número asignado, y totales, IGV, monto en letras y datos del contrato congelados
+- [x] `ValorizacionService.anular` con motivo, solo para ADMIN (supuesto D2; la sesión de prueba es ADMIN hasta la fase 11)
+- [x] Historial `/valorizaciones` con número, periodo, contrato, proyecto, proveedor, total y estado, con filtros (P8)
+- [x] Detalle en modo lectura de una valorización emitida o anulada
+- [x] La ficha del contrato suma lo valorizado de las emitidas: saldo y avance
+- [x] Pruebas: el número correlativo, que una valorización emitida no se pueda editar, y que la siguiente valorización tome el acumulado anterior
+- [x] Verificar
+- [x] STOP
 
 ## Fase 8: PDF de la valorización
 

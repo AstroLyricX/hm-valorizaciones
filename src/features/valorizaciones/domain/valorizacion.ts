@@ -50,6 +50,21 @@ export const NuevaValorizacionSchema = z.object({
 	periodo: z.string().regex(PERIODO, "Selecciona el periodo."),
 });
 
+const centavos = z.int();
+
+export const TotalesSchema = z.object({
+	subtotal1: centavos,
+	gastosGenerales: centavos,
+	utilidad: centavos,
+	subtotal2: centavos,
+	igv: centavos,
+	total: centavos,
+	fondoGarantia: centavos,
+	netoPagable: centavos,
+});
+
+export type Totales = z.infer<typeof TotalesSchema>;
+
 export const ValorizacionSchema = BaseSchema.extend({
 	...ValorizacionCabeceraSchema.shape,
 	...NuevaValorizacionSchema.shape,
@@ -61,14 +76,31 @@ export const ValorizacionSchema = BaseSchema.extend({
 	// Se copian al crear el borrador: el IGV de Configuración y el fondo de garantía del contrato.
 	igvPct: z.number().min(0).max(100),
 	fondoGarantiaPct: z.number().min(0).max(100),
+	// Se congelan al emitir: los montos del periodo y el total en letras.
+	totales: TotalesSchema.nullable(),
+	montoEnLetras: z.string().nullable(),
+	// Solo en las anuladas.
+	motivoAnulacion: z.string().nullable(),
+	anuladaEn: z.iso.datetime().nullable(),
 });
 
-// Horas del periodo por equipo del contrato.
+// Horas del periodo por equipo del contrato. Al emitir se copian los datos del contrato y
+// las horas anteriores, para que la valorización emitida no cambie si se edita el contrato.
 export const ValorizacionItemSchema = BaseSchema.extend({
 	valorizacionId: z.string().min(1),
 	contratoEquipoId: z.string().min(1),
 	cantidadActual: CantidadSchema,
+	descripcion: z.string().nullable(),
+	cantidadContractual: z.string().nullable(),
+	precioUnitario: z.int().nullable(),
+	cantidadAnterior: z.string().nullable(),
 });
+
+export const MotivoAnulacionSchema = z
+	.string()
+	.trim()
+	.min(5, "Escribe el motivo de la anulación.")
+	.max(300, "Máximo 300 caracteres.");
 
 export type ValorizacionCabecera = z.infer<typeof ValorizacionCabeceraSchema>;
 export type NuevaValorizacion = z.infer<typeof NuevaValorizacionSchema>;
@@ -245,6 +277,21 @@ export function formatearPeriodo(periodo: string): string {
 	const nombre = nombreMes(mes);
 
 	return `${nombre.charAt(0).toUpperCase()}${nombre.slice(1)} ${anio}`;
+}
+
+// Correlativo de 4 dígitos por año: "0001-2026", "0002-2026"… Las anuladas conservan su número.
+export function siguienteNumero(anio: number, numeros: readonly (string | null)[]): string {
+	const sufijo = `-${anio}`;
+	const mayor = numeros.reduce((maximo, numero) => {
+		if (!numero?.endsWith(sufijo)) {
+			return maximo;
+		}
+		const correlativo = Number(numero.slice(0, -sufijo.length));
+
+		return Number.isInteger(correlativo) ? Math.max(maximo, correlativo) : maximo;
+	}, 0);
+
+	return `${String(mayor + 1).padStart(4, "0")}${sufijo}`;
 }
 
 export class ValorizacionNoEditableError extends Error {

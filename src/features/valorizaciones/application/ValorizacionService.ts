@@ -1,33 +1,44 @@
 import { uuidv7 } from "uuidv7";
 
+import type { Rol } from "@/features/auth/SessionContext";
 import type { Tercero } from "@/features/clientes/domain/tercero";
 import type { TerceroRepository } from "@/features/clientes/infrastructure/TerceroRepository";
 import type { EmpresaService } from "@/features/configuracion/application/EmpresaService";
 import type { Empresa } from "@/features/configuracion/domain/empresa";
-import type { Contrato, ContratoEquipo } from "@/features/contratos/domain/contrato";
+import { type Contrato, hoyIso } from "@/features/contratos/domain/contrato";
 import type { ContratoRepository } from "@/features/contratos/infrastructure/ContratoRepository";
-import type { Equipo } from "@/features/equipos/domain/equipo";
+import { type Equipo, nombreEquipo } from "@/features/equipos/domain/equipo";
 import type { EquipoRepository } from "@/features/equipos/infrastructure/EquipoRepository";
 import { ahoraIso } from "@/lib/fechas";
 
+import { montoEnLetras } from "../domain/montoEnLetras";
 import {
 	CABECERA_INICIAL,
+	calcularValorizacion,
 	CantidadSchema,
+	MotivoAnulacionSchema,
 	type NuevaValorizacion,
 	NuevaValorizacionSchema,
+	siguienteNumero,
 	sumarCantidades,
+	type Totales,
 	type Valorizacion,
 	type ValorizacionCabecera,
 	ValorizacionCabeceraSchema,
+	type ValorizacionCalculada,
 	type ValorizacionItem,
 	ValorizacionNoEditableError,
 } from "../domain/valorizacion";
 import type { ValorizacionRepository } from "../infrastructure/ValorizacionRepository";
 
-// Una fila de la planilla: el equipo del contrato con sus horas anteriores y del periodo.
+// Una fila de la planilla. En un borrador sale del contrato vigente; en una emitida, de la
+// copia guardada al emitir.
 export interface FilaPlanilla {
-	contratoEquipo: ContratoEquipo;
+	contratoEquipoId: string;
 	equipo: Equipo | undefined;
+	descripcion: string;
+	cantidadContractual: string;
+	precioUnitario: number;
 	cantidadAnterior: string;
 	cantidadActual: string;
 }
@@ -46,6 +57,59 @@ export class ContratoNoEncontradoError extends Error {
 		this.name = "ContratoNoEncontradoError";
 	}
 }
+
+export class SinPermisoError extends Error {
+	constructor() {
+		super("Solo un administrador puede anular una valorización.");
+		this.name = "SinPermisoError";
+	}
+}
+
+export class SinHorasError extends Error {
+	constructor() {
+		super("Ingresa las horas de al menos un equipo antes de emitir.");
+		this.name = "SinHorasError";
+	}
+}
+
+// Descripción del servicio como en la planilla del xlsm: "EXCAVADORA CAT 340 - ALQUILER".
+export function descripcionServicio(equipo: Equipo | undefined): string {
+	return equipo ? `${nombreEquipo(equipo)} - ALQUILER` : "EQUIPO NO ENCONTRADO";
+}
+
+export function calcularPlanilla(planilla: Planilla): ValorizacionCalculada {
+	const { valorizacion, filas } = planilla;
+
+	return calcularValorizacion(filas, {
+		gastosGeneralesPct: valorizacion.gastosGeneralesPct,
+		utilidadPct: valorizacion.utilidadPct,
+		igvPct: valorizacion.igvPct,
+		fondoGarantiaPct: valorizacion.fondoGarantiaPct,
+	});
+}
+
+function totalesDe(calculo: ValorizacionCalculada): Totales {
+	return {
+		...calculo.actual,
+		fondoGarantia: calculo.fondoGarantia,
+		netoPagable: calculo.netoPagable,
+	};
+}
+
+const SIN_EMITIR = {
+	numero: null,
+	fechaEmision: null,
+	totales: null,
+	montoEnLetras: null,
+	motivoAnulacion: null,
+	anuladaEn: null,
+} as const;
+const SIN_COPIA = {
+	descripcion: null,
+	cantidadContractual: null,
+	precioUnitario: null,
+	cantidadAnterior: null,
+} as const;
 
 export class ValorizacionService {
 	constructor(
@@ -93,8 +157,7 @@ export class ValorizacionService {
 			contratoId,
 			periodo,
 			...CABECERA_INICIAL,
-			numero: null,
-			fechaEmision: null,
+			...SIN_EMITIR,
 			estado: "BORRADOR",
 			moneda: contrato.moneda,
 			igvPct: empresa.igvPorcentaje,
@@ -106,6 +169,7 @@ export class ValorizacionService {
 			valorizacionId: valorizacion.id,
 			contratoEquipoId: contratoEquipo.id,
 			cantidadActual: "0",
+			...SIN_COPIA,
 			...base,
 		}));
 		await this.repository.guardar(valorizacion, items);
@@ -124,30 +188,19 @@ export class ValorizacionService {
 			return undefined;
 		}
 
-		const [proveedor, empresa, equiposDelContrato, equipos, items, anteriores] = await Promise.all([
+		const [proveedor, empresa, equipos, items] = await Promise.all([
 			this.terceros.obtener(contrato.terceroId),
 			this.empresa.obtener(),
-			this.contratos.equipos(contrato.id),
 			this.equipos.listar(),
 			this.repository.items(id),
-			this.horasAnteriores(valorizacion),
 		]);
 		const porEquipo = new Map(equipos.map((equipo) => [equipo.id, equipo]));
-		const actuales = new Map(items.map((item) => [item.contratoEquipoId, item.cantidadActual]));
+		const filas =
+			valorizacion.estado === "BORRADOR"
+				? await this.filasDelBorrador(valorizacion, contrato, items, porEquipo)
+				: await this.filasCongeladas(contrato, items, porEquipo);
 
-		return {
-			valorizacion,
-			contrato,
-			proveedor,
-			empresa,
-			// Un equipo agregado al contrato después de crear el borrador aparece con 0 horas.
-			filas: equiposDelContrato.map((contratoEquipo) => ({
-				contratoEquipo,
-				equipo: porEquipo.get(contratoEquipo.equipoId),
-				cantidadAnterior: anteriores.get(contratoEquipo.id) ?? "0",
-				cantidadActual: actuales.get(contratoEquipo.id) ?? "0",
-			})),
-		};
+		return { valorizacion, contrato, proveedor, empresa, filas };
 	}
 
 	// Guarda las horas del periodo de un equipo (se llama mientras el usuario escribe).
@@ -178,6 +231,7 @@ export class ValorizacionService {
 						valorizacionId: id,
 						contratoEquipoId,
 						cantidadActual,
+						...SIN_COPIA,
 						createdAt: ahora,
 						updatedAt: ahora,
 						updatedBy: usuario,
@@ -206,7 +260,90 @@ export class ValorizacionService {
 		return actualizada;
 	}
 
-	// Un borrador se puede descartar; las emitidas solo se anulan (fase 7).
+	// Asigna el número correlativo del año (P7) y congela los datos del contrato, las horas
+	// anteriores, el IGV y los totales. Desde aquí la valorización ya no se modifica.
+	async emitir(id: string, usuario: string, fechaEmision = hoyIso()): Promise<Valorizacion> {
+		const planilla = await this.obtenerPlanilla(id);
+		if (!planilla || planilla.valorizacion.estado !== "BORRADOR") {
+			throw new ValorizacionNoEditableError();
+		}
+		const { valorizacion, filas } = planilla;
+		const calculo = calcularPlanilla(planilla);
+		if (calculo.actual.subtotal1 === 0) {
+			throw new SinHorasError();
+		}
+
+		const numeros = (await this.repository.todas()).map((otra) => otra.numero);
+		const ahora = ahoraIso();
+		const auditoria = { updatedAt: ahora, updatedBy: usuario };
+		const existentes = new Map(
+			(await this.repository.items(id)).map((item) => [item.contratoEquipoId, item]),
+		);
+		const items: ValorizacionItem[] = filas.map((fila) => {
+			const existente = existentes.get(fila.contratoEquipoId);
+			const copia = {
+				descripcion: fila.descripcion,
+				cantidadContractual: fila.cantidadContractual,
+				precioUnitario: fila.precioUnitario,
+				cantidadAnterior: fila.cantidadAnterior,
+			};
+
+			return existente
+				? { ...existente, ...copia, ...auditoria, version: existente.version + 1 }
+				: {
+						id: uuidv7(),
+						valorizacionId: id,
+						contratoEquipoId: fila.contratoEquipoId,
+						cantidadActual: fila.cantidadActual,
+						...copia,
+						...auditoria,
+						createdAt: ahora,
+						deletedAt: null,
+						version: 1,
+					};
+		});
+		const emitida: Valorizacion = {
+			...valorizacion,
+			estado: "EMITIDA",
+			numero: siguienteNumero(Number(fechaEmision.slice(0, 4)), numeros),
+			fechaEmision,
+			totales: totalesDe(calculo),
+			montoEnLetras: montoEnLetras(calculo.actual.total, valorizacion.moneda),
+			...auditoria,
+			version: valorizacion.version + 1,
+		};
+		await this.repository.guardar(emitida, items);
+
+		return emitida;
+	}
+
+	// Solo un administrador anula (D2). La anulada conserva su número y deja de sumar horas.
+	async anular(id: string, motivo: string, usuario: string, rol: Rol): Promise<Valorizacion> {
+		if (rol !== "ADMIN") {
+			throw new SinPermisoError();
+		}
+		const motivoAnulacion = MotivoAnulacionSchema.parse(motivo);
+		const actual = await this.repository.obtener(id);
+		if (!actual || actual.deletedAt !== null || actual.estado !== "EMITIDA") {
+			throw new Error("Solo se puede anular una valorización emitida.");
+		}
+
+		const ahora = ahoraIso();
+		const anulada: Valorizacion = {
+			...actual,
+			estado: "ANULADA",
+			motivoAnulacion,
+			anuladaEn: ahora,
+			updatedAt: ahora,
+			updatedBy: usuario,
+			version: actual.version + 1,
+		};
+		await this.repository.guardar(anulada);
+
+		return anulada;
+	}
+
+	// Un borrador se puede descartar; las emitidas solo se anulan.
 	async eliminarBorrador(id: string, usuario: string): Promise<void> {
 		const actual = await this.borrador(id);
 		const ahora = ahoraIso();
@@ -232,8 +369,65 @@ export class ValorizacionService {
 		return actual;
 	}
 
+	// Equipos vigentes del contrato. Uno agregado después de crear el borrador aparece con 0 horas.
+	private async filasDelBorrador(
+		valorizacion: Valorizacion,
+		contrato: Contrato,
+		items: readonly ValorizacionItem[],
+		porEquipo: ReadonlyMap<string, Equipo>,
+	): Promise<FilaPlanilla[]> {
+		const [equiposDelContrato, anteriores] = await Promise.all([
+			this.contratos.equipos(contrato.id),
+			this.horasAnteriores(valorizacion),
+		]);
+		const actuales = new Map(items.map((item) => [item.contratoEquipoId, item.cantidadActual]));
+
+		return equiposDelContrato.map((contratoEquipo) => {
+			const equipo = porEquipo.get(contratoEquipo.equipoId);
+
+			return {
+				contratoEquipoId: contratoEquipo.id,
+				equipo,
+				descripcion: descripcionServicio(equipo),
+				cantidadContractual: contratoEquipo.horasMinimas,
+				precioUnitario: contratoEquipo.costoHora,
+				cantidadAnterior: anteriores.get(contratoEquipo.id) ?? "0",
+				cantidadActual: actuales.get(contratoEquipo.id) ?? "0",
+			};
+		});
+	}
+
+	// La copia guardada al emitir, en el orden del contrato.
+	private async filasCongeladas(
+		contrato: Contrato,
+		items: readonly ValorizacionItem[],
+		porEquipo: ReadonlyMap<string, Equipo>,
+	): Promise<FilaPlanilla[]> {
+		const equiposDelContrato = await this.contratos.todosLosEquiposDe(contrato.id);
+		const porId = new Map(
+			equiposDelContrato.map((contratoEquipo) => [contratoEquipo.id, contratoEquipo]),
+		);
+		const orden = (item: ValorizacionItem) => porId.get(item.contratoEquipoId)?.orden ?? 0;
+
+		return [...items]
+			.sort((a, b) => orden(a) - orden(b))
+			.map((item) => {
+				const equipoId = porId.get(item.contratoEquipoId)?.equipoId;
+
+				return {
+					contratoEquipoId: item.contratoEquipoId,
+					equipo: equipoId === undefined ? undefined : porEquipo.get(equipoId),
+					descripcion: item.descripcion ?? "",
+					cantidadContractual: item.cantidadContractual ?? "0",
+					precioUnitario: item.precioUnitario ?? 0,
+					cantidadAnterior: item.cantidadAnterior ?? "0",
+					cantidadActual: item.cantidadActual,
+				};
+			});
+	}
+
 	// Cantidad anterior (P5): suma de las horas de las valorizaciones EMITIDAS del contrato
-	// de periodos anteriores, por equipo del contrato.
+	// de periodos anteriores, por equipo del contrato. Las anuladas no cuentan.
 	private async horasAnteriores(valorizacion: Valorizacion): Promise<Map<string, string>> {
 		const emitidas = (await this.repository.delContrato(valorizacion.contratoId)).filter(
 			(otra) => otra.estado === "EMITIDA" && otra.periodo < valorizacion.periodo,

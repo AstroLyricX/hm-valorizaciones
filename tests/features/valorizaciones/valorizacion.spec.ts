@@ -1,6 +1,7 @@
 import {
 	calcularValorizacion,
 	formatearPeriodo,
+	siguienteNumero,
 	sumarCantidades,
 } from "../../../src/features/valorizaciones/domain/valorizacion";
 
@@ -100,5 +101,16 @@ describe("sumarCantidades y formatearPeriodo", () => {
 
 	it("muestra el periodo con el nombre del mes", () => {
 		expect(formatearPeriodo("2026-08")).toBe("Agosto 2026");
+	});
+});
+
+describe("siguienteNumero", () => {
+	it("empieza en 0001 y sigue el correlativo del mismo año", () => {
+		expect(siguienteNumero(2026, [])).toBe("0001-2026");
+		expect(siguienteNumero(2026, ["0001-2026", null, "0003-2026", "0009-2025"])).toBe("0004-2026");
+	});
+
+	it("reinicia el correlativo cada año", () => {
+		expect(siguienteNumero(2027, ["0012-2026"])).toBe("0001-2027");
 	});
 });

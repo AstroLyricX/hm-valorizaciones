@@ -75,6 +75,28 @@ export class HmDatabase extends Dexie {
 			valorizaciones: "id, contratoId, estado, periodo, numero",
 			valorizacionItems: "id, valorizacionId, contratoEquipoId",
 		});
+		// Emisión (fase 7): totales congelados, monto en letras, anulación y copia de los datos
+		// del contrato en cada ítem. Los borradores existentes quedan con esos campos vacíos.
+		this.version(8).upgrade(async (tx) => {
+			await tx
+				.table("valorizaciones")
+				.toCollection()
+				.modify((valorizacion: Record<string, unknown>) => {
+					valorizacion.totales ??= null;
+					valorizacion.montoEnLetras ??= null;
+					valorizacion.motivoAnulacion ??= null;
+					valorizacion.anuladaEn ??= null;
+				});
+			await tx
+				.table("valorizacionItems")
+				.toCollection()
+				.modify((item: Record<string, unknown>) => {
+					item.descripcion ??= null;
+					item.cantidadContractual ??= null;
+					item.precioUnitario ??= null;
+					item.cantidadAnterior ??= null;
+				});
+		});
 	}
 }
 

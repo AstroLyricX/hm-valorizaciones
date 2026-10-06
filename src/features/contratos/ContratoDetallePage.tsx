@@ -46,19 +46,23 @@ function Dato({ label, children }: { label: string; children: string | undefined
 	);
 }
 
-function Indicadores({ contrato }: { contrato: Contrato }) {
-	// El valorizado y el avance se calculan desde las valorizaciones emitidas (fase 6).
+function Indicadores({ contrato, valorizado }: { contrato: Contrato; valorizado: number }) {
+	// Valorizado = suma de los subtotales (sin IGV) de las valorizaciones emitidas.
+	const avance =
+		contrato.montoContractual === 0
+			? 0
+			: Math.round((valorizado / contrato.montoContractual) * 10000) / 100;
 	const indicadores = [
 		{
 			label: "Monto contractual",
 			value: formatearMoneda(contrato.montoContractual, contrato.moneda),
 		},
-		{ label: "Valorizado acumulado", value: formatearMoneda(0, contrato.moneda) },
+		{ label: "Valorizado acumulado", value: formatearMoneda(valorizado, contrato.moneda) },
 		{
 			label: "Saldo contractual",
-			value: formatearMoneda(contrato.montoContractual, contrato.moneda),
+			value: formatearMoneda(contrato.montoContractual - valorizado, contrato.moneda),
 		},
-		{ label: "Avance", value: "0 %" },
+		{ label: "Avance", value: `${avance.toLocaleString("es-PE")} %` },
 	];
 
 	return (
@@ -258,7 +262,12 @@ export function ContratoDetallePage() {
 				</div>
 			</div>
 
-			<Indicadores contrato={contrato} />
+			<Indicadores
+				contrato={contrato}
+				valorizado={datos.valorizaciones
+					.filter((valorizacion) => valorizacion.estado === "EMITIDA")
+					.reduce((suma, valorizacion) => suma + (valorizacion.totales?.subtotal1 ?? 0), 0)}
+			/>
 
 			<section aria-labelledby="datos-contrato" className={tarjeta}>
 				<h2

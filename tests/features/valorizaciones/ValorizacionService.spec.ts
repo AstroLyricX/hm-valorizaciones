@@ -7,7 +7,11 @@ import { ContratoService } from "../../../src/features/contratos/application/Con
 import { ContratoRepository } from "../../../src/features/contratos/infrastructure/ContratoRepository";
 import { EquipoService } from "../../../src/features/equipos/application/EquipoService";
 import { EquipoRepository } from "../../../src/features/equipos/infrastructure/EquipoRepository";
-import { ValorizacionService } from "../../../src/features/valorizaciones/application/ValorizacionService";
+import {
+	SinHorasError,
+	SinPermisoError,
+	ValorizacionService,
+} from "../../../src/features/valorizaciones/application/ValorizacionService";
 import { ValorizacionNoEditableError } from "../../../src/features/valorizaciones/domain/valorizacion";
 import { ValorizacionRepository } from "../../../src/features/valorizaciones/infrastructure/ValorizacionRepository";
 import { CLIENTE, excavadora } from "../../support/fixtures";
@@ -77,12 +81,11 @@ describe("ValorizacionService", () => {
 	it("guarda las horas del periodo y toma lo anterior de las valorizaciones emitidas", async () => {
 		const julio = await service.crearBorrador({ contratoId, periodo: "2026-07" }, "ana@hm.pe");
 		const [fila] = (await service.obtenerPlanilla(julio.id))?.filas ?? [];
-		await service.actualizarCantidad(julio.id, fila.contratoEquipo.id, "114.4", "ana@hm.pe");
-		// La emisión llega en la fase 7: aquí se marca a mano.
-		await repository.guardar({ ...julio, estado: "EMITIDA", numero: "0001-2026" });
+		await service.actualizarCantidad(julio.id, fila.contratoEquipoId, "114.4", "ana@hm.pe");
+		await service.emitir(julio.id, "ana@hm.pe", "2026-08-03");
 
 		const agosto = await service.crearBorrador({ contratoId, periodo: "2026-08" }, "ana@hm.pe");
-		await service.actualizarCantidad(agosto.id, fila.contratoEquipo.id, "53.23", "ana@hm.pe");
+		await service.actualizarCantidad(agosto.id, fila.contratoEquipoId, "53.23", "ana@hm.pe");
 
 		expect((await service.obtenerPlanilla(agosto.id))?.filas[0]).toMatchObject({
 			cantidadAnterior: "114.4",
@@ -95,11 +98,12 @@ describe("ValorizacionService", () => {
 		const [fila] = (await service.obtenerPlanilla(borrador.id))?.filas ?? [];
 
 		await expect(
-			service.actualizarCantidad(borrador.id, fila.contratoEquipo.id, "-3", "ana@hm.pe"),
+			service.actualizarCantidad(borrador.id, fila.contratoEquipoId, "-3", "ana@hm.pe"),
 		).rejects.toThrow();
-		await repository.guardar({ ...borrador, estado: "EMITIDA" });
+		await service.actualizarCantidad(borrador.id, fila.contratoEquipoId, "10", "ana@hm.pe");
+		await service.emitir(borrador.id, "ana@hm.pe");
 		await expect(
-			service.actualizarCantidad(borrador.id, fila.contratoEquipo.id, "10", "ana@hm.pe"),
+			service.actualizarCantidad(borrador.id, fila.contratoEquipoId, "10", "ana@hm.pe"),
 		).rejects.toBeInstanceOf(ValorizacionNoEditableError);
 	});
 
@@ -123,5 +127,75 @@ describe("ValorizacionService", () => {
 		expect(await service.listar()).toHaveLength(0);
 		expect(await database.valorizaciones.count()).toBe(1);
 		expect(await database.outbox.where("entidad").equals("valorizaciones").count()).toBe(3);
+	});
+
+	it("al emitir asigna el correlativo del año y congela totales, IGV y monto en letras", async () => {
+		const julio = await service.crearBorrador({ contratoId, periodo: "2026-07" }, "ana@hm.pe");
+		const [fila] = (await service.obtenerPlanilla(julio.id))?.filas ?? [];
+		await service.actualizarCantidad(julio.id, fila.contratoEquipoId, "114.4", "ana@hm.pe");
+		const primera = await service.emitir(julio.id, "ana@hm.pe", "2026-08-03");
+
+		const agosto = await service.crearBorrador({ contratoId, periodo: "2026-08" }, "ana@hm.pe");
+		await service.actualizarCantidad(agosto.id, fila.contratoEquipoId, "53.23", "ana@hm.pe");
+		const segunda = await service.emitir(agosto.id, "ana@hm.pe", "2026-09-17");
+
+		expect(primera.numero).toBe("0001-2026");
+		expect(segunda).toMatchObject({
+			estado: "EMITIDA",
+			numero: "0002-2026",
+			fechaEmision: "2026-09-17",
+			montoEnLetras: "DOS MIL NOVECIENTOS CINCUENTA Y DOS CON 14/100 DÓLARES AMERICANOS.",
+		});
+		// Fondo de garantía del contrato: 5 % del subtotal 2.
+		expect(segunda.totales).toEqual({
+			subtotal1: 250181,
+			gastosGenerales: 0,
+			utilidad: 0,
+			subtotal2: 250181,
+			igv: 45033,
+			total: 295214,
+			fondoGarantia: 12509,
+			netoPagable: 282705,
+		});
+	});
+
+	it("la emitida conserva sus datos aunque luego cambie el contrato o la configuración", async () => {
+		const borrador = await service.crearBorrador({ contratoId, periodo: "2026-08" }, "ana@hm.pe");
+		const [fila] = (await service.obtenerPlanilla(borrador.id))?.filas ?? [];
+		await service.actualizarCantidad(borrador.id, fila.contratoEquipoId, "53.23", "ana@hm.pe");
+		await service.emitir(borrador.id, "ana@hm.pe");
+		await database.contratoEquipos.update(fila.contratoEquipoId, { costoHora: 9900 });
+
+		const emitida = await service.obtenerPlanilla(borrador.id);
+		expect(emitida?.filas[0]).toMatchObject({
+			precioUnitario: 4700,
+			cantidadContractual: "150",
+			descripcion: "EXCAVADORA CAT 340 - ALQUILER",
+		});
+	});
+
+	it("no emite sin horas", async () => {
+		const borrador = await service.crearBorrador({ contratoId, periodo: "2026-08" }, "ana@hm.pe");
+
+		await expect(service.emitir(borrador.id, "ana@hm.pe")).rejects.toBeInstanceOf(SinHorasError);
+	});
+
+	it("solo un administrador anula, con motivo; la anulada no suma horas ni libera su número", async () => {
+		const julio = await service.crearBorrador({ contratoId, periodo: "2026-07" }, "ana@hm.pe");
+		const [fila] = (await service.obtenerPlanilla(julio.id))?.filas ?? [];
+		await service.actualizarCantidad(julio.id, fila.contratoEquipoId, "114.4", "ana@hm.pe");
+		await service.emitir(julio.id, "ana@hm.pe", "2026-08-03");
+
+		await expect(
+			service.anular(julio.id, "Horas mal cargadas", "luis@hm.pe", "OPERADOR"),
+		).rejects.toBeInstanceOf(SinPermisoError);
+		await expect(service.anular(julio.id, "", "ana@hm.pe", "ADMIN")).rejects.toThrow();
+		const anulada = await service.anular(julio.id, "Horas mal cargadas", "ana@hm.pe", "ADMIN");
+		expect(anulada).toMatchObject({ estado: "ANULADA", motivoAnulacion: "Horas mal cargadas" });
+
+		const agosto = await service.crearBorrador({ contratoId, periodo: "2026-08" }, "ana@hm.pe");
+		expect((await service.obtenerPlanilla(agosto.id))?.filas[0].cantidadAnterior).toBe("0");
+		await service.actualizarCantidad(agosto.id, fila.contratoEquipoId, "10", "ana@hm.pe");
+		expect((await service.emitir(agosto.id, "ana@hm.pe", "2026-09-01")).numero).toBe("0002-2026");
 	});
 });

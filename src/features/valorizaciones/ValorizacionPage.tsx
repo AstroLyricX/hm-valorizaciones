@@ -1,10 +1,13 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import {
 	ArrowLeft,
+	Ban,
 	CircleAlert,
 	ClipboardList,
 	CloudCheck,
 	LoaderCircle,
+	Lock,
+	Send,
 	Trash2,
 	TriangleAlert,
 } from "lucide-react";
@@ -23,15 +26,17 @@ import { EmptyState } from "@/shared/components/EmptyState";
 
 import type { Planilla } from "./application/ValorizacionService";
 import { valorizacionService } from "./application/valorizacionService.instance";
+import { montoEnLetras } from "./domain/montoEnLetras";
 import {
 	calcularValorizacion,
 	CantidadSchema,
 	formatearPeriodo,
 	type ValorizacionCabecera,
 } from "./domain/valorizacion";
+import { AnularDialog } from "./ui/AnularDialog";
 import { DatosServicio } from "./ui/DatosServicio";
 import { EstadoValorizacionPill } from "./ui/EstadoValorizacionPill";
-import { descripcionFila, horas } from "./ui/formato";
+import { horas } from "./ui/formato";
 import { PlanillaMedicion } from "./ui/PlanillaMedicion";
 import { type EstadoGuardado, useAutoguardado } from "./ui/useAutoguardado";
 
@@ -113,10 +118,16 @@ function Editor({ planilla }: { planilla: Planilla }) {
 	const { valorizacion, contrato, proveedor, empresa, filas } = planilla;
 	const editable = valorizacion.estado === "BORRADOR";
 	const [descartando, setDescartando] = useState(false);
+	const [emitiendo, setEmitiendo] = useState(false);
+	const [anulando, setAnulando] = useState(false);
+	const puedeAnular = user?.rol === "ADMIN" && valorizacion.estado === "EMITIDA";
 	const [cabecera, setCabecera] = useState<ValorizacionCabecera>(valorizacion);
 	// Las horas viven en la pantalla mientras se escriben; se guardan solas tras una pausa.
 	const [cantidades, setCantidades] = useState<Record<string, string>>(() =>
-		Object.fromEntries(filas.map((fila) => [fila.contratoEquipo.id, fila.cantidadActual])),
+		Object.fromEntries(filas.map((fila) => [fila.contratoEquipoId, fila.cantidadActual])),
+	);
+	const hayErrores = Object.values(cantidades).some(
+		(valor) => !CantidadSchema.safeParse(valor).success,
 	);
 	const errores = useMemo(
 		() =>
@@ -153,10 +164,10 @@ function Editor({ planilla }: { planilla: Planilla }) {
 
 	const calculo = calcularValorizacion(
 		filas.map((fila) => ({
-			cantidadContractual: fila.contratoEquipo.horasMinimas,
-			precioUnitario: fila.contratoEquipo.costoHora,
+			cantidadContractual: fila.cantidadContractual,
+			precioUnitario: fila.precioUnitario,
 			cantidadAnterior: fila.cantidadAnterior,
-			cantidadActual: cantidades[fila.contratoEquipo.id] ?? "0",
+			cantidadActual: cantidades[fila.contratoEquipoId] ?? "0",
 		})),
 		{
 			gastosGeneralesPct: cabecera.gastosGeneralesPct,
@@ -226,12 +237,62 @@ function Editor({ planilla }: { planilla: Planilla }) {
 								onClick={() => setDescartando(true)}
 							>
 								<Trash2 />
-								Descartar borrador
+								Descartar
+							</Button>
+							<Button
+								className="h-9 bg-brand-600 px-3.5 hover:bg-brand-700"
+								disabled={hayErrores}
+								onClick={() => {
+									if (calculo.actual.subtotal1 === 0) {
+										toast.warning("Ingresa las horas de al menos un equipo antes de emitir.");
+
+										return;
+									}
+									setEmitiendo(true);
+								}}
+							>
+								<Send />
+								Emitir valorización
 							</Button>
 						</div>
 					)}
+					{puedeAnular && (
+						<Button
+							variant="outline"
+							className="h-9 w-fit border-red-200 px-3.5 text-red-600 hover:bg-red-50 hover:text-red-700"
+							onClick={() => setAnulando(true)}
+						>
+							<Ban />
+							Anular
+						</Button>
+					)}
 				</div>
 			</div>
+
+			{valorizacion.estado === "ANULADA" && (
+				<div
+					role="status"
+					className="flex gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900"
+				>
+					<Ban className="mt-0.5 size-5 shrink-0 text-red-600" aria-hidden="true" />
+					<div className="flex flex-col gap-0.5">
+						<span className="font-semibold">
+							Anulada el{" "}
+							{valorizacion.anuladaEn
+								? formatearFechaNumerica(valorizacion.anuladaEn.slice(0, 10))
+								: "—"}
+						</span>
+						<span>Motivo: {valorizacion.motivoAnulacion}</span>
+					</div>
+				</div>
+			)}
+			{!editable && valorizacion.fechaEmision && (
+				<p className="flex items-center gap-2 text-sm text-muted-foreground">
+					<Lock className="size-4" aria-hidden="true" />
+					Emitida el {formatearFechaNumerica(valorizacion.fechaEmision)}. Sus horas y montos ya no
+					se modifican.
+				</p>
+			)}
 
 			<section
 				aria-label="Resumen de la valorización"
@@ -265,7 +326,7 @@ function Editor({ planilla }: { planilla: Planilla }) {
 								.map((fila) => {
 									const indice = filas.indexOf(fila);
 
-									return `${descripcionFila(fila)}: ${horas(calculo.items[indice].cantidadAcumulada)} h de ${horas(fila.contratoEquipo.horasMinimas)} h`;
+									return `${fila.descripcion}: ${horas(calculo.items[indice].cantidadAcumulada)} h de ${horas(fila.cantidadContractual)} h`;
 								})
 								.join(" · ")}
 							. Revisa las horas antes de emitir.
@@ -326,6 +387,14 @@ function Editor({ planilla }: { planilla: Planilla }) {
 								{formatearMoneda(calculo.netoPagable, moneda)}
 							</dd>
 						</div>
+						<div className="flex flex-col gap-1 border-t border-navy-100 pt-2.5 font-sans">
+							<dt className="text-xs font-medium text-muted-foreground">
+								Son (total de la factura)
+							</dt>
+							<dd className="text-[13px] font-medium text-navy-900">
+								{valorizacion.montoEnLetras ?? montoEnLetras(calculo.actual.total, moneda)}
+							</dd>
+						</div>
 					</dl>
 				</Tarjeta>
 			</div>
@@ -366,6 +435,52 @@ function Editor({ planilla }: { planilla: Planilla }) {
 				</div>
 			</Tarjeta>
 
+			<ConfirmDialog
+				open={emitiendo}
+				onOpenChange={setEmitiendo}
+				tono="primario"
+				title={`¿Emitir la valorización de ${formatearPeriodo(valorizacion.periodo)}?`}
+				description={`Se le asignará el siguiente número del año y quedará cerrada: ya no podrás cambiar las horas. Total de la factura: ${formatearMoneda(calculo.actual.total, moneda)}.`}
+				confirmLabel="Emitir"
+				onConfirm={() => {
+					void (async () => {
+						try {
+							await Promise.all([horasGuardado.vaciar(), cabeceraGuardado.vaciar()]);
+							const emitida = await valorizacionService.emitir(valorizacion.id, usuario);
+							toast.success(`Valorización ${emitida.numero ?? ""} emitida.`);
+						} catch {
+							toast.error("No se pudo emitir. Revisa las horas e inténtalo de nuevo.");
+						}
+					})();
+				}}
+			>
+				{excedidos.length > 0 && (
+					<p className="flex gap-2 rounded-lg bg-amber-50 px-3 py-2.5 text-sm text-amber-900">
+						<TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-600" aria-hidden="true" />
+						Atención:{" "}
+						{excedidos.length === 1
+							? "un equipo supera"
+							: `${excedidos.length} equipos superan`}{" "}
+						las horas contratadas.
+					</p>
+				)}
+			</ConfirmDialog>
+			{puedeAnular && (
+				<AnularDialog
+					open={anulando}
+					onOpenChange={setAnulando}
+					numero={valorizacion.numero ?? ""}
+					onAnular={async (motivo) => {
+						try {
+							await valorizacionService.anular(valorizacion.id, motivo, usuario, user.rol);
+							toast.success(`Valorización ${valorizacion.numero ?? ""} anulada.`);
+							setAnulando(false);
+						} catch {
+							toast.error("No se pudo anular. Inténtalo de nuevo.");
+						}
+					}}
+				/>
+			)}
 			<ConfirmDialog
 				open={descartando}
 				onOpenChange={setDescartando}
