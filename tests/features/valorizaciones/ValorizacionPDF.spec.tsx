@@ -1,0 +1,124 @@
+import { render, screen } from "@testing-library/react";
+import type { ReactNode } from "react";
+
+import { db } from "../../../src/data/db";
+import { terceroService } from "../../../src/features/clientes/application/terceroService.instance";
+import { contratoService } from "../../../src/features/contratos/application/contratoService.instance";
+import { equipoService } from "../../../src/features/equipos/application/equipoService.instance";
+import { calcularPlanilla } from "../../../src/features/valorizaciones/application/ValorizacionService";
+import { valorizacionService } from "../../../src/features/valorizaciones/application/valorizacionService.instance";
+import { nombreArchivoPdf } from "../../../src/features/valorizaciones/pdf/datosPdf";
+import { ValorizacionPDF } from "../../../src/features/valorizaciones/pdf/ValorizacionPDF";
+import { CLIENTE, excavadora } from "../../support/fixtures";
+import { contratoDatos } from "../contratos/fixtures";
+
+// El PDF real se genera en el navegador (Cypress lo descarga). Aquí las primitivas de
+// react-pdf se reemplazan por elementos HTML para revisar el contenido.
+jest.mock("@react-pdf/renderer", () => {
+	const contenedor =
+		(etiqueta: string) =>
+		({
+			children,
+			render,
+		}: {
+			children?: ReactNode;
+			render?: (pagina: { pageNumber: number; totalPages: number }) => string;
+		}) => (
+			<div data-pdf={etiqueta}>{render ? render({ pageNumber: 1, totalPages: 1 }) : children}</div>
+		);
+
+	return {
+		Document: contenedor("document"),
+		Page: contenedor("page"),
+		View: contenedor("view"),
+		Text: contenedor("text"),
+		Image: ({ src }: { src: string }) => <img alt="Logo" src={src} />,
+		StyleSheet: { create: <T,>(estilos: T) => estilos },
+	};
+});
+
+let contratoId: string;
+
+beforeEach(async () => {
+	await db.delete();
+	await db.open();
+	const clienteId = (await terceroService.crear(CLIENTE, "ana@hm.pe")).id;
+	const equipoId = (await equipoService.crear(excavadora(clienteId), "ana@hm.pe")).id;
+	contratoId = (await contratoService.crear(contratoDatos(clienteId, equipoId), "ana@hm.pe"))
+		.contrato.id;
+});
+
+async function planillaEmitida() {
+	const borrador = await valorizacionService.crearBorrador(
+		{ contratoId, periodo: "2026-08" },
+		"ana@hm.pe",
+	);
+	const [fila] = (await valorizacionService.obtenerPlanilla(borrador.id))?.filas ?? [];
+	await valorizacionService.actualizarCantidad(
+		borrador.id,
+		fila.contratoEquipoId,
+		"53.23",
+		"ana@hm.pe",
+	);
+	await valorizacionService.emitir(borrador.id, "ana@hm.pe", "2026-09-17");
+	const planilla = await valorizacionService.obtenerPlanilla(borrador.id);
+	if (!planilla) {
+		throw new Error("Sin planilla");
+	}
+
+	return planilla;
+}
+
+test("el PDF tiene la cabecera, la planilla, el total en letras y las firmas del xlsm", async () => {
+	const planilla = await planillaEmitida();
+	render(
+		<ValorizacionPDF
+			planilla={planilla}
+			calculo={calcularPlanilla(planilla)}
+			logo="/logo-hm.png"
+		/>,
+	);
+
+	expect(screen.getByText("VALORIZACIÓN DE EQUIPOS Y CANTERAS")).toBeInTheDocument();
+	expect(screen.getByText("0001-2026")).toBeInTheDocument();
+	expect(screen.getByText("17/09/2026")).toBeInTheDocument();
+	expect(screen.getByText("AGOSTO 2026")).toBeInTheDocument();
+	expect(
+		screen.getByText("MAQUINARIAS Y CONTRATISTAS GENERALES H & M E.I.R.L."),
+	).toBeInTheDocument();
+	expect(screen.getByText("EXCAVADORA CAT 340 - ALQUILER")).toBeInTheDocument();
+	expect(screen.getAllByText("2,501.81").length).toBeGreaterThan(0);
+	expect(screen.getAllByText("2,952.14").length).toBeGreaterThan(0);
+	expect(
+		screen.getByText("DOS MIL NOVECIENTOS CINCUENTA Y DOS CON 14/100 DÓLARES AMERICANOS."),
+	).toBeInTheDocument();
+	expect(screen.getByText("GERENTE ADMINISTRATIVO")).toBeInTheDocument();
+	expect(screen.getByText(/CONSTRUCTORA ANDINA SAC\s+PROVEEDOR/)).toBeInTheDocument();
+	expect(screen.getByText("Página 1 de 1")).toBeInTheDocument();
+	expect(screen.queryByText("BORRADOR")).not.toBeInTheDocument();
+});
+
+test("un borrador lleva marca de agua y su periodo en el nombre del archivo", async () => {
+	const borrador = await valorizacionService.crearBorrador(
+		{ contratoId, periodo: "2026-08" },
+		"ana@hm.pe",
+	);
+	const planilla = await valorizacionService.obtenerPlanilla(borrador.id);
+	if (!planilla) {
+		throw new Error("Sin planilla");
+	}
+	render(
+		<ValorizacionPDF
+			planilla={planilla}
+			calculo={calcularPlanilla(planilla)}
+			logo="/logo-hm.png"
+		/>,
+	);
+
+	expect(screen.getAllByText("BORRADOR")).toHaveLength(2);
+	expect(nombreArchivoPdf(planilla)).toBe("VAL-BORRADOR-2026-08-CTR-001.pdf");
+});
+
+test("el archivo de una emitida se llama VAL-número-contrato.pdf", async () => {
+	expect(nombreArchivoPdf(await planillaEmitida())).toBe("VAL-0001-2026-CTR-001.pdf");
+});

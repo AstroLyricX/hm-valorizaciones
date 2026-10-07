@@ -112,16 +112,17 @@ Rediseñada según `VALORIZACIONES.txt`: el contrato son equipos con horas míni
 - [x] Verificar
 - [x] STOP
 
-## Fase 8: PDF de la valorización
+## Fase 8: PDF de la valorización ✅
 
-- [ ] `ValorizacionPDF` con `@react-pdf/renderer`, cargado solo cuando se necesita (`lazy()`)
-- [ ] Mismo diseño que la hoja VALORIZACION: logo, cabecera con contratante y proveedor, planilla, totales, "SON:" y firmas
-- [ ] A4 horizontal, con la cabecera repetida en cada página
-- [ ] Botones "Descargar PDF" y "Compartir" (Web Share API en celular)
-- [ ] Nombre del archivo: `VAL-0002-2026-CTR-001.pdf`
-- [ ] Pruebas: el componente se renderiza con datos de ejemplo
-- [ ] Verificar
-- [ ] STOP
+- [x] `ValorizacionPDF` con `@react-pdf/renderer`, cargado solo al pulsar el botón (`import()` en su propio chunk, precacheado para usarlo sin conexión)
+- [x] Mismo diseño que la hoja VALORIZACION: logo, N.° de valorización, fecha y periodo, contratante y proveedor, datos del servicio, planilla, totales, pago neto, "SON:" y tres firmas (contratante, gerente administrativo y proveedor)
+- [x] A4 horizontal, con la cabecera y los títulos de la planilla repetidos en cada página, y número de página
+- [x] Marca de agua BORRADOR o ANULADA cuando corresponde
+- [x] Botones "Descargar PDF" y "Compartir" (Web Share API, solo donde el navegador lo permite)
+- [x] Nombre del archivo: `VAL-0002-2026-CTR-001.pdf` (borrador: `VAL-BORRADOR-2026-08-CTR-001.pdf`)
+- [x] Pruebas: el contenido del PDF con datos de ejemplo (Jest) y la descarga del PDF real (Cypress)
+- [x] Verificar
+- [x] STOP
 
 ## Fase 9: Inicio con indicadores
 

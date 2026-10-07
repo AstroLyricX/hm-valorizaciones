@@ -33,6 +33,7 @@ import {
 	formatearPeriodo,
 	type ValorizacionCabecera,
 } from "./domain/valorizacion";
+import { AccionesPdf } from "./ui/AccionesPdf";
 import { AnularDialog } from "./ui/AnularDialog";
 import { DatosServicio } from "./ui/DatosServicio";
 import { EstadoValorizacionPill } from "./ui/EstadoValorizacionPill";
@@ -121,7 +122,14 @@ function Editor({ planilla }: { planilla: Planilla }) {
 	const [emitiendo, setEmitiendo] = useState(false);
 	const [anulando, setAnulando] = useState(false);
 	const puedeAnular = user?.rol === "ADMIN" && valorizacion.estado === "EMITIDA";
-	const [cabecera, setCabecera] = useState<ValorizacionCabecera>(valorizacion);
+	// Solo los campos editables: el resto (número, estado…) siempre sale de la valorización guardada.
+	const [cabecera, setCabecera] = useState<ValorizacionCabecera>(() => ({
+		nombreServicio: valorizacion.nombreServicio,
+		plazoPago: valorizacion.plazoPago,
+		gastosGeneralesPct: valorizacion.gastosGeneralesPct,
+		utilidadPct: valorizacion.utilidadPct,
+		observaciones: valorizacion.observaciones,
+	}));
 	// Las horas viven en la pantalla mientras se escriben; se guardan solas tras una pausa.
 	const [cantidades, setCantidades] = useState<Record<string, string>>(() =>
 		Object.fromEntries(filas.map((fila) => [fila.contratoEquipoId, fila.cantidadActual])),
@@ -177,6 +185,20 @@ function Editor({ planilla }: { planilla: Planilla }) {
 		},
 	);
 	const moneda = valorizacion.moneda;
+	// El PDF usa lo que se ve en pantalla, aunque el guardado automático aún esté pendiente.
+	const datosPdf = {
+		planilla: {
+			...planilla,
+			valorizacion: { ...valorizacion, ...cabecera },
+			filas: filas.map((fila) => ({
+				...fila,
+				cantidadActual: CantidadSchema.safeParse(cantidades[fila.contratoEquipoId]).success
+					? (cantidades[fila.contratoEquipoId] ?? fila.cantidadActual)
+					: "0",
+			})),
+		},
+		calculo,
+	};
 	const excedidos = filas.filter((_, indice) => calculo.items[indice].exceso !== "0");
 
 	const cambiarCantidad = (contratoEquipoId: string, valor: string) => {
@@ -228,44 +250,49 @@ function Editor({ planilla }: { planilla: Planilla }) {
 							{proveedor?.razonSocial ?? "Proveedor no encontrado"}
 						</p>
 					</div>
-					{editable && (
-						<div className="flex flex-wrap items-center gap-3">
+					<div className="flex flex-wrap items-center gap-3">
+						{editable && (
 							<IndicadorGuardado estado={combinar(horasGuardado.estado, cabeceraGuardado.estado)} />
+						)}
+						<AccionesPdf datos={datosPdf} />
+						{editable && (
+							<>
+								<Button
+									variant="outline"
+									className="h-9 border-red-200 px-3.5 text-red-600 hover:bg-red-50 hover:text-red-700"
+									onClick={() => setDescartando(true)}
+								>
+									<Trash2 />
+									Descartar
+								</Button>
+								<Button
+									className="h-9 bg-brand-600 px-3.5 hover:bg-brand-700"
+									disabled={hayErrores}
+									onClick={() => {
+										if (calculo.actual.subtotal1 === 0) {
+											toast.warning("Ingresa las horas de al menos un equipo antes de emitir.");
+
+											return;
+										}
+										setEmitiendo(true);
+									}}
+								>
+									<Send />
+									Emitir valorización
+								</Button>
+							</>
+						)}
+						{puedeAnular && (
 							<Button
 								variant="outline"
 								className="h-9 border-red-200 px-3.5 text-red-600 hover:bg-red-50 hover:text-red-700"
-								onClick={() => setDescartando(true)}
+								onClick={() => setAnulando(true)}
 							>
-								<Trash2 />
-								Descartar
+								<Ban />
+								Anular
 							</Button>
-							<Button
-								className="h-9 bg-brand-600 px-3.5 hover:bg-brand-700"
-								disabled={hayErrores}
-								onClick={() => {
-									if (calculo.actual.subtotal1 === 0) {
-										toast.warning("Ingresa las horas de al menos un equipo antes de emitir.");
-
-										return;
-									}
-									setEmitiendo(true);
-								}}
-							>
-								<Send />
-								Emitir valorización
-							</Button>
-						</div>
-					)}
-					{puedeAnular && (
-						<Button
-							variant="outline"
-							className="h-9 w-fit border-red-200 px-3.5 text-red-600 hover:bg-red-50 hover:text-red-700"
-							onClick={() => setAnulando(true)}
-						>
-							<Ban />
-							Anular
-						</Button>
-					)}
+						)}
+					</div>
 				</div>
 			</div>
 

@@ -14,6 +14,13 @@ import { CLIENTE, excavadora } from "../../support/fixtures";
 import { renderRoute, signInAs } from "../../support/renderRoute";
 import { contratoDatos } from "../contratos/fixtures";
 
+// La generación real del PDF se prueba en Cypress; aquí basta con un archivo de ejemplo.
+jest.mock("../../../src/features/valorizaciones/pdf/generarPdf", () => ({
+	generarPdf: jest.fn(async () =>
+		Promise.resolve(new Blob(["%PDF-1.7"], { type: "application/pdf" })),
+	),
+}));
+
 let contratoId: string;
 
 beforeEach(async () => {
@@ -239,4 +246,42 @@ test("la ficha del contrato suma lo valorizado de las emitidas", async () => {
 	expect(resumen).toHaveTextContent("USD 7,878.61");
 	expect(resumen).toHaveTextContent("USD -828.61");
 	expect(resumen).toHaveTextContent("111.75 %");
+});
+
+test("descarga el PDF con el nombre de la valorización", async () => {
+	const user = userEvent.setup();
+	URL.createObjectURL = jest.fn(() => "blob:valorizacion");
+	URL.revokeObjectURL = jest.fn();
+	const emitida = await agostoEmitido();
+	renderRoute(`/valorizaciones/${emitida.id}`);
+
+	await user.click(await screen.findByRole("button", { name: "Descargar PDF" }));
+
+	expect(await screen.findByText("Se descargó VAL-0002-2026-CTR-001.pdf.")).toBeInTheDocument();
+	expect(URL.createObjectURL).toHaveBeenCalledTimes(1);
+});
+
+test("al emitir y descargar en la misma pantalla, el PDF lleva el número asignado", async () => {
+	const user = userEvent.setup();
+	URL.createObjectURL = jest.fn(() => "blob:valorizacion");
+	URL.revokeObjectURL = jest.fn();
+	const borrador = await valorizacionService.crearBorrador(
+		{ contratoId, periodo: "2026-08" },
+		"ana@hm.pe",
+	);
+	renderRoute(`/valorizaciones/${borrador.id}`);
+
+	const [horas] = await screen.findAllByLabelText("Horas del periodo del ítem 1");
+	await user.clear(horas);
+	await user.type(horas, "10");
+	await user.click(screen.getByRole("button", { name: "Emitir valorización" }));
+	await user.click(
+		within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Emitir" }),
+	);
+	await screen.findByText(/Emitida el/);
+	await user.click(screen.getByRole("button", { name: "Descargar PDF" }));
+
+	expect(
+		await screen.findByText(`Se descargó VAL-0001-${new Date().getFullYear()}-CTR-001.pdf.`),
+	).toBeInTheDocument();
 });

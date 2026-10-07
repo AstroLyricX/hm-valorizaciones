@@ -35,8 +35,15 @@ describe("Valorizaciones", () => {
 		cy.findByRole("button", { name: "Emitir valorización" }).click();
 		cy.findByRole("alertdialog").should("contain.text", "un equipo supera las horas contratadas");
 		cy.findByRole("alertdialog").findByRole("button", { name: "Emitir" }).click();
-		cy.findByText(/Valorización 0001-\d{4} emitida\./).should("exist");
+		cy.findByText(`Valorización 0001-${new Date().getFullYear()} emitida.`).should("exist");
 		cy.findAllByLabelText("Horas del periodo del ítem 1").filter(":visible").should("be.disabled");
+
+		// El número toma el año de emisión (hoy).
+		const archivo = `VAL-0001-${new Date().getFullYear()}-CTR-001.pdf`;
+		cy.findByRole("button", { name: "Descargar PDF" }).click();
+		cy.readFile(`${Cypress.config("downloadsFolder")}/${archivo}`, "binary", {
+			timeout: 20000,
+		}).should("match", /^%PDF-/);
 
 		cy.get("[data-sidebar=sidebar]").findByRole("link", { name: "Valorizaciones" }).click();
 		cy.findByRole("table").findByText("Agosto 2026").should("exist");
