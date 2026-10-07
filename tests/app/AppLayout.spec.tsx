@@ -77,7 +77,7 @@ test("Inicio muestra los indicadores y las valorizaciones recientes", async () =
 	for (const indicador of [
 		"Valorizado este mes",
 		"Contratos activos",
-		"Equipos operativos",
+		"Equipos en obra",
 		"Clientes activos",
 	]) {
 		expect(within(indicadores).getByText(indicador)).toBeInTheDocument();

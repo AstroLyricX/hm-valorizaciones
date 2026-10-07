@@ -124,14 +124,15 @@ Rediseñada según `VALORIZACIONES.txt`: el contrato son equipos con horas míni
 - [x] Verificar
 - [x] STOP
 
-## Fase 9: Inicio con indicadores
+## Fase 9: Inicio con indicadores ✅
 
-- [ ] Indicadores: clientes activos, equipos operativos y contratos activos (como en INICIO), más el monto valorizado del mes
-- [ ] Contratos con alerta de exceso o con más del 90 % ejecutado
-- [ ] Últimas valorizaciones y borradores pendientes
-- [ ] Pruebas: los indicadores con datos de ejemplo
-- [ ] Verificar
-- [ ] STOP
+- [x] Indicadores: valorizado del mes (facturas emitidas este mes, por moneda), contratos activos, equipos en obra (en contratos vigentes) y clientes activos
+- [x] Contratos que requieren atención: excedidos (más del 100 %) o por agotarse (90 % o más), con barra de avance
+- [x] Borradores pendientes y las últimas 5 valorizaciones emitidas o anuladas
+- [x] Pruebas: `resumenInicio` con datos de ejemplo (caso del xlsm: 111.75 %) y la pantalla de Inicio
+- [x] Verificar
+- [x] STOP
+- [ ] Pendiente de confirmar: si existe un estado "Operativo" de equipo para mostrar "Equipos operativos" como en la hoja INICIO
 
 ## Fase 10: Exportar a Excel y migrar desde el xlsm
 

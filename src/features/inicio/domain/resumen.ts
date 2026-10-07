@@ -1,0 +1,115 @@
+import type { Tercero } from "@/features/clientes/domain/tercero";
+import {
+	type Contrato,
+	type ContratoEquipo,
+	estadoContrato,
+} from "@/features/contratos/domain/contrato";
+import type { Valorizacion } from "@/features/valorizaciones/domain/valorizacion";
+import type { Moneda } from "@/lib/dinero";
+
+// Desde qué avance (lo valorizado sobre el monto contractual) un contrato pide atención.
+export const UMBRAL_AVANCE = 90;
+
+export interface ContratoEnAlerta {
+	contrato: Contrato;
+	cliente: string;
+	valorizado: number;
+	avancePct: number;
+	// "excedido": se valorizó más que el monto contractual; "por-agotarse": 90 % o más.
+	nivel: "excedido" | "por-agotarse";
+}
+
+export interface ResumenInicio {
+	// Total de las facturas emitidas este mes, por moneda.
+	valorizadoMes: Partial<Record<Moneda, number>>;
+	contratosActivos: number;
+	equiposEnObra: number;
+	clientesActivos: number;
+	alertas: ContratoEnAlerta[];
+	borradores: Valorizacion[];
+	ultimasEmitidas: Valorizacion[];
+}
+
+interface Datos {
+	terceros: readonly Tercero[];
+	contratos: readonly Contrato[];
+	contratoEquipos: readonly ContratoEquipo[];
+	valorizaciones: readonly Valorizacion[];
+	// Fecha de hoy "YYYY-MM-DD".
+	hoy: string;
+}
+
+function avance(valorizado: number, monto: number): number {
+	return monto === 0 ? 0 : Math.round((valorizado / monto) * 10000) / 100;
+}
+
+// Indicadores de la pantalla de Inicio (como la hoja INICIO del xlsm) con datos reales.
+export function resumenInicio({
+	terceros,
+	contratos,
+	contratoEquipos,
+	valorizaciones,
+	hoy,
+}: Datos): ResumenInicio {
+	const mes = hoy.slice(0, 7);
+	const activos = contratos.filter((contrato) => estadoContrato(contrato, hoy) === "ACTIVO");
+	const idsActivos = new Set(activos.map((contrato) => contrato.id));
+	const emitidas = valorizaciones.filter((valorizacion) => valorizacion.estado === "EMITIDA");
+	const nombres = new Map(terceros.map((tercero) => [tercero.id, tercero.razonSocial]));
+
+	const valorizadoMes: Partial<Record<Moneda, number>> = {};
+	for (const valorizacion of emitidas) {
+		if (valorizacion.fechaEmision?.startsWith(mes) === true && valorizacion.totales) {
+			valorizadoMes[valorizacion.moneda] =
+				(valorizadoMes[valorizacion.moneda] ?? 0) + valorizacion.totales.total;
+		}
+	}
+
+	const valorizadoPorContrato = new Map<string, number>();
+	for (const valorizacion of emitidas) {
+		valorizadoPorContrato.set(
+			valorizacion.contratoId,
+			(valorizadoPorContrato.get(valorizacion.contratoId) ?? 0) +
+				(valorizacion.totales?.subtotal1 ?? 0),
+		);
+	}
+
+	const alertas = contratos
+		.map((contrato): ContratoEnAlerta => {
+			const valorizado = valorizadoPorContrato.get(contrato.id) ?? 0;
+			const avancePct = avance(valorizado, contrato.montoContractual);
+
+			return {
+				contrato,
+				cliente: nombres.get(contrato.terceroId) ?? "—",
+				valorizado,
+				avancePct,
+				nivel: avancePct > 100 ? "excedido" : "por-agotarse",
+			};
+		})
+		.filter((alerta) => alerta.avancePct >= UMBRAL_AVANCE)
+		.sort((a, b) => b.avancePct - a.avancePct);
+
+	const porFechaDesc = (a: Valorizacion, b: Valorizacion) =>
+		(b.fechaEmision ?? "").localeCompare(a.fechaEmision ?? "") ||
+		(b.numero ?? "").localeCompare(a.numero ?? "");
+
+	return {
+		valorizadoMes,
+		contratosActivos: activos.length,
+		equiposEnObra: new Set(
+			contratoEquipos
+				.filter((contratoEquipo) => idsActivos.has(contratoEquipo.contratoId))
+				.map((contratoEquipo) => contratoEquipo.equipoId),
+		).size,
+		clientesActivos: terceros.filter((tercero) => tercero.estado === "ACTIVO").length,
+		alertas,
+		borradores: valorizaciones
+			.filter((valorizacion) => valorizacion.estado === "BORRADOR")
+			.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
+		ultimasEmitidas: valorizaciones
+			.filter((valorizacion) => valorizacion.estado !== "BORRADOR")
+			.sort(porFechaDesc)
+			.slice(0, 5),
+	};
+}
