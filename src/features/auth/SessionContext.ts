@@ -1,6 +1,6 @@
 import { createContext } from "react";
 
-// Hasta el login con Microsoft (fase 11) la sesión de prueba es de administrador.
+// ADMIN: todo. OPERADOR: carga los datos y las valorizaciones (decisión D2).
 export type Rol = "ADMIN" | "OPERADOR";
 
 export interface SessionUser {
@@ -11,9 +11,15 @@ export interface SessionUser {
 
 export interface Session {
 	user: SessionUser | null;
+	// Mientras se lee la sesión guardada o se procesa la vuelta del login de Microsoft.
+	isLoading: boolean;
 	isSigningIn: boolean;
-	signIn: () => Promise<void>;
-	signOut: () => void;
+	// Ruta a la que volver después del login con redirección.
+	destino: string | null;
+	// "prueba": sin Client ID configurado; "microsoft": login real con MSAL.
+	modo: "prueba" | "microsoft";
+	signIn: (destino?: string) => Promise<void>;
+	signOut: () => Promise<void>;
 }
 
 export const SessionContext = createContext<Session | null>(null);

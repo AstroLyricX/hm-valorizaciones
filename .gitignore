@@ -18,3 +18,4 @@ dev-dist
 tests/e2e/screenshots
 tests/e2e/videos
 cypress/downloads
+*.local

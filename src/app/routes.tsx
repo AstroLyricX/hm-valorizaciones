@@ -1,6 +1,7 @@
 import { Navigate, type RouteObject } from "react-router";
 
 import { LoginPage } from "@/features/auth/LoginPage";
+import { RequireRol } from "@/features/auth/RequireRol";
 import { RequireSession } from "@/features/auth/RequireSession";
 import { ClientesPage } from "@/features/clientes/ClientesPage";
 import { ConfiguracionPage } from "@/features/configuracion/ConfiguracionPage";
@@ -30,7 +31,10 @@ export const routes: RouteObject[] = [
 					{ path: "/contratos/:id", element: <ContratoDetallePage /> },
 					{ path: "/equipos", element: <EquiposPage /> },
 					{ path: "/clientes", element: <ClientesPage /> },
-					{ path: "/configuracion", element: <ConfiguracionPage /> },
+					{
+						element: <RequireRol accion="configurar" />,
+						children: [{ path: "/configuracion", element: <ConfiguracionPage /> }],
+					},
 				],
 			},
 		],

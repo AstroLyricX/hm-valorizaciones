@@ -8,7 +8,7 @@ import { useSession } from "@/features/auth/useSession";
 import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/shared/components/UserAvatar";
 
-import { isNavItemActive, NAV_ITEMS } from "../navigation";
+import { isNavItemActive, NAV_ITEMS, visiblePara } from "../navigation";
 
 function TabContent({
 	icon: Icon,
@@ -41,7 +41,9 @@ export function MobileNav() {
 	const { user, signOut } = useSession();
 	const [isMoreOpen, setIsMoreOpen] = useState(false);
 	const barItems = NAV_ITEMS.filter((item) => item.mobile === "bar");
-	const moreItems = NAV_ITEMS.filter((item) => item.mobile === "more");
+	const moreItems = NAV_ITEMS.filter(
+		(item) => item.mobile === "more" && visiblePara(item, user?.rol),
+	);
 	const isMoreActive = moreItems.some((item) => isNavItemActive(item.to, pathname));
 
 	return (
@@ -108,7 +110,12 @@ export function MobileNav() {
 										<span className="truncate font-medium">{user.name}</span>
 										<span className="truncate text-xs text-muted-foreground">{user.email}</span>
 									</div>
-									<Button variant="outline" size="sm" className="bg-white" onClick={signOut}>
+									<Button
+										variant="outline"
+										size="sm"
+										className="bg-white"
+										onClick={() => void signOut()}
+									>
 										<LogOut />
 										Salir
 									</Button>

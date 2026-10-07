@@ -142,16 +142,16 @@ Rediseñada según `VALORIZACIONES.txt`: el contrato son equipos con horas míni
 - [x] STOP
 - Decisión: **no se importa desde el xlsm** (solo tiene un cliente de prueba); los datos reales se registran en la app y la primera valorización empieza con 0 h anteriores.
 
-## Fase 11: Login con Microsoft y roles
+## Fase 11: Login con Microsoft y roles ✅ (pendiente el registro en Azure)
 
-- [ ] Registrar la app en Azure (Entra ID), con los permisos `User.Read` y `Files.ReadWrite.AppFolder` (tarea del administrador)
-- [ ] Reemplazar la sesión de prueba por MSAL (`@azure/msal-react`), con el método Auth Code + PKCE
-- [ ] Sesión recordada para trabajar sin conexión; volver a pedir el login solo cuando hay red
-- [ ] Roles ADMIN y OPERADOR (decisión D2), con permisos en las rutas y las acciones
-- [ ] `updatedBy` con el correo del usuario
-- [ ] Pruebas: la protección por rol y Cypress con MSAL simulado
-- [ ] Verificar
-- [ ] STOP
+- [ ] Registrar la app en Azure (Entra ID), con los permisos `User.Read` y `Files.ReadWrite.AppFolder` y los roles ADMIN y OPERADOR (tarea del administrador; pasos en `docs/AZURE.md`)
+- [x] Login con MSAL (`@azure/msal-browser`), Auth Code + PKCE por redirección, cuentas de empresa y personales (`common`); se activa con `VITE_MSAL_CLIENT_ID` en `.env.local`. Sin Client ID: sesión de prueba ("Modo de prueba")
+- [x] Sesión recordada en el dispositivo para trabajar sin conexión; al salir sin conexión solo se borra la cuenta local
+- [x] Roles ADMIN y OPERADOR desde los App roles de Entra ID (sin rol o cuenta personal: OPERADOR). Solo ADMIN: Configuración (empresa, IGV, exportar) y anular valorizaciones
+- [x] `updatedBy` con el correo del usuario
+- [x] Pruebas: roles, MSAL simulado (cuenta guardada, vuelta del login, salir con y sin conexión), protección de rutas y Cypress con un operador
+- [x] Verificar
+- [x] STOP
 
 ## Fase 12: Sincronización con OneDrive
 

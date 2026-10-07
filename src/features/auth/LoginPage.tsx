@@ -16,19 +16,22 @@ const FEATURES = [
 ];
 
 export function LoginPage() {
-	const { user, isSigningIn, signIn } = useSession();
+	const { user, isLoading, isSigningIn, signIn, destino, modo } = useSession();
 	const isOnline = useOnlineStatus();
 	const navigate = useNavigate();
 	const location = useLocation();
-	const from = (location.state as { from?: string } | null)?.from ?? "/";
+	const from = (location.state as { from?: string } | null)?.from ?? destino ?? "/";
 
 	if (user) {
 		return <Navigate to={from} replace />;
 	}
 
+	// Con Microsoft la página se va al login y vuelve a /login; sin Client ID entra al instante.
 	const handleSignIn = async () => {
-		await signIn();
-		await navigate(from, { replace: true });
+		await signIn(from);
+		if (modo === "prueba") {
+			await navigate(from, { replace: true });
+		}
 	};
 
 	return (
@@ -65,7 +68,7 @@ export function LoginPage() {
 								size="lg"
 								variant="outline"
 								className="h-12 w-full gap-3 rounded-xl bg-white text-[15px] font-medium shadow-xs transition-all hover:-translate-y-px hover:bg-white hover:shadow-md disabled:translate-y-0 dark:bg-background"
-								disabled={isSigningIn || !isOnline}
+								disabled={isLoading || isSigningIn || !isOnline}
 								onClick={() => void handleSignIn()}
 							>
 								{isSigningIn ? (
@@ -103,6 +106,11 @@ export function LoginPage() {
 						<p className="mt-8 border-t border-slate-200/70 pt-6 text-center text-xs text-balance text-muted-foreground dark:border-white/10">
 							¿No tienes acceso? Solicítalo al administrador de H&amp;M.
 						</p>
+						{modo === "prueba" && (
+							<p className="mt-3 text-center text-xs font-medium text-amber-700">
+								Modo de prueba: el login con Microsoft aún no está configurado.
+							</p>
+						)}
 					</section>
 
 					<ul className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-muted-foreground sm:flex-nowrap sm:whitespace-nowrap">

@@ -25,7 +25,7 @@ import {
 import { useSession } from "@/features/auth/useSession";
 import { UserAvatar } from "@/shared/components/UserAvatar";
 
-import { isNavItemActive, NAV_GROUPS } from "../navigation";
+import { isNavItemActive, NAV_GROUPS, visiblePara } from "../navigation";
 
 const itemClass =
 	"h-9 gap-3 rounded-md px-2.5 text-[14px] text-white/70 transition-colors hover:bg-white/[0.06] hover:text-white data-active:bg-brand-600 data-active:font-medium data-active:text-white data-active:shadow-sm data-active:shadow-black/20 [&_svg]:size-[18px] [&_svg]:text-white/45 data-active:[&_svg]:text-white";
@@ -61,30 +61,35 @@ export function AppSidebar() {
 			</SidebarHeader>
 
 			<SidebarContent className="px-1 pt-2">
-				{NAV_GROUPS.map((group) => (
-					<SidebarGroup key={group.label}>
-						<SidebarGroupLabel className="text-xs font-medium text-white/40">
-							{group.label}
-						</SidebarGroupLabel>
-						<SidebarGroupContent>
-							<SidebarMenu className="gap-0.5">
-								{group.items.map(({ to, label, icon: Icon }) => (
-									<SidebarMenuItem key={to}>
-										<SidebarMenuButton
-											tooltip={label}
-											isActive={isNavItemActive(to, pathname)}
-											className={itemClass}
-											render={<NavLink to={to} end={to === "/"} />}
-										>
-											<Icon />
-											<span>{label}</span>
-										</SidebarMenuButton>
-									</SidebarMenuItem>
-								))}
-							</SidebarMenu>
-						</SidebarGroupContent>
-					</SidebarGroup>
-				))}
+				{NAV_GROUPS.map((group) => ({
+					...group,
+					items: group.items.filter((item) => visiblePara(item, user?.rol)),
+				}))
+					.filter((group) => group.items.length > 0)
+					.map((group) => (
+						<SidebarGroup key={group.label}>
+							<SidebarGroupLabel className="text-xs font-medium text-white/40">
+								{group.label}
+							</SidebarGroupLabel>
+							<SidebarGroupContent>
+								<SidebarMenu className="gap-0.5">
+									{group.items.map(({ to, label, icon: Icon }) => (
+										<SidebarMenuItem key={to}>
+											<SidebarMenuButton
+												tooltip={label}
+												isActive={isNavItemActive(to, pathname)}
+												className={itemClass}
+												render={<NavLink to={to} end={to === "/"} />}
+											>
+												<Icon />
+												<span>{label}</span>
+											</SidebarMenuButton>
+										</SidebarMenuItem>
+									))}
+								</SidebarMenu>
+							</SidebarGroupContent>
+						</SidebarGroup>
+					))}
 			</SidebarContent>
 
 			{user && (
@@ -110,7 +115,7 @@ export function AppSidebar() {
 								<DropdownMenuContent side="right" align="end" className="min-w-56">
 									<DropdownMenuLabel>{user.email}</DropdownMenuLabel>
 									<DropdownMenuSeparator />
-									<DropdownMenuItem onClick={signOut}>
+									<DropdownMenuItem onClick={() => void signOut()}>
 										<LogOut />
 										Cerrar sesión
 									</DropdownMenuItem>

@@ -26,6 +26,7 @@ const config = {
 		],
 	},
 	moduleNameMapper: {
+		"^@/app/entorno$": "<rootDir>/tests/support/entorno.ts",
 		"^@/(.*)$": "<rootDir>/src/$1",
 		"\\.(css|less|scss|sass)$": "jest-transform-stub",
 		"\\.(jpg|jpeg|png|gif|eot|otf|webp|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$":

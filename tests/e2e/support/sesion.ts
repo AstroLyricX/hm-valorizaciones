@@ -18,3 +18,17 @@ export function iniciarSesion(): void {
 	cy.findByRole("button", { name: "Continuar con Microsoft" }).click();
 	cy.findByRole("heading", { level: 1, name: /Hola,/ }).should("exist");
 }
+
+// Sesión de un operador (en producción el rol llega del token de Microsoft Entra ID).
+export function iniciarSesionComoOperador(): void {
+	cy.visit("/");
+	borrarBaseLocal();
+	cy.window().then((win) => {
+		win.localStorage.setItem(
+			"hm.session",
+			JSON.stringify({ name: "Luis Mamani", email: "luis@hm.pe", rol: "OPERADOR" }),
+		);
+	});
+	cy.reload();
+	cy.findByRole("heading", { level: 1, name: "Hola, Luis" }).should("exist");
+}

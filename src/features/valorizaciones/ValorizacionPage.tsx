@@ -17,6 +17,7 @@ import { toast } from "sonner";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { puede } from "@/features/auth/roles";
 import { useSession } from "@/features/auth/useSession";
 import { formatearMoneda } from "@/lib/dinero";
 import { formatearFechaNumerica } from "@/lib/fechas";
@@ -121,7 +122,7 @@ function Editor({ planilla }: { planilla: Planilla }) {
 	const [descartando, setDescartando] = useState(false);
 	const [emitiendo, setEmitiendo] = useState(false);
 	const [anulando, setAnulando] = useState(false);
-	const puedeAnular = user?.rol === "ADMIN" && valorizacion.estado === "EMITIDA";
+	const puedeAnular = puede(user?.rol, "anular") && valorizacion.estado === "EMITIDA";
 	// Solo los campos editables: el resto (número, estado…) siempre sale de la valorización guardada.
 	const [cabecera, setCabecera] = useState<ValorizacionCabecera>(() => ({
 		nombreServicio: valorizacion.nombreServicio,
@@ -499,7 +500,12 @@ function Editor({ planilla }: { planilla: Planilla }) {
 					numero={valorizacion.numero ?? ""}
 					onAnular={async (motivo) => {
 						try {
-							await valorizacionService.anular(valorizacion.id, motivo, usuario, user.rol);
+							await valorizacionService.anular(
+								valorizacion.id,
+								motivo,
+								usuario,
+								user?.rol ?? "OPERADOR",
+							);
 							toast.success(`Valorización ${valorizacion.numero ?? ""} anulada.`);
 							setAnulando(false);
 						} catch {
