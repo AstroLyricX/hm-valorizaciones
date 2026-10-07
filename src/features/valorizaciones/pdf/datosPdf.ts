@@ -7,7 +7,7 @@ import type { ValorizacionCalculada } from "../domain/valorizacion";
 export interface DatosPdf {
 	planilla: Planilla;
 	calculo: ValorizacionCalculada;
-	// URL o data URI del logo (en el navegador, "/logo-hm.png").
+	// URL o data URI del logo (en el navegador, ruta("logo-hm.png")).
 	logo: string;
 }
 

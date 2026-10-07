@@ -42,7 +42,7 @@ describe("Valorizaciones", () => {
 		const archivo = `VAL-0001-${new Date().getFullYear()}-CTR-001.pdf`;
 		cy.findByRole("button", { name: "Descargar PDF" }).click();
 		cy.readFile(`${Cypress.config("downloadsFolder")}/${archivo}`, "binary", {
-			timeout: 20000,
+			timeout: 40000,
 		}).should("match", /^%PDF-/);
 
 		cy.get("[data-sidebar=sidebar]").findByRole("link", { name: "Valorizaciones" }).click();

@@ -3,3 +3,11 @@ export const entorno = {
 	msalClientId: "",
 	msalAuthority: "https://login.microsoftonline.com/common",
 };
+
+export const base = "/";
+
+export function ruta(archivo: string): string {
+	return `/${archivo}`;
+}
+
+export const basename = "/";

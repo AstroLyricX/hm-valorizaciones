@@ -1,6 +1,7 @@
 import { ChevronsUpDown, LogOut } from "lucide-react";
 import { NavLink, useLocation } from "react-router";
 
+import { ruta } from "@/app/entorno";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -45,7 +46,7 @@ export function AppSidebar() {
 							render={<NavLink to="/" />}
 						>
 							<img
-								src="/favicon.svg"
+								src={ruta("favicon.svg")}
 								alt=""
 								width={32}
 								height={32}

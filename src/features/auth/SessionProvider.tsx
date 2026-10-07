@@ -1,7 +1,7 @@
 import { PublicClientApplication } from "@azure/msal-browser";
 import type { ReactNode } from "react";
 
-import { entorno } from "@/app/entorno";
+import { entorno, ruta } from "@/app/entorno";
 
 import { DemoSessionProvider } from "./DemoSessionProvider";
 import { MsalSessionProvider } from "./MsalSessionProvider";
@@ -12,8 +12,8 @@ const clienteMsal = entorno.msalClientId
 			auth: {
 				clientId: entorno.msalClientId,
 				authority: entorno.msalAuthority,
-				redirectUri: `${window.location.origin}/login`,
-				postLogoutRedirectUri: `${window.location.origin}/login`,
+				redirectUri: `${window.location.origin}${ruta("login")}`,
+				postLogoutRedirectUri: `${window.location.origin}${ruta("login")}`,
 			},
 			// localStorage: la sesión sobrevive al cierre de la app y sirve sin conexión.
 			cache: { cacheLocation: "localStorage" },

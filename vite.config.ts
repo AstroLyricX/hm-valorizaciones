@@ -5,7 +5,11 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
+// En GitHub Pages la app vive en /<repositorio>/ (el workflow define BASE_PATH); en local, en /.
+const base = process.env.BASE_PATH ?? "/";
+
 export default defineConfig({
+	base,
 	plugins: [
 		react(),
 		tailwindcss(),
@@ -19,8 +23,8 @@ export default defineConfig({
 				short_name: "H&M Valoriza",
 				description: "Gestión de equipos, contratos y valorizaciones de H&M E.I.R.L.",
 				lang: "es-PE",
-				start_url: "/",
-				scope: "/",
+				start_url: base,
+				scope: base,
 				display: "standalone",
 				orientation: "any",
 				theme_color: "#005A9C",

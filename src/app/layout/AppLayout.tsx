@@ -1,5 +1,6 @@
 import { Outlet, ScrollRestoration, useLocation } from "react-router";
 
+import { ruta } from "@/app/entorno";
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { ConnectionStatus } from "@/shared/components/ConnectionStatus";
@@ -27,7 +28,7 @@ export function AppLayout() {
 						className="hidden h-5 data-vertical:self-center md:block"
 					/>
 					<img
-						src="/favicon.svg"
+						src={ruta("favicon.svg")}
 						alt=""
 						width={28}
 						height={28}

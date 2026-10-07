@@ -1,6 +1,8 @@
 import type { IPublicClientApplication } from "@azure/msal-browser";
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 
+import { ruta } from "@/app/entorno";
+
 import { PERMISOS } from "./permisos";
 import { usuarioDesdeCuenta } from "./roles";
 import { type Session, SessionContext, type SessionUser } from "./SessionContext";
@@ -84,7 +86,7 @@ export function MsalSessionProvider({
 		if (navigator.onLine) {
 			await cliente.logoutRedirect({
 				account: cuenta ?? undefined,
-				postLogoutRedirectUri: `${window.location.origin}/login`,
+				postLogoutRedirectUri: `${window.location.origin}${ruta("login")}`,
 			});
 
 			return;

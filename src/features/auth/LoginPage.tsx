@@ -1,6 +1,7 @@
 import { Calculator, FileText, LoaderCircle, WifiOff } from "lucide-react";
 import { Navigate, useLocation, useNavigate } from "react-router";
 
+import { ruta } from "@/app/entorno";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useOnlineStatus } from "@/shared/hooks/useOnlineStatus";
@@ -47,7 +48,7 @@ export function LoginPage() {
 					<section className="w-full rounded-3xl border border-white bg-white p-8 shadow-[0_24px_64px_-24px] shadow-primary/25 ring-1 ring-slate-900/5 backdrop-blur-xl sm:p-10 dark:border-white/10 dark:bg-card/80">
 						<div className="flex flex-col items-center gap-6 text-center">
 							<img
-								src="/logo-hm.png"
+								src={ruta("logo-hm.png")}
 								alt="Maquinarias y Contratistas Generales H&M E.I.R.L."
 								width={88}
 								height={88}

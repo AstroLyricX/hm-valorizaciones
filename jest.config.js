@@ -1,6 +1,8 @@
 /** @type {import("jest").Config} */
 const config = {
 	testEnvironment: "jest-fixed-jsdom",
+	// Las pruebas de pantallas completas (selectores, calendario) pasan de 5 s con la suite en paralelo.
+	testTimeout: 15000,
 	setupFilesAfterEnv: ["<rootDir>/tests/setupTests.ts"],
 	testMatch: ["<rootDir>/tests/**/*.spec.{ts,tsx}"],
 	testPathIgnorePatterns: ["<rootDir>/tests/e2e/"],

@@ -7,3 +7,14 @@ export const entorno = {
 		(import.meta.env.VITE_MSAL_AUTHORITY as string | undefined) ??
 		"https://login.microsoftonline.com/common",
 };
+
+// Ruta base de la app ("/" en local, "/hm-valorizaciones/" en GitHub Pages), siempre con "/" final.
+export const base = import.meta.env.BASE_URL;
+
+// Dirección de un archivo de public/ respetando la ruta base: ruta("logo-hm.png").
+export function ruta(archivo: string): string {
+	return `${base}${archivo}`;
+}
+
+// Para React Router: sin "/" final ("/hm-valorizaciones"), o "/" en local.
+export const basename = base === "/" ? "/" : base.replace(/\/$/, "");

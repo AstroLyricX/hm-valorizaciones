@@ -2,12 +2,13 @@ import { Download, LoaderCircle, Share2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { ruta } from "@/app/entorno";
 import { Button } from "@/components/ui/button";
 import { descargarArchivo } from "@/shared/lib/descargar";
 
 import { type DatosPdf, nombreArchivoPdf } from "../pdf/datosPdf";
 
-const LOGO = "/logo-hm.png";
+const LOGO = ruta("logo-hm.png");
 
 function puedeCompartirArchivos(): boolean {
 	try {
