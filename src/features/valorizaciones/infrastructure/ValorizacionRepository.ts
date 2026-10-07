@@ -50,6 +50,12 @@ export class ValorizacionRepository {
 		return items.filter((item) => item.deletedAt === null);
 	}
 
+	async todosLosItems(): Promise<ValorizacionItem[]> {
+		return (await this.database.valorizacionItems.toArray()).filter(
+			(item) => item.deletedAt === null,
+		);
+	}
+
 	async itemsDe(valorizacionIds: readonly string[]): Promise<ValorizacionItem[]> {
 		const items = await this.database.valorizacionItems
 			.where("valorizacionId")

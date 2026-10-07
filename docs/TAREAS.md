@@ -134,13 +134,13 @@ Rediseñada según `VALORIZACIONES.txt`: el contrato son equipos con horas míni
 - [x] STOP
 - [ ] Pendiente de confirmar: si existe un estado "Operativo" de equipo para mostrar "Equipos operativos" como en la hoja INICIO
 
-## Fase 10: Exportar a Excel y migrar desde el xlsm
+## Fase 10: Exportar a Excel ✅
 
-- [ ] Exportar a Excel con SheetJS: clientes, equipos, contratos e historial de valorizaciones
-- [ ] Importar desde `VALORIZACIONES H&M.xlsm`: leer las hojas maestras y crear los registros, con una vista previa antes de confirmar
-- [ ] Pruebas: importar el xlsm real (1 cliente) y exportar sin perder datos
-- [ ] Verificar
-- [ ] STOP
+- [x] Exportar a Excel con SheetJS desde Configuración: CLIENTES, EQUIPOS, CONTRATOS, EQUIPOS_CONTRATO, VALORIZACIONES y DET_VALORIZACIONES (montos con 2 decimales y fechas reales de Excel); SheetJS se carga solo al exportar
+- [x] Pruebas: exportar sin perder datos (se lee el Excel generado) y la descarga en Cypress
+- [x] Verificar
+- [x] STOP
+- Decisión: **no se importa desde el xlsm** (solo tiene un cliente de prueba); los datos reales se registran en la app y la primera valorización empieza con 0 h anteriores.
 
 ## Fase 11: Login con Microsoft y roles
 

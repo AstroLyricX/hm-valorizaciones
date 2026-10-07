@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSession } from "@/features/auth/useSession";
+import { RespaldoDatos } from "@/features/datos/ui/RespaldoDatos";
 import { formatearFechaHora } from "@/lib/fechas";
 import { FormField } from "@/shared/components/FormField";
 import { FormSection } from "@/shared/components/FormSection";
@@ -174,6 +175,7 @@ export function ConfiguracionPage() {
 					<Skeleton className="h-28 w-full rounded-xl" />
 				</div>
 			)}
+			<RespaldoDatos />
 		</div>
 	);
 }

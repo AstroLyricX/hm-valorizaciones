@@ -3,6 +3,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { descargarArchivo } from "@/shared/lib/descargar";
 
 import { type DatosPdf, nombreArchivoPdf } from "../pdf/datosPdf";
 
@@ -25,17 +26,6 @@ async function crearArchivo(datos: Omit<DatosPdf, "logo">): Promise<File> {
 	return new File([blob], nombreArchivoPdf(datos.planilla), { type: "application/pdf" });
 }
 
-function descargar(archivo: File): void {
-	const url = URL.createObjectURL(archivo);
-	const enlace = document.createElement("a");
-	enlace.href = url;
-	enlace.download = archivo.name;
-	document.body.append(enlace);
-	enlace.click();
-	enlace.remove();
-	setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
 // "Descargar PDF" en todos los dispositivos y "Compartir" donde el navegador lo permite
 // (celulares: WhatsApp, correo…). Un borrador sale con la marca de agua BORRADOR.
 export function AccionesPdf({ datos }: { datos: Omit<DatosPdf, "logo"> }) {
@@ -49,7 +39,7 @@ export function AccionesPdf({ datos }: { datos: Omit<DatosPdf, "logo"> }) {
 			if (accion === "compartir") {
 				await navigator.share({ files: [archivo], title: archivo.name });
 			} else {
-				descargar(archivo);
+				descargarArchivo(archivo);
 				toast.success(`Se descargó ${archivo.name}.`);
 			}
 		} catch (error) {
