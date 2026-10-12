@@ -103,6 +103,7 @@ const SIN_EMITIR = {
 	montoEnLetras: null,
 	motivoAnulacion: null,
 	anuladaEn: null,
+	pdfPath: null,
 } as const;
 const SIN_COPIA = {
 	descripcion: null,

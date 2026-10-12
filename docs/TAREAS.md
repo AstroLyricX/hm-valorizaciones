@@ -153,17 +153,21 @@ Rediseñada según `VALORIZACIONES.txt`: el contrato son equipos con horas míni
 - [x] Verificar
 - [x] STOP
 
-## Fase 12: Sincronización con OneDrive
+## Fase 12: Sincronización con SharePoint ✅ (pendiente el sitio y el registro en Azure)
 
-- [ ] `graphClient`: token, reintentos ante 429/503 con `Retry-After`, `If-Match` con eTag y sesiones de subida para archivos grandes
-- [ ] `syncEngine`: subir lo pendiente del `outbox` y bajar los cambios con `/delta`. Se ejecuta al recuperar la conexión, al volver a la app y cada cierto tiempo.
-- [ ] Estructura en OneDrive: `/Apps/SistemaHM/{tabla}/{id}.json` y `/pdf/{año}/`
-- [ ] Resolución de conflictos: gana el cambio más reciente, y se avisa al usuario si había un conflicto en una valorización
-- [ ] Subir el PDF al emitir y guardar su ruta en `pdfPath` (P9)
-- [ ] Estado de la sincronización en la interfaz
-- [ ] Pruebas: el `syncEngine` con Graph simulado (subida, bajada, conflicto y sin conexión)
-- [ ] Verificar
-- [ ] STOP
+Decisión: los datos son **compartidos por todos los usuarios** en un sitio de SharePoint de H&M
+(no en el OneDrive de cada uno). Permiso `Sites.ReadWrite.All`; login con el directorio de H&M y
+las cuentas personales como invitados.
+
+- [x] `GraphClient`: token, reintentos ante 429/503/504 con `Retry-After`, `If-Match` con eTag (e `If-None-Match: *` al crear) y sesiones de subida para archivos de más de 4 MB
+- [x] `SyncEngine`: baja los cambios con `/delta`, sube los PDFs y lo pendiente del `outbox` (un archivo por registro con su estado actual). Se ejecuta al abrir la app, al recuperar la conexión, al volver a la app, cada 5 minutos y poco después de cada cambio.
+- [x] Estructura en SharePoint: `SistemaHM/{tabla}/{id}.json` y `SistemaHM/pdf/{año}/`
+- [x] Conflictos: gana el cambio más reciente (`updatedAt`), también si el archivo cambia entre la bajada y la subida (412); aviso al usuario si fue una valorización y si dos dispositivos emitieron el mismo número
+- [x] Al emitir, el PDF queda en cola (también sin conexión), se sube y su ruta se guarda en `pdfPath` (P9)
+- [x] Estado de la sincronización en la cabecera: "Todo sincronizado", "N cambios por sincronizar", "Sin conexión…", "Sincronizando…", "Inicia sesión de nuevo…"; al tocarlo sincroniza
+- [x] Pruebas: `GraphClient` con fetch simulado y `SyncEngine` con un SharePoint simulado de dos dispositivos (subida, bajada, conflictos, 412, sin conexión, datos inválidos, PDF y números duplicados), y el estado en la interfaz
+- [x] Verificar
+- [x] STOP
 
 ## Fase 13: Consulta de RUC
 

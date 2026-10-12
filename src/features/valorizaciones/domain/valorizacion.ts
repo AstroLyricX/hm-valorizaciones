@@ -82,6 +82,8 @@ export const ValorizacionSchema = BaseSchema.extend({
 	// Solo en las anuladas.
 	motivoAnulacion: z.string().nullable(),
 	anuladaEn: z.iso.datetime().nullable(),
+	// Ruta del PDF emitido en SharePoint (P9), cuando ya se subió.
+	pdfPath: z.string().nullable(),
 });
 
 // Horas del periodo por equipo del contrato. Al emitir se copian los datos del contrato y

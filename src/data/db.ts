@@ -19,6 +19,27 @@ export interface OutboxEntry {
 	intentos: number;
 }
 
+// Estado de la sincronización con SharePoint (fase 12).
+export interface SyncMeta {
+	clave: "driveId" | "deltaLink" | "ultimaSincronizacion";
+	valor: string;
+}
+
+// eTag del archivo de cada registro en SharePoint, para escribir solo si nadie lo cambió.
+export interface SyncArchivo {
+	clave: string; // "terceros/<id>"
+	eTag: string;
+}
+
+// PDFs emitidos que esperan subirse a SharePoint (también se generan sin conexión).
+export interface ArchivoPendiente {
+	id?: number;
+	ruta: string;
+	archivo: Blob;
+	valorizacionId: string;
+	createdAt: string;
+}
+
 export class HmDatabase extends Dexie {
 	empresa!: EntityTable<Empresa, "id">;
 	terceros!: EntityTable<Tercero, "id">;
@@ -28,6 +49,9 @@ export class HmDatabase extends Dexie {
 	valorizaciones!: EntityTable<Valorizacion, "id">;
 	valorizacionItems!: EntityTable<ValorizacionItem, "id">;
 	outbox!: EntityTable<OutboxEntry, "id">;
+	syncMeta!: EntityTable<SyncMeta, "clave">;
+	syncArchivos!: EntityTable<SyncArchivo, "clave">;
+	archivosPendientes!: EntityTable<ArchivoPendiente, "id">;
 
 	constructor(name = "hm-valorizaciones") {
 		super(name);
@@ -97,6 +121,21 @@ export class HmDatabase extends Dexie {
 					item.cantidadAnterior ??= null;
 				});
 		});
+		// Sincronización con SharePoint (fase 12) y ruta del PDF de cada valorización emitida.
+		this.version(9)
+			.stores({
+				syncMeta: "clave",
+				syncArchivos: "clave",
+				archivosPendientes: "++id, valorizacionId",
+			})
+			.upgrade(async (tx) => {
+				await tx
+					.table("valorizaciones")
+					.toCollection()
+					.modify((valorizacion: Record<string, unknown>) => {
+						valorizacion.pdfPath ??= null;
+					});
+			});
 	}
 }
 

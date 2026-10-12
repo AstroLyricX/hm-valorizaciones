@@ -3,7 +3,7 @@ import { Outlet, ScrollRestoration, useLocation } from "react-router";
 import { ruta } from "@/app/entorno";
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { ConnectionStatus } from "@/shared/components/ConnectionStatus";
+import { SyncStatus } from "@/features/sincronizacion/SyncStatus";
 import { NuevaValorizacionButton } from "@/shared/components/NuevaValorizacionButton";
 import { OfflineBanner } from "@/shared/components/OfflineBanner";
 
@@ -46,7 +46,7 @@ export function AppLayout() {
 						<span className="truncate font-semibold text-navy-900 md:font-medium">{titulo}</span>
 					</nav>
 					<div className="ml-auto flex items-center gap-3">
-						<ConnectionStatus className="max-md:hidden" />
+						<SyncStatus className="max-md:hidden" />
 						{!isNuevaValorizacion && <NuevaValorizacionButton className="hidden md:inline-flex" />}
 					</div>
 				</header>

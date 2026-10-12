@@ -1,2 +1,3 @@
-// Permisos que se piden al iniciar sesión: el perfil y la carpeta de la app en OneDrive (fase 12).
-export const PERMISOS = ["User.Read", "Files.ReadWrite.AppFolder"];
+// Permisos que se piden al iniciar sesión: el perfil y el sitio de SharePoint de H&M, donde se
+// sincronizan los datos y los PDFs (fase 12).
+export const PERMISOS = ["User.Read", "Sites.ReadWrite.All"];

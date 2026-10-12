@@ -2,6 +2,7 @@
 export const entorno = {
 	msalClientId: "",
 	msalAuthority: "https://login.microsoftonline.com/common",
+	sharepointSitio: "",
 };
 
 export const base = "/";

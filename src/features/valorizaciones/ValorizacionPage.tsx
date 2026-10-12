@@ -19,6 +19,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { puede } from "@/features/auth/roles";
 import { useSession } from "@/features/auth/useSession";
+import { useSincronizacion } from "@/features/sincronizacion/SyncContext";
 import { formatearMoneda } from "@/lib/dinero";
 import { formatearFechaNumerica } from "@/lib/fechas";
 import { cn } from "@/lib/utils";
@@ -34,6 +35,7 @@ import {
 	formatearPeriodo,
 	type ValorizacionCabecera,
 } from "./domain/valorizacion";
+import { encolarPdf } from "./pdf/encolarPdf";
 import { AccionesPdf } from "./ui/AccionesPdf";
 import { AnularDialog } from "./ui/AnularDialog";
 import { DatosServicio } from "./ui/DatosServicio";
@@ -122,6 +124,7 @@ function Editor({ planilla }: { planilla: Planilla }) {
 	const [descartando, setDescartando] = useState(false);
 	const [emitiendo, setEmitiendo] = useState(false);
 	const [anulando, setAnulando] = useState(false);
+	const sincronizacion = useSincronizacion();
 	const puedeAnular = puede(user?.rol, "anular") && valorizacion.estado === "EMITIDA";
 	// Solo los campos editables: el resto (número, estado…) siempre sale de la valorización guardada.
 	const [cabecera, setCabecera] = useState<ValorizacionCabecera>(() => ({
@@ -476,6 +479,12 @@ function Editor({ planilla }: { planilla: Planilla }) {
 							await Promise.all([horasGuardado.vaciar(), cabeceraGuardado.vaciar()]);
 							const emitida = await valorizacionService.emitir(valorizacion.id, usuario);
 							toast.success(`Valorización ${emitida.numero ?? ""} emitida.`);
+							// Con sincronización, el PDF también se guarda en SharePoint (P9).
+							if (sincronizacion.activa) {
+								void encolarPdf(emitida.id).catch((error: unknown) => {
+									console.error(error);
+								});
+							}
 						} catch {
 							toast.error("No se pudo emitir. Revisa las horas e inténtalo de nuevo.");
 						}

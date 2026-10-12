@@ -20,6 +20,18 @@ export interface Session {
 	modo: "prueba" | "microsoft";
 	signIn: (destino?: string) => Promise<void>;
 	signOut: () => Promise<void>;
+	// Token de Microsoft Graph para la sincronización; solo con login de Microsoft.
+	obtenerToken?: () => Promise<string>;
+	// Vuelve a pedir el login cuando Microsoft lo exige (contraseña cambiada, sesión vencida…).
+	reautenticar?: () => Promise<void>;
+}
+
+// Microsoft pide volver a iniciar sesión: la sincronización espera a que el usuario lo haga.
+export class ReautenticacionRequeridaError extends Error {
+	constructor() {
+		super("Vuelve a iniciar sesión con Microsoft para sincronizar.");
+		this.name = "ReautenticacionRequeridaError";
+	}
 }
 
 export const SessionContext = createContext<Session | null>(null);

@@ -1,11 +1,16 @@
-import type { IPublicClientApplication } from "@azure/msal-browser";
+import { InteractionRequiredAuthError, type IPublicClientApplication } from "@azure/msal-browser";
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 
 import { ruta } from "@/app/entorno";
 
 import { PERMISOS } from "./permisos";
 import { usuarioDesdeCuenta } from "./roles";
-import { type Session, SessionContext, type SessionUser } from "./SessionContext";
+import {
+	ReautenticacionRequeridaError,
+	type Session,
+	SessionContext,
+	type SessionUser,
+} from "./SessionContext";
 
 export type ClienteMsal = Pick<
 	IPublicClientApplication,
@@ -17,6 +22,8 @@ export type ClienteMsal = Pick<
 	| "loginRedirect"
 	| "logoutRedirect"
 	| "clearCache"
+	| "acquireTokenSilent"
+	| "acquireTokenRedirect"
 >;
 
 // Login con Microsoft (Auth Code + PKCE, por redirección: funciona también en la PWA instalada).
@@ -95,9 +102,44 @@ export function MsalSessionProvider({
 		cliente.setActiveAccount(null);
 	}, [cliente]);
 
+	// Token silencioso (de la caché o renovado en segundo plano). Si Microsoft exige volver a
+	// iniciar sesión, no se interrumpe al usuario: la sincronización lo avisa.
+	const obtenerToken = useCallback(async () => {
+		const cuenta = cliente.getActiveAccount();
+		if (!cuenta) {
+			throw new ReautenticacionRequeridaError();
+		}
+		try {
+			return (await cliente.acquireTokenSilent({ scopes: PERMISOS, account: cuenta })).accessToken;
+		} catch (error) {
+			if (error instanceof InteractionRequiredAuthError) {
+				throw new ReautenticacionRequeridaError();
+			}
+			throw error;
+		}
+	}, [cliente]);
+
+	const reautenticar = useCallback(async () => {
+		await cliente.acquireTokenRedirect({
+			scopes: PERMISOS,
+			account: cliente.getActiveAccount() ?? undefined,
+			state: window.location.pathname,
+		});
+	}, [cliente]);
+
 	const session = useMemo<Session>(
-		() => ({ user, isLoading, isSigningIn, destino, modo: "microsoft", signIn, signOut }),
-		[user, isLoading, isSigningIn, destino, signIn, signOut],
+		() => ({
+			user,
+			isLoading,
+			isSigningIn,
+			destino,
+			modo: "microsoft",
+			signIn,
+			signOut,
+			obtenerToken,
+			reautenticar,
+		}),
+		[user, isLoading, isSigningIn, destino, signIn, signOut, obtenerToken, reautenticar],
 	);
 
 	return <SessionContext value={session}>{children}</SessionContext>;
