@@ -175,7 +175,7 @@ export function EquiposPage() {
 				description="Maquinaria con su activo fijo, placa, dueño y estado."
 				actions={
 					duenos.length > 0 && (
-						<Button className="h-9 px-3.5 md:hidden" onClick={nuevo}>
+						<Button className="h-9 px-3.5" onClick={nuevo}>
 							<Plus />
 							Agregar equipo
 						</Button>
@@ -203,7 +203,7 @@ export function EquiposPage() {
 							data={equipos}
 							columns={columns}
 							initialSorting={[{ id: "activoFijo", desc: false }]}
-							nuevo={{ label: "Nuevo", onClick: nuevo }}
+							buscar="Buscar por equipo, activo fijo, placa o dueño"
 							vacio={
 								<span className="text-muted-foreground">
 									No hay equipos registrados. Usa «Nuevo» para agregar el primero.

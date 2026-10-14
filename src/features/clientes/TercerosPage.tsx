@@ -193,7 +193,7 @@ export function TercerosPage({ tipo }: { tipo: TipoTercero }) {
 				title={textos.titulo}
 				description={textos.descripcion}
 				actions={
-					<Button className="h-9 px-3.5 md:hidden" onClick={nuevo}>
+					<Button className="h-9 px-3.5" onClick={nuevo}>
 						<Plus />
 						{textos.agregar}
 					</Button>
@@ -209,7 +209,7 @@ export function TercerosPage({ tipo }: { tipo: TipoTercero }) {
 							data={terceros}
 							columns={columns}
 							initialSorting={[{ id: "codigo", desc: false }]}
-							nuevo={{ label: "Nuevo", onClick: nuevo }}
+							buscar="Buscar por razón social, RUC, código o representante"
 							vacio={
 								<span className="text-muted-foreground">
 									{textos.vacio}. Usa «Nuevo» para agregar el primero.

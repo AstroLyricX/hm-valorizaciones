@@ -24,7 +24,7 @@ beforeEach(async () => {
 });
 
 async function abrirNuevo(user: ReturnType<typeof userEvent.setup>) {
-	await user.click(within(await screen.findByRole("table")).getByRole("button", { name: "Nuevo" }));
+	await user.click(await screen.findByRole("button", { name: "Agregar equipo" }));
 
 	return screen.findByRole("dialog", { name: "Nuevo equipo" });
 }
@@ -109,7 +109,7 @@ test("filtra los equipos por estado", async () => {
 	const tabla = await screen.findByRole("table");
 	await seleccionar(
 		user,
-		within(tabla).getByRole("combobox", { name: "Filtrar por estado" }),
+		screen.getByRole("combobox", { name: "Filtrar por estado" }),
 		"Desmovilizado",
 	);
 

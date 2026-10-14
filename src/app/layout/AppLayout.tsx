@@ -1,7 +1,6 @@
 import { Outlet, ScrollRestoration, useLocation } from "react-router";
 
 import { ruta } from "@/app/entorno";
-import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { SyncStatus } from "@/features/sincronizacion/SyncStatus";
 import { NuevaValorizacionButton } from "@/shared/components/NuevaValorizacionButton";
@@ -23,10 +22,6 @@ export function AppLayout() {
 			<SidebarInset className="min-w-0 bg-canvas dark:bg-background">
 				<header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-3 border-b border-navy-100 bg-white px-4 shadow-[0_1px_2px_rgb(14_30_54/0.04)] md:px-6 dark:bg-background">
 					<SidebarTrigger className="-ml-2 hidden text-navy-500 md:inline-flex" />
-					<Separator
-						orientation="vertical"
-						className="hidden h-5 data-vertical:self-center md:block"
-					/>
 					<img
 						src={ruta("favicon.svg")}
 						alt=""
@@ -34,17 +29,8 @@ export function AppLayout() {
 						height={28}
 						className="size-7 rounded-md md:hidden"
 					/>
-					<nav aria-label="Ruta de navegación" className="flex min-w-0 items-center gap-2 text-sm">
-						<span className="hidden text-muted-foreground md:inline">H&amp;M</span>
-						<span className="hidden text-navy-200 md:inline">/</span>
-						{isNuevaValorizacion && (
-							<>
-								<span className="hidden text-muted-foreground md:inline">Valorizaciones</span>
-								<span className="hidden text-navy-200 md:inline">/</span>
-							</>
-						)}
-						<span className="truncate font-semibold text-navy-900 md:font-medium">{titulo}</span>
-					</nav>
+					{/* En celular el título va en la barra; en pantalla grande ya lo muestra la página. */}
+					<span className="truncate font-semibold text-navy-900 md:hidden">{titulo}</span>
 					<div className="ml-auto flex items-center gap-3">
 						<SyncStatus className="max-md:hidden" />
 						{!isNuevaValorizacion && <NuevaValorizacionButton className="hidden md:inline-flex" />}

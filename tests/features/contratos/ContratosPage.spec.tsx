@@ -30,7 +30,7 @@ beforeEach(async () => {
 });
 
 async function abrirNuevo(user: Usuario) {
-	await user.click(within(await screen.findByRole("table")).getByRole("button", { name: "Nuevo" }));
+	await user.click(await screen.findByRole("button", { name: "Nuevo contrato" }));
 
 	return screen.findByRole("dialog", { name: "Nuevo contrato" });
 }
@@ -56,7 +56,7 @@ test("sin equipos avisa que primero hay que registrarlos", async () => {
 	const user = userEvent.setup();
 	renderRoute("/contratos");
 
-	await user.click(within(await screen.findByRole("table")).getByRole("button", { name: "Nuevo" }));
+	await user.click(await screen.findByRole("button", { name: "Nuevo contrato" }));
 
 	expect(
 		await screen.findByText("Primero registra al menos un cliente o proveedor y un equipo."),
@@ -155,18 +155,14 @@ test("el listado muestra el contrato con su cliente, monto y estado, y abre la f
 	expect(within(tabla).getAllByText("USD 7,050.00")).toHaveLength(2);
 	expect(within(screen.getAllByRole("rowgroup")[1]).getByText("Vencido")).toBeInTheDocument();
 
-	await seleccionar(
-		user,
-		within(tabla).getByRole("combobox", { name: "Filtrar por estado" }),
-		"Vencido",
-	);
+	await seleccionar(user, screen.getByRole("combobox", { name: "Filtrar por estado" }), "Vencido");
 	expect(
 		within(tabla).queryByText("GESTIÓN GENERAL DE SUBCONTRATOS - OSUR"),
 	).not.toBeInTheDocument();
 	await seleccionar(
 		user,
-		within(tabla).getByRole("combobox", { name: "Filtrar por estado" }),
-		"Todos",
+		screen.getByRole("combobox", { name: "Filtrar por estado" }),
+		"Estado: todos",
 	);
 
 	await user.click(within(tabla).getByRole("button", { name: "Ver CTR-001" }));
@@ -191,7 +187,7 @@ test("un contrato recibido pide un proveedor y solo ofrece sus equipos", async (
 	);
 	renderRoute("/contratos");
 
-	await user.click(within(await screen.findByRole("table")).getByRole("button", { name: "Nuevo" }));
+	await user.click(await screen.findByRole("button", { name: "Nuevo contrato" }));
 	const formulario = await screen.findByRole("dialog", { name: "Nuevo contrato" });
 	await seleccionar(user, within(formulario).getByLabelText(/Tipo de contrato/), /Recibido/);
 

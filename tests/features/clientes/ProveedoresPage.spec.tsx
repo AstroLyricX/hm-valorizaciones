@@ -22,7 +22,7 @@ test("registra un proveedor con su código PRO y no lo mezcla con los clientes",
 	renderRoute("/proveedores");
 
 	expect(await screen.findByRole("heading", { level: 1, name: "Proveedores" })).toBeInTheDocument();
-	await user.click(within(await screen.findByRole("table")).getByRole("button", { name: "Nuevo" }));
+	await user.click(await screen.findByRole("button", { name: "Agregar proveedor" }));
 	const formulario = await screen.findByRole("dialog", { name: "Nuevo proveedor" });
 	await user.type(within(formulario).getByLabelText(/Razón social/), "Huise Quea Antolin");
 	await user.type(within(formulario).getByLabelText(/RUC/), "10098637074");

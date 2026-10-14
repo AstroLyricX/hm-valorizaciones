@@ -20,9 +20,12 @@ export interface OpcionFiltro {
 	etiqueta: string;
 }
 
-// Filtro de la fila de filtros bajo los encabezados: texto libre o lista de opciones.
+// "texto": la columna entra en el buscador de la tabla (con `texto` si lo que se ve difiere del
+// valor guardado, como el periodo "2026-08" que se muestra "Agosto 2026").
+// "opciones": lista desplegable junto al buscador.
 export type FiltroColumna =
-	{ tipo: "texto"; placeholder?: string } | { tipo: "opciones"; opciones: OpcionFiltro[] };
+	| { tipo: "texto"; placeholder?: string; texto?: (valor: unknown) => string }
+	| { tipo: "opciones"; opciones: OpcionFiltro[] };
 
 export interface MetaColumna {
 	filtro?: FiltroColumna;

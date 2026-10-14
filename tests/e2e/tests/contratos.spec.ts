@@ -1,4 +1,5 @@
 import {
+	abrirNuevo,
 	datosGeneralesDelContrato,
 	llenarEquipo,
 	registrarCliente,
@@ -35,7 +36,7 @@ describe("Contratos", () => {
 
 	it("registra un contrato con 2 equipos y muestra el monto contractual", () => {
 		cy.visit("/contratos");
-		cy.findByRole("table").findByRole("button", { name: "Nuevo" }).click();
+		abrirNuevo("Nuevo contrato");
 
 		datosGeneralesDelContrato();
 		cy.findByRole("button", { name: "Agregar equipo" }).click();

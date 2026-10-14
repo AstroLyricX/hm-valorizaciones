@@ -88,7 +88,10 @@ export function ValorizacionesPage() {
 				columnHelper.accessor("periodo", {
 					header: "Periodo",
 					filterFn: "contiene",
-					meta: { filtro: { tipo: "texto" }, celda: "whitespace-nowrap" },
+					meta: {
+						filtro: { tipo: "texto", texto: (valor) => formatearPeriodo(String(valor)) },
+						celda: "whitespace-nowrap",
+					},
 					cell: ({ getValue }) => formatearPeriodo(getValue()),
 				}),
 				columnHelper.accessor("contrato", {
@@ -217,7 +220,7 @@ export function ValorizacionesPage() {
 							data={filas}
 							columns={columns}
 							initialSorting={[{ id: "periodo", desc: true }]}
-							nuevo={{ label: "Nueva", onClick: () => void navigate("/valorizaciones/nueva") }}
+							buscar="Buscar por número, contrato, proyecto o periodo"
 							vacio={<span className="text-muted-foreground">No hay valorizaciones.</span>}
 						/>
 					</div>

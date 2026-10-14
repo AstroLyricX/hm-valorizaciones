@@ -1,6 +1,6 @@
-// En escritorio el alta se abre con "+ Nuevo" de la tabla; en celular, con el botón de la cabecera.
-export function abrirNuevo(etiquetaCelular: string): void {
-	cy.contains("button:visible", new RegExp(`^(Nuevo|${etiquetaCelular})$`)).click();
+// El alta se abre con el botón de la cabecera de la página ("Agregar cliente", "Nuevo contrato"…).
+export function abrirNuevo(etiqueta: string): void {
+	cy.contains("button:visible", new RegExp(`^${etiqueta}$`)).click();
 }
 
 // Los selectores son propios: se abre el campo y se elige la opción de la lista flotante,
@@ -114,7 +114,7 @@ export function registrarContratoDelXlsm(): void {
 		dueno: "HUISE QUEA ANTOLIN",
 	});
 	cy.visit("/contratos");
-	cy.findByRole("table").findByRole("button", { name: "Nuevo" }).click();
+	abrirNuevo("Nuevo contrato");
 	datosGeneralesDelContrato();
 	cy.findByRole("button", { name: "Agregar equipo" }).click();
 	llenarEquipo(1, /EXCAVADORA CAT 340/, "150", "47");

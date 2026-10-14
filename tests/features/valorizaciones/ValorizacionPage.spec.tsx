@@ -285,3 +285,17 @@ test("al emitir y descargar en la misma pantalla, el PDF lleva el número asigna
 		await screen.findByText(`Se descargó VAL-0001-${new Date().getFullYear()}-CTR-001.pdf.`),
 	).toBeInTheDocument();
 });
+
+test("el buscador del historial encuentra el periodo como se ve («agosto»)", async () => {
+	const user = userEvent.setup();
+	await valorizacionService.crearBorrador({ contratoId, periodo: "2026-08" }, "ana@hm.pe");
+	await valorizacionService.crearBorrador({ contratoId, periodo: "2026-09" }, "ana@hm.pe");
+	renderRoute("/valorizaciones");
+
+	const tabla = await screen.findByRole("table");
+	const [buscador] = screen.getAllByRole("searchbox", { name: "Buscar" });
+	await user.type(buscador, "agosto");
+
+	expect(within(tabla).getByText("Agosto 2026")).toBeInTheDocument();
+	expect(within(tabla).queryByText("Septiembre 2026")).not.toBeInTheDocument();
+});

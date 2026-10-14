@@ -186,7 +186,7 @@ export function ContratosPage() {
 				title="Contratos"
 				description="Contratos con sus equipos, horas mínimas, montos y vigencia."
 				actions={
-					<Button className="h-9 px-3.5 md:hidden" onClick={nuevo}>
+					<Button className="h-9 px-3.5" onClick={nuevo}>
 						<Plus />
 						Nuevo contrato
 					</Button>
@@ -202,7 +202,7 @@ export function ContratosPage() {
 							data={datos.filas}
 							columns={columns}
 							initialSorting={[{ id: "codigo", desc: false }]}
-							nuevo={{ label: "Nuevo", onClick: nuevo }}
+							buscar="Buscar por código, proyecto, cliente o proveedor"
 							vacio={
 								<span className="text-muted-foreground">
 									No hay contratos registrados. Usa «Nuevo» para crear el primero.

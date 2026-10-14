@@ -1,11 +1,13 @@
 import { type ColumnDef, type SortingState, useTable } from "@tanstack/react-table";
-import { Plus, SearchX } from "lucide-react";
-import type { ReactNode } from "react";
+import { Search, SearchX } from "lucide-react";
+import { type ReactNode, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { SelectField } from "@/shared/components/SelectField";
 import { type FiltroColumna, type TablaFeatures, tablaFeatures } from "@/shared/lib/tabla";
+import { coincide } from "@/shared/lib/texto";
 
 const ALINEACION = {
 	izquierda: "text-left",
@@ -14,68 +16,55 @@ const ALINEACION = {
 } as const;
 // Opción "Todos" del filtro: el selector no admite un valor vacío como opción.
 const TODOS = "__todos__";
-const celda = "border border-navy-100 px-2.5 py-2.5";
+const celda = "px-4 py-3.5";
 
-function FiltroCelda({
+function FiltroOpciones({
 	filtro,
 	titulo,
 	valor,
 	onChange,
 }: {
-	filtro: FiltroColumna;
+	filtro: Extract<FiltroColumna, { tipo: "opciones" }>;
 	titulo: string;
 	valor: string;
 	onChange: (valor: string) => void;
 }) {
-	const clase =
-		"h-8 w-full min-w-0 rounded-md border border-navy-100 bg-white px-2.5 text-[13px] font-normal text-navy-900 outline-none placeholder:text-navy-400 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40";
-
-	return filtro.tipo === "texto" ? (
-		<input
-			type="search"
-			value={valor}
-			onChange={(event) => onChange(event.target.value)}
-			placeholder={filtro.placeholder ?? titulo}
-			aria-label={`Filtrar por ${titulo.toLowerCase()}`}
-			className={cn(clase, "min-w-16")}
-		/>
-	) : (
+	return (
 		<SelectField
 			value={valor === "" ? TODOS : valor}
 			onChange={(nuevo) => onChange(nuevo === TODOS ? "" : nuevo)}
 			options={[
-				{ value: TODOS, label: "Todos" },
+				{ value: TODOS, label: `${titulo}: todos` },
 				...filtro.opciones.map((opcion) => ({ value: opcion.valor, label: opcion.etiqueta })),
 			]}
 			aria-label={`Filtrar por ${titulo.toLowerCase()}`}
-			className={cn(
-				"min-w-24 rounded-md bg-white px-2.5 text-[13px] font-normal data-[size=default]:h-8",
-				valor === "" && "text-navy-400",
-			)}
+			className={cn("min-w-40 bg-white md:w-auto", valor === "" && "text-navy-500")}
 		/>
 	);
 }
 
-// Tabla de listados: columna N.°, fila de filtros por columna, botón "Nuevo" en la columna
-// de acciones y filas alternadas. Las columnas se definen con `crearColumnas`; el encabezado
-// debe ser texto para usarlo como texto de ejemplo del filtro.
+// Tabla de listados para pantalla grande, con el mismo estilo limpio que la vista de celular:
+// un buscador (sobre las columnas con filtro de texto), los filtros de opciones a su lado y filas
+// separadas solo por una línea. Las columnas se definen con `crearColumnas`; el encabezado debe
+// ser texto. La acción principal ("Agregar…") va en la cabecera de la página.
 export function DataTable<TData extends { id: string }>({
 	data,
 	columns,
 	initialSorting,
-	nuevo,
+	buscar = "Buscar",
 	vacio,
 	onRowClick,
 }: {
 	data: TData[];
 	columns: ColumnDef<TablaFeatures, TData>[];
 	initialSorting?: SortingState;
-	// Botón de la cabecera de acciones.
-	nuevo?: { label: string; onClick: () => void };
+	// Texto de ejemplo del buscador: "Buscar por razón social, RUC o código".
+	buscar?: string;
 	// Mensaje cuando aún no hay registros.
 	vacio: ReactNode;
 	onRowClick?: (row: TData) => void;
 }) {
+	const [busqueda, setBusqueda] = useState("");
 	const table = useTable({
 		features: tablaFeatures,
 		columns,
@@ -84,80 +73,96 @@ export function DataTable<TData extends { id: string }>({
 		initialState: { sorting: initialSorting ?? [] },
 	});
 	const columnas = table.getAllLeafColumns();
-	const filas = table.getRowModel().rows;
-	const hayFiltros = table.state.columnFilters.length > 0;
+	const buscables = columnas.filter((columna) => columna.columnDef.meta?.filtro?.tipo === "texto");
+	const filtros = columnas.filter((columna) => columna.columnDef.meta?.filtro?.tipo === "opciones");
+	const filas = table.getRowModel().rows.filter((fila) =>
+		coincide(
+			busqueda,
+			buscables.map((columna) => {
+				const valor = fila.getValue(columna.id);
+				const filtro = columna.columnDef.meta?.filtro;
+
+				// Se busca en lo que se ve: "Agosto 2026" en lugar de "2026-08".
+				return filtro?.tipo === "texto" && filtro.texto ? filtro.texto(valor) : String(valor ?? "");
+			}),
+		),
+	);
+	const hayFiltros = table.state.columnFilters.length > 0 || busqueda.trim() !== "";
+	const titulo = (columna: (typeof columnas)[number]) =>
+		typeof columna.columnDef.header === "string" ? columna.columnDef.header : "";
 
 	return (
 		<div className="overflow-hidden rounded-xl border border-navy-100 bg-white shadow-[0_1px_3px_rgb(14_30_54/0.06)] dark:bg-card">
+			<div className="flex flex-col gap-3 border-b border-navy-100 p-4 md:flex-row md:items-center">
+				<div className="relative flex-1">
+					<Search
+						className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-navy-400"
+						aria-hidden="true"
+					/>
+					<Input
+						type="search"
+						value={busqueda}
+						onChange={(event) => setBusqueda(event.target.value)}
+						placeholder={buscar}
+						aria-label="Buscar"
+						className="h-10 pl-9"
+					/>
+				</div>
+				{filtros.map((columna) => {
+					const filtro = columna.columnDef.meta?.filtro;
+
+					return filtro?.tipo === "opciones" ? (
+						<FiltroOpciones
+							key={columna.id}
+							filtro={filtro}
+							titulo={titulo(columna)}
+							valor={(columna.getFilterValue() as string | undefined) ?? ""}
+							onChange={(valor) => columna.setFilterValue(valor === "" ? undefined : valor)}
+						/>
+					) : null;
+				})}
+			</div>
 			<div className="overflow-x-auto">
 				<table className="w-full border-collapse text-sm">
-					<thead>
-						<tr className="bg-white">
-							<th
-								scope="col"
-								className={cn(
-									celda,
-									"w-12 text-center font-semibold whitespace-nowrap text-navy-900",
-								)}
-							>
-								N.°
-							</th>
+					<thead className="border-b border-navy-100 bg-navy-50/50">
+						<tr>
 							{columnas.map((columna) => (
 								<th
 									key={columna.id}
 									scope="col"
 									className={cn(
-										celda,
-										"font-semibold text-navy-900",
-										ALINEACION[columna.columnDef.meta?.alineacion ?? "centro"],
+										"px-4 py-3 text-xs font-medium whitespace-nowrap text-navy-500",
+										ALINEACION[
+											columna.id === "acciones"
+												? "derecha"
+												: (columna.columnDef.meta?.alineacion ?? "izquierda")
+										],
 									)}
 								>
-									{typeof columna.columnDef.header === "string" ? columna.columnDef.header : null}
-									{columna.id === "acciones" && "Acciones"}
+									{columna.id === "acciones" ? (
+										<span className="sr-only">Acciones</span>
+									) : (
+										titulo(columna)
+									)}
 								</th>
 							))}
 						</tr>
-						<tr className="bg-white">
-							<td className={celda} />
-							{columnas.map((columna) => {
-								const filtro = columna.columnDef.meta?.filtro;
-								const titulo =
-									typeof columna.columnDef.header === "string" ? columna.columnDef.header : "";
-
-								return (
-									<td key={columna.id} className={cn(celda, "py-2")}>
-										{columna.id === "acciones" && nuevo ? (
-											<Button type="button" className="h-8 w-full px-3" onClick={nuevo.onClick}>
-												<Plus />
-												{nuevo.label}
-											</Button>
-										) : filtro ? (
-											<FiltroCelda
-												filtro={filtro}
-												titulo={titulo}
-												valor={(columna.getFilterValue() as string | undefined) ?? ""}
-												onChange={(valor) =>
-													columna.setFilterValue(valor === "" ? undefined : valor)
-												}
-											/>
-										) : null}
-									</td>
-								);
-							})}
-						</tr>
 					</thead>
-					<tbody>
+					<tbody className="divide-y divide-navy-100">
 						{filas.length === 0 ? (
 							<tr>
-								<td colSpan={columnas.length + 1} className={cn(celda, "py-12 text-center")}>
+								<td colSpan={columnas.length} className="px-4 py-12 text-center">
 									{hayFiltros ? (
 										<div className="flex flex-col items-center gap-3 text-muted-foreground">
 											<SearchX className="size-6 text-navy-300" aria-hidden="true" />
-											<span>Ningún registro coincide con los filtros.</span>
+											<span>Ningún registro coincide con la búsqueda.</span>
 											<Button
 												variant="outline"
 												className="h-8 px-3"
-												onClick={() => table.resetColumnFilters()}
+												onClick={() => {
+													setBusqueda("");
+													table.resetColumnFilters();
+												}}
 											>
 												Limpiar filtros
 											</Button>
@@ -168,25 +173,25 @@ export function DataTable<TData extends { id: string }>({
 								</td>
 							</tr>
 						) : (
-							filas.map((fila, index) => (
+							filas.map((fila) => (
 								<tr
 									key={fila.id}
 									className={cn(
-										"text-navy-700 transition-colors",
-										index % 2 === 0 ? "bg-navy-50/70" : "bg-white",
-										onRowClick && "cursor-pointer hover:bg-brand-50/60",
+										"text-navy-700 transition-colors hover:bg-navy-50/60",
+										onRowClick && "cursor-pointer",
 									)}
 									onClick={onRowClick ? () => onRowClick(fila.original) : undefined}
 								>
-									<td className={cn(celda, "text-center text-navy-500 tabular-nums")}>
-										{index + 1}
-									</td>
 									{fila.getAllCells().map((cell) => (
 										<td
 											key={cell.id}
 											className={cn(
 												celda,
-												ALINEACION[cell.column.columnDef.meta?.alineacion ?? "centro"],
+												ALINEACION[
+													cell.column.id === "acciones"
+														? "derecha"
+														: (cell.column.columnDef.meta?.alineacion ?? "izquierda")
+												],
 												cell.column.columnDef.meta?.celda,
 											)}
 										>
@@ -199,7 +204,7 @@ export function DataTable<TData extends { id: string }>({
 					</tbody>
 				</table>
 			</div>
-			<p className="border-t border-navy-100 px-4 py-2.5 text-[13px] text-muted-foreground">
+			<p className="border-t border-navy-100 bg-navy-50/40 px-4 py-2.5 text-[13px] text-muted-foreground">
 				{filas.length} de {data.length} {data.length === 1 ? "registro" : "registros"}
 			</p>
 		</div>

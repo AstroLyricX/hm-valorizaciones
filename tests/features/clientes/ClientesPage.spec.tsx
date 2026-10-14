@@ -20,7 +20,7 @@ beforeEach(async () => {
 });
 
 async function abrirNuevo(user: Usuario) {
-	await user.click(within(await screen.findByRole("table")).getByRole("button", { name: "Nuevo" }));
+	await user.click(await screen.findByRole("button", { name: "Agregar cliente" }));
 
 	return screen.findByRole("dialog", { name: "Nuevo cliente" });
 }
@@ -132,17 +132,14 @@ test("filtra por columna sin importar tildes ni mayúsculas", async () => {
 	renderRoute("/clientes");
 
 	const tabla = await screen.findByRole("table");
-	const filtro = within(tabla).getByRole("searchbox", { name: "Filtrar por razón social" });
+	// El buscador de la tabla (el primero; el otro es el de la vista de celular).
+	const [filtro] = screen.getAllByRole("searchbox", { name: "Buscar" });
 	await user.type(filtro, "nunoa");
 	expect(within(tabla).getByText("MINERA ÑUÑOA")).toBeInTheDocument();
 	expect(within(tabla).queryByText("HUISE QUEA ANTOLIN")).not.toBeInTheDocument();
 
 	await user.clear(filtro);
-	await seleccionar(
-		user,
-		within(tabla).getByRole("combobox", { name: "Filtrar por estado" }),
-		"Activo",
-	);
+	await seleccionar(user, screen.getByRole("combobox", { name: "Filtrar por estado" }), "Activo");
 	expect(within(tabla).getByText("HUISE QUEA ANTOLIN")).toBeInTheDocument();
 	expect(within(tabla).queryByText("MINERA ÑUÑOA")).not.toBeInTheDocument();
 	expect(screen.getByText("1 de 2 registros")).toBeInTheDocument();
