@@ -31,9 +31,12 @@ export const CONTRAPARTE: Record<
 };
 
 export const ETIQUETA_MONEDA: Record<Moneda, string> = {
+	PEN: "Soles (S/)",
 	USD: "Dólares (USD)",
-	PEN: "Soles (PEN)",
 };
+
+// Símbolo corto para encabezados de columnas: "Costo por hora (S/)".
+export const SIMBOLO_MONEDA: Record<Moneda, string> = { PEN: "S/", USD: "USD" };
 
 export const ETIQUETA_ESTADO_CONTRATO: Record<EstadoContrato, string> = {
 	ACTIVO: "Activo",

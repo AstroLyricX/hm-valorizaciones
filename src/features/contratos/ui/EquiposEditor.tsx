@@ -13,6 +13,7 @@ import { type Equipo, nombreEquipo } from "@/features/equipos/domain/equipo";
 import { formatearMoneda } from "@/lib/dinero";
 import { SelectField } from "@/shared/components/SelectField";
 
+import { type Moneda, SIMBOLO_MONEDA } from "../domain/contrato";
 import {
 	type ContratoDatos,
 	type ContratoFormInput,
@@ -22,14 +23,16 @@ import {
 
 const celda = "border border-navy-100 px-2 py-2";
 
-// Lista de equipos del contrato: equipo, horas mínimas y costo por hora (USD); el parcial y el
-// monto contractual se calculan solos.
+// Lista de equipos del contrato: equipo, horas mínimas y costo por hora en la moneda del
+// contrato; el parcial y el monto contractual se calculan solos.
 export function EquiposEditor({
 	control,
 	register,
 	errors,
 	equipos,
+	moneda,
 }: {
+	moneda: Moneda;
 	control: Control<ContratoFormInput, unknown, ContratoDatos>;
 	register: UseFormRegister<ContratoFormInput>;
 	errors: FieldErrors<ContratoFormInput>;
@@ -83,7 +86,7 @@ export function EquiposEditor({
 									Horas mínimas <span className="text-red-500">*</span>
 								</th>
 								<th className={`${celda} w-40 text-center font-semibold whitespace-nowrap`}>
-									Costo por hora (USD) <span className="text-red-500">*</span>
+									Costo por hora ({SIMBOLO_MONEDA[moneda]}) <span className="text-red-500">*</span>
 								</th>
 								<th className={`${celda} w-32 text-right font-semibold`}>Parcial</th>
 								<th className={`${celda} w-14 text-center font-semibold`}>Acción</th>
@@ -149,7 +152,7 @@ export function EquiposEditor({
 											className={`${celda} pt-4 text-right font-medium whitespace-nowrap text-navy-900 tabular-nums`}
 										>
 											<output aria-label={`Parcial del equipo ${index + 1}`}>
-												{formatearMoneda(parciales[index] ?? 0, "USD")}
+												{formatearMoneda(parciales[index] ?? 0, moneda)}
 											</output>
 										</td>
 										<td className={`${celda} pt-3 text-center`}>
@@ -173,7 +176,7 @@ export function EquiposEditor({
 									Monto contractual
 								</td>
 								<td className={`${celda} text-right whitespace-nowrap tabular-nums`}>
-									<output aria-label="Monto contractual">{formatearMoneda(total, "USD")}</output>
+									<output aria-label="Monto contractual">{formatearMoneda(total, moneda)}</output>
 								</td>
 								<td className={celda} />
 							</tr>

@@ -40,7 +40,7 @@ export const ContratoFormSchema = z
 		documentoContractual: z.string(),
 		fechaInicio: z.string(),
 		fechaFin: z.string(),
-		// El costo por hora es en dólares (VALORIZACIONES.txt).
+		// Soles por defecto; también se puede pactar en dólares.
 		moneda: z.string(),
 		fondoGarantiaPct: z.string().transform((valor) => (valor.trim() === "" ? 0 : aNumero(valor))),
 		observaciones: z.string(),
@@ -62,7 +62,7 @@ export const FORMULARIO_VACIO: ContratoFormInput = {
 	documentoContractual: "",
 	fechaInicio: "",
 	fechaFin: "",
-	moneda: "USD",
+	moneda: "PEN",
 	fondoGarantiaPct: "",
 	observaciones: "",
 	equipos: [],
@@ -80,7 +80,7 @@ export function aFormulario(
 		documentoContractual: contrato.documentoContractual,
 		fechaInicio: contrato.fechaInicio,
 		fechaFin: contrato.fechaFin,
-		moneda: "USD",
+		moneda: contrato.moneda,
 		fondoGarantiaPct: contrato.fondoGarantiaPct === 0 ? "" : String(contrato.fondoGarantiaPct),
 		observaciones: contrato.observaciones,
 		equipos: equipos.map((equipo) => ({

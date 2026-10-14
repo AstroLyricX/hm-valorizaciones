@@ -16,7 +16,13 @@ import { SelectField } from "@/shared/components/SelectField";
 
 import { ClienteNoValidoError, type ContratoDetalle } from "../application/ContratoService";
 import { contratoService } from "../application/contratoService.instance";
-import { CONTRAPARTE, type TipoContrato, TIPOS_CONTRATO } from "../domain/contrato";
+import {
+	CONTRAPARTE,
+	ETIQUETA_MONEDA,
+	type Moneda,
+	type TipoContrato,
+	TIPOS_CONTRATO,
+} from "../domain/contrato";
 import {
 	aFormulario,
 	type ContratoDatos,
@@ -27,6 +33,12 @@ import {
 import { EquiposEditor } from "./EquiposEditor";
 
 const mayus = "uppercase placeholder:normal-case";
+
+// Soles primero: es la moneda por defecto.
+const OPCIONES_MONEDA = (["PEN", "USD"] as const).map((moneda) => ({
+	value: moneda,
+	label: ETIQUETA_MONEDA[moneda],
+}));
 
 const OPCIONES_TIPO = TIPOS_CONTRATO.map((tipo) => ({
 	value: tipo,
@@ -66,6 +78,7 @@ function Formulario({
 	const tipo: TipoContrato =
 		useWatch({ control, name: "tipo" }) === "RECIBIDO" ? "RECIBIDO" : "EMITIDO";
 	const terceroId = useWatch({ control, name: "terceroId" });
+	const moneda: Moneda = useWatch({ control, name: "moneda" }) === "USD" ? "USD" : "PEN";
 	const contraparte = CONTRAPARTE[tipo];
 	const opcionesContraparte = terceros
 		.filter((tercero) => tercero.tipo === contraparte.tipo)
@@ -207,6 +220,22 @@ function Formulario({
 						/>
 					)}
 				</FormField>
+				<FormField label="Moneda" required error={errors.moneda?.message}>
+					{(campo) => (
+						<Controller
+							control={control}
+							name="moneda"
+							render={({ field }) => (
+								<SelectField
+									{...campo}
+									value={field.value}
+									onChange={field.onChange}
+									options={OPCIONES_MONEDA}
+								/>
+							)}
+						/>
+					)}
+				</FormField>
 				<FormField label="Fondo de garantía (%)" error={errors.fondoGarantiaPct?.message}>
 					{(campo) => (
 						<Input
@@ -234,6 +263,7 @@ function Formulario({
 				register={register}
 				errors={errors}
 				equipos={equiposDisponibles}
+				moneda={moneda}
 			/>
 		</FormDialog>
 	);

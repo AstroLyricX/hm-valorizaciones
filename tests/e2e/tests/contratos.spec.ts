@@ -43,7 +43,7 @@ describe("Contratos", () => {
 		llenarEquipo(1, /EXCAVADORA CAT 340/, "150", "47");
 		cy.findByRole("button", { name: "Agregar equipo" }).click();
 		llenarEquipo(2, /VOLQUETE VOLVO FMX/, "20", "850");
-		cy.findByLabelText("Monto contractual").should("have.text", "USD 24,050.00");
+		cy.findByLabelText("Monto contractual").should("have.text", "S/ 24,050.00");
 		cy.findByRole("dialog").findByRole("button", { name: "Guardar" }).click();
 
 		cy.findByText("Contrato CTR-001 registrado.").should("exist");
@@ -56,6 +56,6 @@ describe("Contratos", () => {
 		);
 
 		cy.get("main").findByRole("link", { name: "Contratos" }).click();
-		cy.findByRole("table").findByText("USD 24,050.00").should("exist");
+		cy.findByRole("table").findByText("S/ 24,050.00").should("exist");
 	});
 });

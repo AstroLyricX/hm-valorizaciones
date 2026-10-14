@@ -81,15 +81,17 @@ test("registra un contrato con 2 equipos y abre su ficha con el monto total", as
 	await user.click(within(formulario).getByRole("button", { name: "Agregar equipo" }));
 	await llenarEquipo(user, 2, /VOLQUETE VOLVO FMX/, "20", "850,00");
 
-	expect(screen.getByLabelText("Parcial del equipo 1")).toHaveTextContent("USD 7,050.00");
-	expect(screen.getByLabelText("Monto contractual")).toHaveTextContent("USD 24,050.00");
+	// Soles por defecto: el costo por hora y los totales salen en S/.
+	expect(within(formulario).getByText("Costo por hora (S/)", { exact: false })).toBeInTheDocument();
+	expect(screen.getByLabelText("Parcial del equipo 1")).toHaveTextContent("S/ 7,050.00");
+	expect(screen.getByLabelText("Monto contractual")).toHaveTextContent("S/ 24,050.00");
 
 	await user.click(within(formulario).getByRole("button", { name: "Guardar" }));
 
 	expect(await screen.findByText("Contrato CTR-001 registrado.")).toBeInTheDocument();
 	expect(await screen.findByRole("heading", { level: 1, name: "OSUR" })).toBeInTheDocument();
 	const resumen = screen.getByRole("region", { name: "Resumen del contrato" });
-	expect(within(resumen).getAllByText("USD 24,050.00")).toHaveLength(2);
+	expect(within(resumen).getAllByText("S/ 24,050.00")).toHaveLength(2);
 	expect(screen.getByRole("region", { name: "Equipos del contrato" })).toHaveTextContent(
 		"VOLQUETE VOLVO FMX",
 	);
@@ -202,4 +204,20 @@ test("un contrato recibido pide un proveedor y solo ofrece sus equipos", async (
 	await user.click(screen.getByRole("combobox", { name: "Equipo del ítem 1" }));
 	expect(await screen.findByRole("option", { name: /RETROEXCAVADORA/ })).toBeInTheDocument();
 	expect(screen.queryByRole("option", { name: /VOLQUETE/ })).not.toBeInTheDocument();
+});
+
+test("un contrato se puede pactar en dólares", async () => {
+	const user = userEvent.setup();
+	renderRoute("/contratos");
+
+	await user.click(await screen.findByRole("button", { name: "Nuevo contrato" }));
+	const formulario = await screen.findByRole("dialog", { name: "Nuevo contrato" });
+	expect(within(formulario).getByLabelText(/Moneda/)).toHaveTextContent("Soles (S/)");
+	await seleccionar(user, within(formulario).getByLabelText(/Moneda/), "Dólares (USD)");
+	await user.click(within(formulario).getByRole("button", { name: "Agregar equipo" }));
+
+	expect(
+		within(formulario).getByText("Costo por hora (USD)", { exact: false }),
+	).toBeInTheDocument();
+	expect(within(formulario).getByLabelText("Monto contractual")).toHaveTextContent("USD 0.00");
 });

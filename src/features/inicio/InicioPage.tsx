@@ -148,7 +148,7 @@ function FilaAlerta({ alerta }: { alerta: ContratoEnAlerta }) {
 function montosDelMes(valorizado: Partial<Record<Moneda, number>>): ReactNode {
 	const monedas = (Object.keys(valorizado) as Moneda[]).filter((moneda) => valorizado[moneda]);
 	if (monedas.length === 0) {
-		return formatearMoneda(0, "USD");
+		return formatearMoneda(0, "PEN");
 	}
 
 	return monedas.map((moneda) => (

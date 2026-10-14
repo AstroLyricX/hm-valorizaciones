@@ -116,6 +116,8 @@ export function registrarContratoDelXlsm(): void {
 	cy.visit("/contratos");
 	abrirNuevo("Nuevo contrato");
 	datosGeneralesDelContrato();
+	// El contrato del xlsm es en dólares (la moneda por defecto es soles).
+	seleccionar(/Moneda/, "Dólares (USD)");
 	cy.findByRole("button", { name: "Agregar equipo" }).click();
 	llenarEquipo(1, /EXCAVADORA CAT 340/, "150", "47");
 	cy.findByRole("dialog").findByRole("button", { name: "Guardar" }).click();
