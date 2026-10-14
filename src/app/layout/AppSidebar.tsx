@@ -5,6 +5,7 @@ import { ruta } from "@/app/entorno";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
+	DropdownMenuGroup,
 	DropdownMenuItem,
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
@@ -114,7 +115,15 @@ export function AppSidebar() {
 									<ChevronsUpDown className="ml-auto text-white/40" />
 								</DropdownMenuTrigger>
 								<DropdownMenuContent side="right" align="end" className="min-w-56">
-									<DropdownMenuLabel>{user.email}</DropdownMenuLabel>
+									{/* Base UI exige que la etiqueta esté dentro de un grupo. */}
+									<DropdownMenuGroup>
+										<DropdownMenuLabel className="flex flex-col gap-0.5">
+											<span className="truncate">{user.email}</span>
+											<span className="font-normal">
+												{user.rol === "ADMIN" ? "Administrador" : "Operador"}
+											</span>
+										</DropdownMenuLabel>
+									</DropdownMenuGroup>
 									<DropdownMenuSeparator />
 									<DropdownMenuItem onClick={() => void signOut()}>
 										<LogOut />

@@ -95,3 +95,16 @@ test("cerrar sesión vuelve al login", async () => {
 
 	expect(await screen.findByRole("heading", { name: "Iniciar sesión" })).toBeInTheDocument();
 });
+
+test("el menú del usuario muestra su correo y su rol", async () => {
+	const user = userEvent.setup();
+	signInAs();
+	renderRoute("/");
+
+	await user.click(await screen.findByRole("button", { name: /Ana Quispe/ }));
+
+	const menu = await screen.findByRole("menu");
+	expect(within(menu).getByText("ana@hm.pe")).toBeInTheDocument();
+	expect(within(menu).getByText("Administrador")).toBeInTheDocument();
+	expect(within(menu).getByRole("menuitem", { name: "Cerrar sesión" })).toBeInTheDocument();
+});

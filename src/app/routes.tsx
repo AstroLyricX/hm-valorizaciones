@@ -13,12 +13,14 @@ import { NuevaValorizacionPage } from "@/features/valorizaciones/NuevaValorizaci
 import { ValorizacionesPage } from "@/features/valorizaciones/ValorizacionesPage";
 import { ValorizacionPage } from "@/features/valorizaciones/ValorizacionPage";
 
+import { ErrorPage } from "./ErrorPage";
 import { AppLayout } from "./layout/AppLayout";
 
 export const routes: RouteObject[] = [
-	{ path: "/login", element: <LoginPage /> },
+	{ path: "/login", element: <LoginPage />, errorElement: <ErrorPage /> },
 	{
 		element: <RequireSession />,
+		errorElement: <ErrorPage />,
 		children: [
 			{
 				element: <AppLayout />,
