@@ -22,6 +22,7 @@ import { useSession } from "@/features/auth/useSession";
 import { terceroRepository } from "@/features/clientes/application/terceroService.instance";
 import { contratoRepository } from "@/features/contratos/application/contratoService.instance";
 import { hoyIso } from "@/features/contratos/domain/contrato";
+import { AvisoInstalacion } from "@/features/instalacion/AvisoInstalacion";
 import { valorizacionService } from "@/features/valorizaciones/application/valorizacionService.instance";
 import { formatearPeriodo } from "@/features/valorizaciones/domain/valorizacion";
 import { EstadoValorizacionPill } from "@/features/valorizaciones/ui/EstadoValorizacionPill";
@@ -188,6 +189,8 @@ export function InicioPage() {
 				description={`Resumen de la operación al ${fecha}.`}
 				actions={<NuevaValorizacionButton className="md:hidden" />}
 			/>
+
+			<AvisoInstalacion />
 
 			{datos === undefined ? (
 				<Skeleton aria-label="Cargando" className="h-80 w-full rounded-xl" />

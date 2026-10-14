@@ -1,4 +1,4 @@
-import { ChevronsUpDown, LogOut } from "lucide-react";
+import { ChevronsUpDown, Download, LogOut } from "lucide-react";
 import { NavLink, useLocation } from "react-router";
 
 import { ruta } from "@/app/entorno";
@@ -25,6 +25,8 @@ import {
 	SidebarRail,
 } from "@/components/ui/sidebar";
 import { useSession } from "@/features/auth/useSession";
+import { PasosIos } from "@/features/instalacion/PasosIos";
+import { useBotonInstalar } from "@/features/instalacion/useBotonInstalar";
 import { UserAvatar } from "@/shared/components/UserAvatar";
 
 import { isNavItemActive, NAV_GROUPS, visiblePara } from "../navigation";
@@ -35,6 +37,7 @@ const itemClass =
 export function AppSidebar() {
 	const { pathname } = useLocation();
 	const { user, signOut } = useSession();
+	const boton = useBotonInstalar();
 
 	return (
 		<Sidebar collapsible="icon">
@@ -97,6 +100,18 @@ export function AppSidebar() {
 			{user && (
 				<SidebarFooter className="border-t border-sidebar-border p-2">
 					<SidebarMenu>
+						{boton.visible && (
+							<SidebarMenuItem>
+								<SidebarMenuButton
+									tooltip="Instalar app"
+									className={itemClass}
+									onClick={() => void boton.instalar()}
+								>
+									<Download />
+									<span>Instalar app</span>
+								</SidebarMenuButton>
+							</SidebarMenuItem>
+						)}
 						<SidebarMenuItem>
 							<DropdownMenu>
 								<DropdownMenuTrigger
@@ -135,6 +150,7 @@ export function AppSidebar() {
 					</SidebarMenu>
 				</SidebarFooter>
 			)}
+			<PasosIos open={boton.pasosIos} onOpenChange={boton.setPasosIos} />
 			<SidebarRail />
 		</Sidebar>
 	);

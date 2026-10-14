@@ -1,10 +1,12 @@
-import { LogOut, Menu } from "lucide-react";
+import { Download, LogOut, Menu } from "lucide-react";
 import { useState } from "react";
 import { NavLink, useLocation } from "react-router";
 
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useSession } from "@/features/auth/useSession";
+import { PasosIos } from "@/features/instalacion/PasosIos";
+import { useBotonInstalar } from "@/features/instalacion/useBotonInstalar";
 import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/shared/components/UserAvatar";
 
@@ -40,6 +42,7 @@ export function MobileNav() {
 	const { pathname } = useLocation();
 	const { user, signOut } = useSession();
 	const [isMoreOpen, setIsMoreOpen] = useState(false);
+	const boton = useBotonInstalar();
 	const barItems = NAV_ITEMS.filter((item) => item.mobile === "bar");
 	const moreItems = NAV_ITEMS.filter(
 		(item) => item.mobile === "more" && visiblePara(item, user?.rol),
@@ -102,6 +105,23 @@ export function MobileNav() {
 										</li>
 									);
 								})}
+								{boton.visible && (
+									<li>
+										<button
+											type="button"
+											onClick={() => {
+												setIsMoreOpen(false);
+												void boton.instalar();
+											}}
+											className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-[15px] text-brand-700 transition-colors hover:bg-brand-50"
+										>
+											<span className="flex size-9 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
+												<Download className="size-[18px]" aria-hidden="true" />
+											</span>
+											Instalar app
+										</button>
+									</li>
+								)}
 							</ul>
 							{user && (
 								<div className="mx-3 mt-2 mb-4 flex items-center gap-3 rounded-2xl bg-navy-50 p-3 dark:bg-white/5">
@@ -125,6 +145,7 @@ export function MobileNav() {
 					</Sheet>
 				</li>
 			</ul>
+			<PasosIos open={boton.pasosIos} onOpenChange={boton.setPasosIos} />
 		</nav>
 	);
 }
