@@ -2,10 +2,14 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { db } from "../../../src/data/db";
-import { clienteService } from "../../../src/features/clientes/application/terceroService.instance";
+import {
+	clienteService,
+	proveedorService,
+} from "../../../src/features/clientes/application/terceroService.instance";
 import { contratoService } from "../../../src/features/contratos/application/contratoService.instance";
 import { equipoService } from "../../../src/features/equipos/application/equipoService.instance";
 import { elegirFecha, seleccionar } from "../../support/campos";
+import { HUISE } from "../../support/fixtures";
 import { renderRoute, signInAs } from "../../support/renderRoute";
 import { CLIENTE, contratoDatos, equipoDelContrato, excavadora, volquete } from "./fixtures";
 
@@ -55,7 +59,7 @@ test("sin equipos avisa que primero hay que registrarlos", async () => {
 	await user.click(within(await screen.findByRole("table")).getByRole("button", { name: "Nuevo" }));
 
 	expect(
-		await screen.findByText("Primero registra al menos un cliente y un equipo."),
+		await screen.findByText("Primero registra al menos un cliente o proveedor y un equipo."),
 	).toBeInTheDocument();
 	expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 });
@@ -98,7 +102,9 @@ test("muestra todos los errores obligatorios a la vez", async () => {
 	const formulario = await abrirNuevo(user);
 	await user.click(within(formulario).getByRole("button", { name: "Guardar" }));
 
-	expect(await within(formulario).findByText("Selecciona el cliente.")).toBeInTheDocument();
+	expect(
+		await within(formulario).findByText("Selecciona el cliente o proveedor."),
+	).toBeInTheDocument();
 	expect(within(formulario).getByText("Ingresa el proyecto.")).toBeInTheDocument();
 	expect(within(formulario).getByText("Selecciona la fecha de fin.")).toBeInTheDocument();
 	expect(within(formulario).getByText("Agrega al menos un equipo.")).toBeInTheDocument();
@@ -170,4 +176,34 @@ test("el listado muestra el contrato con su cliente, monto y estado, y abre la f
 			name: "GESTIÓN GENERAL DE SUBCONTRATOS - OSUR",
 		}),
 	).toBeInTheDocument();
+});
+
+test("un contrato recibido pide un proveedor y solo ofrece sus equipos", async () => {
+	const user = userEvent.setup();
+	const proveedorId = (await proveedorService.crear(HUISE, "ana@hm.pe")).id;
+	await equipoService.crear(
+		excavadora(proveedorId, {
+			activoFijo: "AF-009",
+			placa: "HUI-009",
+			descripcion: "Retroexcavadora",
+		}),
+		"ana@hm.pe",
+	);
+	renderRoute("/contratos");
+
+	await user.click(within(await screen.findByRole("table")).getByRole("button", { name: "Nuevo" }));
+	const formulario = await screen.findByRole("dialog", { name: "Nuevo contrato" });
+	await seleccionar(user, within(formulario).getByLabelText(/Tipo de contrato/), /Recibido/);
+
+	expect(
+		within(formulario).getByText("H&M recibe las valorizaciones del proveedor y paga."),
+	).toBeInTheDocument();
+	await user.click(within(formulario).getByLabelText(/^Proveedor/));
+	expect(screen.queryByRole("option", { name: "CONSTRUCTORA ANDINA SAC" })).not.toBeInTheDocument();
+	await user.click(await screen.findByRole("option", { name: "HUISE QUEA ANTOLIN" }));
+
+	await user.click(within(formulario).getByRole("button", { name: "Agregar equipo" }));
+	await user.click(screen.getByRole("combobox", { name: "Equipo del ítem 1" }));
+	expect(await screen.findByRole("option", { name: /RETROEXCAVADORA/ })).toBeInTheDocument();
+	expect(screen.queryByRole("option", { name: /VOLQUETE/ })).not.toBeInTheDocument();
 });

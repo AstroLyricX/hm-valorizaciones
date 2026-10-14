@@ -7,10 +7,28 @@ import { siguienteCodigo } from "@/shared/domain/codigo";
 // Contrato según VALORIZACIONES.txt: cliente, proyecto, vigencia y, por cada equipo,
 // horas mínimas × costo por hora. El monto contractual es la suma de esos parciales.
 export const MONEDAS = ["USD", "PEN"] as const;
+// EMITIDO: H&M alquila equipos a un cliente y le emite sus valorizaciones (cobra).
+// RECIBIDO: un proveedor le alquila equipos a H&M y H&M recibe sus valorizaciones (paga).
+export const TIPOS_CONTRATO = ["EMITIDO", "RECIBIDO"] as const;
 export const ESTADOS_CONTRATO = ["ACTIVO", "VENCIDO"] as const;
 
 export type Moneda = (typeof MONEDAS)[number];
 export type EstadoContrato = (typeof ESTADOS_CONTRATO)[number];
+export type TipoContrato = (typeof TIPOS_CONTRATO)[number];
+
+export const ETIQUETA_TIPO_CONTRATO: Record<TipoContrato, string> = {
+	EMITIDO: "Emitido",
+	RECIBIDO: "Recibido",
+};
+
+// Con quién es el contrato según su tipo.
+export const CONTRAPARTE: Record<
+	TipoContrato,
+	{ tipo: "CLIENTE" | "PROVEEDOR"; nombre: string; titulo: string }
+> = {
+	EMITIDO: { tipo: "CLIENTE", nombre: "cliente", titulo: "Cliente" },
+	RECIBIDO: { tipo: "PROVEEDOR", nombre: "proveedor", titulo: "Proveedor" },
+};
 
 export const ETIQUETA_MONEDA: Record<Moneda, string> = {
 	USD: "Dólares (USD)",
@@ -48,7 +66,9 @@ export const ContratoEquipoDatosSchema = z.object({
 });
 
 export const ContratoCabeceraSchema = z.object({
-	terceroId: z.string().min(1, "Selecciona el cliente."),
+	tipo: z.enum(TIPOS_CONTRATO, { error: "Selecciona el tipo de contrato." }),
+	// El cliente (contrato emitido) o el proveedor (contrato recibido).
+	terceroId: z.string().min(1, "Selecciona el cliente o proveedor."),
 	proyecto: z
 		.string()
 		.trim()
@@ -92,6 +112,8 @@ export const ContratoDatosSchema = ContratoCabeceraSchema.extend({
 
 export const ContratoSchema = BaseSchema.extend({
 	...ContratoCabeceraSchema.shape,
+	// Los contratos anteriores a los proveedores eran todos con clientes.
+	tipo: z.enum(TIPOS_CONTRATO).default("EMITIDO"),
 	codigo: z.string().regex(/^CTR-\d{3,}$/),
 	// Suma de horas mínimas × costo por hora de todos los equipos, en centavos.
 	montoContractual: z.int().nonnegative(),

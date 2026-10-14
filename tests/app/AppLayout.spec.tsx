@@ -75,7 +75,8 @@ test("Inicio muestra los indicadores y las valorizaciones recientes", async () =
 
 	const indicadores = await screen.findByRole("region", { name: "Indicadores" });
 	for (const indicador of [
-		"Valorizado este mes",
+		"Por cobrar este mes",
+		"Por pagar este mes",
 		"Contratos activos",
 		"Equipos en obra",
 		"Clientes activos",

@@ -114,3 +114,13 @@ describe("siguienteNumero", () => {
 		expect(siguienteNumero(2027, ["0012-2026"])).toBe("0001-2027");
 	});
 });
+
+describe("siguienteNumero con prefijo", () => {
+	it("las de recepción llevan su propia serie R-", () => {
+		const numeros = ["0001-2026", "0002-2026", "R-0001-2026"];
+
+		expect(siguienteNumero(2026, numeros)).toBe("0003-2026");
+		expect(siguienteNumero(2026, numeros, "R-")).toBe("R-0002-2026");
+		expect(siguienteNumero(2026, ["0005-2026"], "R-")).toBe("R-0001-2026");
+	});
+});

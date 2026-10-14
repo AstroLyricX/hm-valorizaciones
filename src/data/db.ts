@@ -160,6 +160,15 @@ export class HmDatabase extends Dexie {
 						tercero.tipo ??= "CLIENTE";
 					});
 			});
+		// Tipo de contrato: emitido (a un cliente) o recibido (de un proveedor).
+		this.version(12).upgrade(async (tx) => {
+			await tx
+				.table("contratos")
+				.toCollection()
+				.modify((contrato: Record<string, unknown>) => {
+					contrato.tipo ??= "EMITIDO";
+				});
+		});
 	}
 }
 

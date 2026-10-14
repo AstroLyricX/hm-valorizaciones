@@ -188,4 +188,11 @@ de D1), un Worker consulta una API de RUC (Decolecta / apis.net.pe) y guarda los
 - [x] El RUC es único dentro de cada lista: una empresa puede ser cliente y proveedor a la vez
 - [x] El dueño de un equipo es un proveedor; los contratos siguen siendo con un cliente
 - [x] Menú "Proveedores" en Registros, hoja PROVEEDORES en la exportación a Excel
-- [ ] Pendiente de definir: quién aparece como "Del proveedor" en la valorización y el PDF (hoy, el cliente del contrato)
+
+## Tipo de contrato: emitido o recibido ✅
+
+- [x] Contrato **emitido**: H&M alquila equipos a un **cliente** y le emite las valorizaciones (cobra). En la valorización y el PDF el cliente es el contratante y H&M el proveedor.
+- [x] Contrato **recibido**: un **proveedor** alquila sus equipos a H&M, que recibe sus valorizaciones (paga). H&M es el contratante y el proveedor, el proveedor (como la hoja del xlsm). Solo se eligen equipos de ese proveedor.
+- [x] Valorizaciones "de emisión" (`0001-2026`) y "de recepción" (serie propia `R-0001-2026`), con columna y filtro de tipo
+- [x] Inicio: "Por cobrar este mes" y "Por pagar este mes"; tipo en la exportación a Excel
+- [x] Los contratos que ya existían quedan como emitidos (Dexie v12)

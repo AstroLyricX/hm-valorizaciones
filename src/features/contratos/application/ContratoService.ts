@@ -4,12 +4,14 @@ import type { TerceroRepository } from "@/features/clientes/infrastructure/Terce
 import { ahoraIso } from "@/lib/fechas";
 
 import {
+	CONTRAPARTE,
 	type Contrato,
 	type ContratoDatos,
 	ContratoDatosSchema,
 	type ContratoEquipo,
 	montoContractual,
 	siguienteCodigoContrato,
+	type TipoContrato,
 } from "../domain/contrato";
 import type { ContratoRepository } from "../infrastructure/ContratoRepository";
 
@@ -18,9 +20,11 @@ export interface ContratoDetalle {
 	equipos: ContratoEquipo[];
 }
 
+// La contraparte no existe, está inactiva o no corresponde al tipo de contrato
+// (un contrato emitido es con un cliente; uno recibido, con un proveedor).
 export class ClienteNoValidoError extends Error {
 	constructor() {
-		super("El cliente no existe o está inactivo.");
+		super("El cliente o proveedor no existe, está inactivo o no corresponde al tipo de contrato.");
 		this.name = "ClienteNoValidoError";
 	}
 }
@@ -47,7 +51,7 @@ export class ContratoService {
 
 	async crear(datos: ContratoDatos, usuario: string): Promise<ContratoDetalle> {
 		const { equipos, ...cabecera } = ContratoDatosSchema.parse(datos);
-		await this.asegurarCliente(cabecera.terceroId);
+		await this.asegurarCliente(cabecera.terceroId, cabecera.tipo);
 
 		const ahora = ahoraIso();
 		const contrato: Contrato = {
@@ -88,7 +92,7 @@ export class ContratoService {
 		const { equipos, ...cabecera } = ContratoDatosSchema.parse(datos);
 
 		if (cabecera.terceroId !== actual.contrato.terceroId) {
-			await this.asegurarCliente(cabecera.terceroId);
+			await this.asegurarCliente(cabecera.terceroId, cabecera.tipo);
 		}
 
 		const ahora = ahoraIso();
@@ -142,14 +146,14 @@ export class ContratoService {
 		return { contrato, equipos: vigentes };
 	}
 
-	private async asegurarCliente(terceroId: string): Promise<void> {
+	private async asegurarCliente(terceroId: string, tipo: TipoContrato): Promise<void> {
 		const tercero = await this.terceros.obtener(terceroId);
 
 		if (
 			!tercero ||
 			tercero.deletedAt !== null ||
 			tercero.estado !== "ACTIVO" ||
-			tercero.tipo !== "CLIENTE"
+			tercero.tipo !== CONTRAPARTE[tipo].tipo
 		) {
 			throw new ClienteNoValidoError();
 		}

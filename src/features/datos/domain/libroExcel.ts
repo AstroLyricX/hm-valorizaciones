@@ -10,6 +10,7 @@ import {
 	type ContratoEquipo,
 	estadoContrato,
 	ETIQUETA_ESTADO_CONTRATO,
+	ETIQUETA_TIPO_CONTRATO,
 	parcialEquipo,
 } from "@/features/contratos/domain/contrato";
 import {
@@ -21,6 +22,7 @@ import {
 import {
 	calcularValorizacion,
 	ETIQUETA_ESTADO_VALORIZACION,
+	ETIQUETA_TIPO_VALORIZACION,
 	formatearPeriodo,
 	type Valorizacion,
 	type ValorizacionItem,
@@ -165,8 +167,9 @@ export function libroExcel(datos: DatosExportacion): Hoja[] {
 		[
 			["Código", (contrato) => contrato.codigo],
 			["Documento contractual", (contrato) => contrato.documentoContractual],
-			["Cód. cliente", (contrato) => cliente(contrato.terceroId)?.codigo ?? ""],
-			["Cliente", (contrato) => cliente(contrato.terceroId)?.razonSocial ?? ""],
+			["Tipo", (contrato) => ETIQUETA_TIPO_CONTRATO[contrato.tipo]],
+			["Cód. cliente o proveedor", (contrato) => cliente(contrato.terceroId)?.codigo ?? ""],
+			["Cliente o proveedor", (contrato) => cliente(contrato.terceroId)?.razonSocial ?? ""],
 			["Proyecto", (contrato) => contrato.proyecto],
 			["Ubicación", (contrato) => contrato.ubicacion],
 			["Fecha de inicio", (contrato) => fecha(contrato.fechaInicio)],
@@ -217,7 +220,15 @@ export function libroExcel(datos: DatosExportacion): Hoja[] {
 			["N.° valorización", (valorizacion) => valorizacion.numero ?? ""],
 			["Contrato", (valorizacion) => contratoDe(valorizacion)?.codigo ?? ""],
 			[
-				"Cliente",
+				"Tipo",
+				(valorizacion) => {
+					const contrato = contratoDe(valorizacion);
+
+					return contrato ? ETIQUETA_TIPO_VALORIZACION[contrato.tipo] : "";
+				},
+			],
+			[
+				"Cliente o proveedor",
 				(valorizacion) => cliente(contratoDe(valorizacion)?.terceroId)?.razonSocial ?? "",
 			],
 			["Proyecto", (valorizacion) => contratoDe(valorizacion)?.proyecto ?? ""],

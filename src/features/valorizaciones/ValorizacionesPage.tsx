@@ -6,6 +6,7 @@ import { useNavigate } from "react-router";
 import { Skeleton } from "@/components/ui/skeleton";
 import { terceroRepository } from "@/features/clientes/application/terceroService.instance";
 import { contratoRepository } from "@/features/contratos/application/contratoService.instance";
+import { type TipoContrato, TIPOS_CONTRATO } from "@/features/contratos/domain/contrato";
 import { formatearMoneda } from "@/lib/dinero";
 import { AccionesFila } from "@/shared/components/AccionesFila";
 import { DataTable } from "@/shared/components/DataTable";
@@ -13,6 +14,7 @@ import { EmptyState } from "@/shared/components/EmptyState";
 import { ListCard } from "@/shared/components/ListCard";
 import { NuevaValorizacionButton } from "@/shared/components/NuevaValorizacionButton";
 import { PageHeader } from "@/shared/components/PageHeader";
+import { Pill } from "@/shared/components/Pill";
 import { crearColumnas } from "@/shared/lib/tabla";
 import { coincide } from "@/shared/lib/texto";
 
@@ -21,6 +23,7 @@ import {
 	ESTADOS_VALORIZACION,
 	type EstadoValorizacion,
 	ETIQUETA_ESTADO_VALORIZACION,
+	ETIQUETA_TIPO_VALORIZACION,
 	formatearPeriodo,
 } from "./domain/valorizacion";
 import { EstadoValorizacionPill } from "./ui/EstadoValorizacionPill";
@@ -31,7 +34,9 @@ interface FilaValorizacion {
 	periodo: string;
 	contrato: string;
 	proyecto: string;
-	proveedor: string;
+	// Emisión (contrato emitido, H&M cobra) o recepción (contrato recibido, H&M paga).
+	tipo: TipoContrato;
+	contraparte: string;
 	estado: EstadoValorizacion;
 	moneda: "USD" | "PEN";
 	// Total de la factura congelado al emitir; null en los borradores.
@@ -61,7 +66,8 @@ export function ValorizacionesPage() {
 				periodo: valorizacion.periodo,
 				contrato: contrato?.codigo ?? "—",
 				proyecto: contrato?.proyecto ?? "—",
-				proveedor: (contrato && nombres.get(contrato.terceroId)) ?? "—",
+				tipo: contrato?.tipo ?? "EMITIDO",
+				contraparte: (contrato && nombres.get(contrato.terceroId)) ?? "—",
 				estado: valorizacion.estado,
 				moneda: valorizacion.moneda,
 				total: valorizacion.totales?.total ?? null,
@@ -99,8 +105,26 @@ export function ValorizacionesPage() {
 						celda: "min-w-44 font-medium text-navy-900",
 					},
 				}),
-				columnHelper.accessor("proveedor", {
-					header: "Proveedor",
+				columnHelper.accessor("tipo", {
+					header: "Tipo",
+					filterFn: "igual",
+					meta: {
+						filtro: {
+							tipo: "opciones",
+							opciones: TIPOS_CONTRATO.map((tipo) => ({
+								valor: tipo,
+								etiqueta: ETIQUETA_TIPO_VALORIZACION[tipo],
+							})),
+						},
+					},
+					cell: ({ getValue }) => (
+						<Pill tone={getValue() === "EMITIDO" ? "brand" : "indigo"}>
+							{ETIQUETA_TIPO_VALORIZACION[getValue()]}
+						</Pill>
+					),
+				}),
+				columnHelper.accessor("contraparte", {
+					header: "Cliente o proveedor",
 					filterFn: "contiene",
 					meta: { filtro: { tipo: "texto" }, alineacion: "izquierda", celda: "min-w-40" },
 				}),
@@ -166,7 +190,7 @@ export function ValorizacionesPage() {
 			fila.numero,
 			fila.contrato,
 			fila.proyecto,
-			fila.proveedor,
+			fila.contraparte,
 			formatearPeriodo(fila.periodo),
 		]),
 	);
@@ -222,7 +246,9 @@ export function ValorizacionesPage() {
 											<span className="text-[13px] text-muted-foreground">
 												{fila.contrato} · {fila.proyecto}
 											</span>
-											<span className="text-[13px] text-navy-600">{fila.proveedor}</span>
+											<span className="text-[13px] text-navy-600">
+												{ETIQUETA_TIPO_VALORIZACION[fila.tipo]} · {fila.contraparte}
+											</span>
 										</button>
 									</li>
 								))}

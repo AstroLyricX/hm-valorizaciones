@@ -8,6 +8,7 @@ import {
 	ClipboardList,
 	FilePen,
 	FileSignature,
+	HandCoins,
 	type LucideIcon,
 	TriangleAlert,
 	Truck,
@@ -194,15 +195,23 @@ export function InicioPage() {
 				<>
 					<section
 						aria-label="Indicadores"
-						className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4"
+						className="grid grid-cols-2 gap-3 lg:grid-cols-5 lg:gap-4"
 					>
 						<Indicador
-							label="Valorizado este mes"
+							label="Por cobrar este mes"
 							to="/valorizaciones"
 							icon={Wallet}
 							tone="bg-brand-50 text-brand-600"
 						>
-							{montosDelMes(datos.resumen.valorizadoMes)}
+							{montosDelMes(datos.resumen.porCobrarMes)}
+						</Indicador>
+						<Indicador
+							label="Por pagar este mes"
+							to="/valorizaciones"
+							icon={HandCoins}
+							tone="bg-amber-50 text-amber-700"
+						>
+							{montosDelMes(datos.resumen.porPagarMes)}
 						</Indicador>
 						<Indicador
 							label="Contratos activos"

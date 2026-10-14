@@ -17,7 +17,7 @@ import { PageHeader } from "@/shared/components/PageHeader";
 import { SelectField } from "@/shared/components/SelectField";
 
 import { valorizacionService } from "./application/valorizacionService.instance";
-import { NuevaValorizacionSchema } from "./domain/valorizacion";
+import { ETIQUETA_TIPO_VALORIZACION, NuevaValorizacionSchema } from "./domain/valorizacion";
 import { PeriodoField } from "./ui/PeriodoField";
 
 function periodoActual(): string {
@@ -35,7 +35,7 @@ export function NuevaValorizacionPage() {
 	const opciones = useLiveQuery(async () => {
 		const [contratos, terceros] = await Promise.all([
 			contratoRepository.listar(),
-			terceroRepository.listar("CLIENTE"),
+			terceroRepository.listar(),
 		]);
 		const nombres = new Map(terceros.map((tercero) => [tercero.id, tercero.razonSocial]));
 		const hoy = hoyIso();
@@ -44,7 +44,7 @@ export function NuevaValorizacionPage() {
 			.filter((contrato) => estadoContrato(contrato, hoy) === "ACTIVO")
 			.map((contrato) => ({
 				value: contrato.id,
-				label: `${contrato.codigo} · ${contrato.proyecto} · ${nombres.get(contrato.terceroId) ?? "—"}`,
+				label: `${contrato.codigo} · ${ETIQUETA_TIPO_VALORIZACION[contrato.tipo]} · ${contrato.proyecto} · ${nombres.get(contrato.terceroId) ?? "—"}`,
 			}));
 	});
 

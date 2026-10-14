@@ -282,18 +282,30 @@ export function formatearPeriodo(periodo: string): string {
 }
 
 // Correlativo de 4 dígitos por año: "0001-2026", "0002-2026"… Las anuladas conservan su número.
-export function siguienteNumero(anio: number, numeros: readonly (string | null)[]): string {
-	const sufijo = `-${anio}`;
+// Las valorizaciones de recepción (contratos recibidos) llevan su propia serie: "R-0001-2026".
+export function siguienteNumero(
+	anio: number,
+	numeros: readonly (string | null)[],
+	prefijo = "",
+): string {
+	const formato = new RegExp(`^${prefijo}(\\d{4})-${anio}$`);
 	const mayor = numeros.reduce((maximo, numero) => {
-		if (!numero?.endsWith(sufijo)) {
-			return maximo;
-		}
-		const correlativo = Number(numero.slice(0, -sufijo.length));
+		const coincidencia = numero ? formato.exec(numero) : null;
 
-		return Number.isInteger(correlativo) ? Math.max(maximo, correlativo) : maximo;
+		return coincidencia ? Math.max(maximo, Number(coincidencia[1])) : maximo;
 	}, 0);
 
-	return `${String(mayor + 1).padStart(4, "0")}${sufijo}`;
+	return `${prefijo}${String(mayor + 1).padStart(4, "0")}-${anio}`;
+}
+
+// Emisión: H&M la emite al cliente (contrato emitido). Recepción: H&M la recibe del proveedor.
+export const ETIQUETA_TIPO_VALORIZACION = {
+	EMITIDO: "Emisión",
+	RECIBIDO: "Recepción",
+} as const;
+
+export function prefijoNumero(tipo: "EMITIDO" | "RECIBIDO"): string {
+	return tipo === "RECIBIDO" ? "R-" : "";
 }
 
 export class ValorizacionNoEditableError extends Error {

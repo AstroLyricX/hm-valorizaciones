@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 
@@ -16,6 +16,7 @@ import { SelectField } from "@/shared/components/SelectField";
 
 import { ClienteNoValidoError, type ContratoDetalle } from "../application/ContratoService";
 import { contratoService } from "../application/contratoService.instance";
+import { CONTRAPARTE, type TipoContrato, TIPOS_CONTRATO } from "../domain/contrato";
 import {
 	aFormulario,
 	type ContratoDatos,
@@ -27,15 +28,24 @@ import { EquiposEditor } from "./EquiposEditor";
 
 const mayus = "uppercase placeholder:normal-case";
 
+const OPCIONES_TIPO = TIPOS_CONTRATO.map((tipo) => ({
+	value: tipo,
+	label:
+		tipo === "EMITIDO"
+			? "Emitido: H&M alquila a un cliente"
+			: "Recibido: un proveedor alquila a H&M",
+}));
+
 function Formulario({
 	detalle,
-	clientes,
+	terceros,
 	equipos,
 	open,
 	onOpenChange,
 }: {
 	detalle?: ContratoDetalle;
-	clientes: readonly Tercero[];
+	// Clientes y proveedores activos (más la contraparte del contrato que se edita).
+	terceros: readonly Tercero[];
 	equipos: readonly Equipo[];
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
@@ -47,15 +57,22 @@ function Formulario({
 		handleSubmit,
 		control,
 		setError,
+		setValue,
 		formState: { errors, isSubmitting },
 	} = useForm<ContratoFormInput, unknown, ContratoDatos>({
 		resolver: zodResolver(ContratoFormSchema),
 		defaultValues: detalle ? aFormulario(detalle.contrato, detalle.equipos) : FORMULARIO_VACIO,
 	});
-	const opcionesCliente = clientes.map((cliente) => ({
-		value: cliente.id,
-		label: cliente.razonSocial,
-	}));
+	const tipo: TipoContrato =
+		useWatch({ control, name: "tipo" }) === "RECIBIDO" ? "RECIBIDO" : "EMITIDO";
+	const terceroId = useWatch({ control, name: "terceroId" });
+	const contraparte = CONTRAPARTE[tipo];
+	const opcionesContraparte = terceros
+		.filter((tercero) => tercero.tipo === contraparte.tipo)
+		.map((tercero) => ({ value: tercero.id, label: tercero.razonSocial }));
+	// En un contrato recibido, el proveedor alquila sus propios equipos.
+	const equiposDisponibles =
+		tipo === "RECIBIDO" ? equipos.filter((equipo) => equipo.duenoId === terceroId) : equipos;
 
 	const guardar = async (datos: ContratoDatos) => {
 		const usuario = user?.email ?? "desconocido";
@@ -73,7 +90,7 @@ function Formulario({
 		} catch (error) {
 			if (error instanceof ClienteNoValidoError) {
 				setError("terceroId", {
-					message: "El cliente seleccionado está inactivo. Selecciona otro.",
+					message: `El ${contraparte.nombre} seleccionado está inactivo. Selecciona otro.`,
 				});
 
 				return;
@@ -93,7 +110,36 @@ function Formulario({
 			size="xl"
 		>
 			<FormSeccion>
-				<FormField label="Cliente" required error={errors.terceroId?.message}>
+				<FormField
+					label="Tipo de contrato"
+					required
+					error={errors.tipo?.message}
+					hint={
+						tipo === "EMITIDO"
+							? "H&M emite las valorizaciones y cobra."
+							: "H&M recibe las valorizaciones del proveedor y paga."
+					}
+				>
+					{(campo) => (
+						<Controller
+							control={control}
+							name="tipo"
+							render={({ field }) => (
+								<SelectField
+									{...campo}
+									value={field.value}
+									onChange={(valor) => {
+										field.onChange(valor);
+										// Cambia la lista de contrapartes: se vuelve a elegir.
+										setValue("terceroId", "");
+									}}
+									options={OPCIONES_TIPO}
+								/>
+							)}
+						/>
+					)}
+				</FormField>
+				<FormField label={contraparte.titulo} required error={errors.terceroId?.message}>
 					{(campo) => (
 						<Controller
 							control={control}
@@ -103,8 +149,8 @@ function Formulario({
 									{...campo}
 									value={field.value}
 									onChange={field.onChange}
-									options={opcionesCliente}
-									placeholder="Seleccionar cliente"
+									options={opcionesContraparte}
+									placeholder={`Seleccionar ${contraparte.nombre}`}
 								/>
 							)}
 						/>
@@ -183,7 +229,12 @@ function Formulario({
 					)}
 				</FormField>
 			</FormSeccion>
-			<EquiposEditor control={control} register={register} errors={errors} equipos={equipos} />
+			<EquiposEditor
+				control={control}
+				register={register}
+				errors={errors}
+				equipos={equiposDisponibles}
+			/>
 		</FormDialog>
 	);
 }
@@ -192,13 +243,13 @@ export function ContratoFormDialog({
 	open,
 	onOpenChange,
 	detalle,
-	clientes,
+	terceros,
 	equipos,
 }: {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	detalle?: ContratoDetalle;
-	clientes: readonly Tercero[];
+	terceros: readonly Tercero[];
 	equipos: readonly Equipo[];
 }) {
 	return open ? (
@@ -207,7 +258,7 @@ export function ContratoFormDialog({
 			open={open}
 			onOpenChange={onOpenChange}
 			detalle={detalle}
-			clientes={clientes}
+			terceros={terceros}
 			equipos={equipos}
 		/>
 	) : null;

@@ -19,6 +19,7 @@ import {
 	MotivoAnulacionSchema,
 	type NuevaValorizacion,
 	NuevaValorizacionSchema,
+	prefijoNumero,
 	siguienteNumero,
 	sumarCantidades,
 	type Totales,
@@ -306,7 +307,11 @@ export class ValorizacionService {
 		const emitida: Valorizacion = {
 			...valorizacion,
 			estado: "EMITIDA",
-			numero: siguienteNumero(Number(fechaEmision.slice(0, 4)), numeros),
+			numero: siguienteNumero(
+				Number(fechaEmision.slice(0, 4)),
+				numeros,
+				prefijoNumero(planilla.contrato.tipo),
+			),
 			fechaEmision,
 			totales: totalesDe(calculo),
 			montoEnLetras: montoEnLetras(calculo.actual.total, valorizacion.moneda),
@@ -452,4 +457,37 @@ export class ValorizacionService {
 			]),
 		);
 	}
+}
+
+// Datos de facturación de cada parte, como en la hoja VALORIZACION.
+export interface Parte {
+	razonSocial: string;
+	direccion: string;
+	ruc: string;
+	telefono: string;
+}
+
+// Contrato emitido: el cliente contrata a H&M (H&M es el proveedor y cobra).
+// Contrato recibido: H&M contrata al proveedor (como el xlsm; H&M paga).
+export function partesDe(planilla: Pick<Planilla, "contrato" | "proveedor" | "empresa">): {
+	contratante: Parte;
+	proveedor: Parte;
+} {
+	const { contrato, proveedor: tercero, empresa } = planilla;
+	const hm: Parte = {
+		razonSocial: empresa.razonSocial,
+		direccion: empresa.direccion,
+		ruc: empresa.ruc,
+		telefono: empresa.telefono,
+	};
+	const contraparte: Parte = {
+		razonSocial: tercero?.razonSocial ?? "",
+		direccion: tercero?.direccion ?? "",
+		ruc: tercero?.ruc ?? "",
+		telefono: tercero?.representanteTelefono ?? "",
+	};
+
+	return contrato.tipo === "EMITIDO"
+		? { contratante: contraparte, proveedor: hm }
+		: { contratante: hm, proveedor: contraparte };
 }

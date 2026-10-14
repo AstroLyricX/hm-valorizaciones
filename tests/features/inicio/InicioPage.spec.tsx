@@ -20,7 +20,7 @@ test("sin datos muestra los indicadores en cero y nada pendiente", async () => {
 	renderRoute("/");
 
 	const indicadores = await screen.findByRole("region", { name: "Indicadores" });
-	expect(within(indicadores).getByText("USD 0.00")).toBeInTheDocument();
+	expect(within(indicadores).getAllByText("USD 0.00")).toHaveLength(2);
 	expect(screen.getByText("Ningún contrato supera el 90 % de lo contratado.")).toBeInTheDocument();
 	expect(screen.getByText("No hay valorizaciones por terminar.")).toBeInTheDocument();
 	expect(screen.getByText("Sin valorizaciones")).toBeInTheDocument();

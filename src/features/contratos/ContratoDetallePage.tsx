@@ -17,6 +17,7 @@ import { EmptyState } from "@/shared/components/EmptyState";
 
 import { contratoService } from "./application/contratoService.instance";
 import {
+	CONTRAPARTE,
 	type Contrato,
 	type ContratoEquipo,
 	estadoContrato,
@@ -25,6 +26,7 @@ import {
 } from "./domain/contrato";
 import { ContratoFormDialog } from "./ui/ContratoFormDialog";
 import { EstadoContratoPill } from "./ui/EstadoContratoPill";
+import { TipoContratoPill } from "./ui/TipoContratoPill";
 import { vigencia } from "./ui/vigencia";
 
 const tarjeta =
@@ -192,7 +194,7 @@ export function ContratoDetallePage() {
 		const [cliente, equipos, terceros, valorizaciones] = await Promise.all([
 			terceroRepository.obtener(detalle.contrato.terceroId),
 			equipoRepository.listar(),
-			terceroRepository.listar("CLIENTE"),
+			terceroRepository.listar(),
 			valorizacionRepository.delContrato(id),
 		]);
 
@@ -202,8 +204,8 @@ export function ContratoDetallePage() {
 			listaEquipos: equipos,
 			valorizaciones: valorizaciones.sort((a, b) => b.periodo.localeCompare(a.periodo)),
 			equipos: new Map(equipos.map((equipo) => [equipo.id, equipo])),
-			// Clientes activos, más el del contrato aunque se haya desactivado.
-			clientes: terceros.filter(
+			// Clientes y proveedores activos, más la contraparte del contrato aunque esté inactiva.
+			terceros: terceros.filter(
 				(tercero) => tercero.estado === "ACTIVO" || tercero.id === detalle.contrato.terceroId,
 			),
 		};
@@ -246,13 +248,15 @@ export function ContratoDetallePage() {
 							<span className="text-sm font-medium text-brand-700 tabular-nums">
 								{contrato.codigo}
 							</span>
+							<TipoContratoPill tipo={contrato.tipo} />
 							<EstadoContratoPill estado={estadoContrato(contrato, hoyIso())} />
 						</div>
 						<h1 className="text-2xl font-semibold tracking-tight text-navy-900 dark:text-white">
 							{contrato.proyecto}
 						</h1>
 						<p className="text-sm text-muted-foreground">
-							{datos.cliente?.razonSocial ?? "Cliente no encontrado"} · {vigencia(contrato)}
+							{datos.cliente?.razonSocial ?? `${CONTRAPARTE[contrato.tipo].titulo} no encontrado`} ·{" "}
+							{vigencia(contrato)}
 						</p>
 					</div>
 					<Button variant="outline" className="h-9 w-fit px-3.5" onClick={() => setEditando(true)}>
@@ -277,7 +281,12 @@ export function ContratoDetallePage() {
 					Datos del contrato
 				</h2>
 				<dl className="grid gap-x-6 gap-y-4 px-5 py-5 sm:grid-cols-2 md:px-6 lg:grid-cols-4">
-					<Dato label="Cliente">{datos.cliente?.razonSocial}</Dato>
+					<Dato label="Tipo">
+						{contrato.tipo === "EMITIDO"
+							? "Emitido: H&M cobra al cliente"
+							: "Recibido: H&M paga al proveedor"}
+					</Dato>
+					<Dato label={CONTRAPARTE[contrato.tipo].titulo}>{datos.cliente?.razonSocial}</Dato>
 					<Dato label="RUC">{datos.cliente?.ruc}</Dato>
 					<Dato label="Proyecto">{contrato.proyecto}</Dato>
 					<Dato label="Ubicación">{contrato.ubicacion}</Dato>
@@ -347,7 +356,7 @@ export function ContratoDetallePage() {
 				open={editando}
 				onOpenChange={setEditando}
 				detalle={detalle}
-				clientes={datos.clientes}
+				terceros={datos.terceros}
 				equipos={datos.listaEquipos}
 			/>
 		</div>

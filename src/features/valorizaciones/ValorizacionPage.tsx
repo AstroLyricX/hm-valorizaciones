@@ -19,19 +19,22 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { puede } from "@/features/auth/roles";
 import { useSession } from "@/features/auth/useSession";
+import { CONTRAPARTE } from "@/features/contratos/domain/contrato";
 import { useSincronizacion } from "@/features/sincronizacion/SyncContext";
 import { formatearMoneda } from "@/lib/dinero";
 import { formatearFechaNumerica } from "@/lib/fechas";
 import { cn } from "@/lib/utils";
 import { ConfirmDialog } from "@/shared/components/ConfirmDialog";
 import { EmptyState } from "@/shared/components/EmptyState";
+import { Pill } from "@/shared/components/Pill";
 
-import type { Planilla } from "./application/ValorizacionService";
+import { partesDe, type Planilla } from "./application/ValorizacionService";
 import { valorizacionService } from "./application/valorizacionService.instance";
 import { montoEnLetras } from "./domain/montoEnLetras";
 import {
 	calcularValorizacion,
 	CantidadSchema,
+	ETIQUETA_TIPO_VALORIZACION,
 	formatearPeriodo,
 	type ValorizacionCabecera,
 } from "./domain/valorizacion";
@@ -119,7 +122,7 @@ function Editor({ planilla }: { planilla: Planilla }) {
 	const { user } = useSession();
 	const usuario = user?.email ?? "desconocido";
 	const navigate = useNavigate();
-	const { valorizacion, contrato, proveedor, empresa, filas } = planilla;
+	const { valorizacion, contrato, proveedor, filas } = planilla;
 	const editable = valorizacion.estado === "BORRADOR";
 	const [descartando, setDescartando] = useState(false);
 	const [emitiendo, setEmitiendo] = useState(false);
@@ -189,6 +192,8 @@ function Editor({ planilla }: { planilla: Planilla }) {
 		},
 	);
 	const moneda = valorizacion.moneda;
+	// Quién es contratante y quién proveedor depende del tipo de contrato.
+	const partes = partesDe(planilla);
 	// El PDF usa lo que se ve en pantalla, aunque el guardado automático aún esté pendiente.
 	const datosPdf = {
 		planilla: {
@@ -245,13 +250,16 @@ function Editor({ planilla }: { planilla: Planilla }) {
 								{valorizacion.numero ?? "Sin número"}
 							</span>
 							<EstadoValorizacionPill estado={valorizacion.estado} />
+							<Pill tone={contrato.tipo === "EMITIDO" ? "brand" : "indigo"}>
+								{ETIQUETA_TIPO_VALORIZACION[contrato.tipo]}
+							</Pill>
 						</div>
 						<h1 className="text-2xl font-semibold tracking-tight text-navy-900 dark:text-white">
 							Valorización · {formatearPeriodo(valorizacion.periodo)}
 						</h1>
 						<p className="text-sm text-muted-foreground">
 							{contrato.codigo} · {contrato.proyecto} ·{" "}
-							{proveedor?.razonSocial ?? "Proveedor no encontrado"}
+							{proveedor?.razonSocial ?? `${CONTRAPARTE[contrato.tipo].titulo} no encontrado`}
 						</p>
 					</div>
 					<div className="flex flex-wrap items-center gap-3">
@@ -436,19 +444,19 @@ function Editor({ planilla }: { planilla: Planilla }) {
 						<h3 className="text-xs font-semibold tracking-wide text-brand-700 uppercase">
 							Del contratante
 						</h3>
-						<Dato label="Razón social">{empresa.razonSocial}</Dato>
-						<Dato label="Dirección legal">{empresa.direccion}</Dato>
-						<Dato label="RUC">{empresa.ruc}</Dato>
-						<Dato label="Teléfono">{empresa.telefono}</Dato>
+						<Dato label="Razón social">{partes.contratante.razonSocial}</Dato>
+						<Dato label="Dirección legal">{partes.contratante.direccion}</Dato>
+						<Dato label="RUC">{partes.contratante.ruc}</Dato>
+						<Dato label="Teléfono">{partes.contratante.telefono}</Dato>
 					</dl>
 					<dl className="flex flex-col gap-2">
 						<h3 className="text-xs font-semibold tracking-wide text-brand-700 uppercase">
 							Del proveedor
 						</h3>
-						<Dato label="Razón social">{proveedor?.razonSocial ?? ""}</Dato>
-						<Dato label="Dirección legal">{proveedor?.direccion ?? ""}</Dato>
-						<Dato label="RUC">{proveedor?.ruc ?? ""}</Dato>
-						<Dato label="Teléfono">{proveedor?.representanteTelefono ?? ""}</Dato>
+						<Dato label="Razón social">{partes.proveedor.razonSocial}</Dato>
+						<Dato label="Dirección legal">{partes.proveedor.direccion}</Dato>
+						<Dato label="RUC">{partes.proveedor.ruc}</Dato>
+						<Dato label="Teléfono">{partes.proveedor.telefono}</Dato>
 					</dl>
 					<dl className="flex flex-col gap-2">
 						<h3 className="text-xs font-semibold tracking-wide text-brand-700 uppercase">

@@ -4,8 +4,9 @@ import type { Style } from "@react-pdf/types";
 import { formatearMoneda, formatearMonto } from "@/lib/dinero";
 import { formatearFechaNumerica } from "@/lib/fechas";
 
+import { partesDe } from "../application/ValorizacionService";
 import type { ColumnaResumen } from "../domain/valorizacion";
-import { formatearPeriodo } from "../domain/valorizacion";
+import { ETIQUETA_TIPO_VALORIZACION, formatearPeriodo } from "../domain/valorizacion";
 import { horas } from "../ui/formato";
 import { type DatosPdf, fechaDelPdf, letrasDelPdf } from "./datosPdf";
 
@@ -149,7 +150,8 @@ const RESUMEN: readonly { etiqueta: (datos: DatosPdf) => string; campo: keyof Co
 // Formato imprimible de la hoja VALORIZACION: A4 horizontal, con la cabecera en cada página.
 export function ValorizacionPDF(datos: DatosPdf) {
 	const { planilla, calculo, logo } = datos;
-	const { valorizacion, contrato, proveedor, empresa, filas } = planilla;
+	const { valorizacion, contrato, empresa, filas } = planilla;
+	const { contratante, proveedor } = partesDe(planilla);
 	const moneda = valorizacion.moneda;
 	const marca =
 		valorizacion.estado === "BORRADOR"
@@ -188,6 +190,12 @@ export function ValorizacionPDF(datos: DatosPdf) {
 							<Text style={estilos.cajaEtiqueta}>FECHA</Text>
 							<Text style={estilos.cajaValor}>{formatearFechaNumerica(fechaDelPdf(planilla))}</Text>
 						</View>
+						<View style={estilos.cajaFila}>
+							<Text style={estilos.cajaEtiqueta}>TIPO</Text>
+							<Text style={estilos.cajaValor}>
+								{ETIQUETA_TIPO_VALORIZACION[contrato.tipo].toUpperCase()}
+							</Text>
+						</View>
 						<View style={[estilos.cajaFila, { borderBottomWidth: 0 }]}>
 							<Text style={estilos.cajaEtiqueta}>PERIODO</Text>
 							<Text style={estilos.cajaValor}>
@@ -205,17 +213,17 @@ export function ValorizacionPDF(datos: DatosPdf) {
 					<View style={estilos.columnas}>
 						<View style={estilos.columna}>
 							<Text style={estilos.subtitulo}>DEL CONTRATANTE</Text>
-							<Dato etiqueta="Razón social" valor={empresa.razonSocial} />
-							<Dato etiqueta="Dirección legal" valor={empresa.direccion} />
-							<Dato etiqueta="RUC" valor={empresa.ruc} />
-							<Dato etiqueta="Teléfonos" valor={empresa.telefono} />
+							<Dato etiqueta="Razón social" valor={contratante.razonSocial} />
+							<Dato etiqueta="Dirección legal" valor={contratante.direccion} />
+							<Dato etiqueta="RUC" valor={contratante.ruc} />
+							<Dato etiqueta="Teléfonos" valor={contratante.telefono} />
 						</View>
 						<View style={estilos.columna}>
 							<Text style={estilos.subtitulo}>DEL PROVEEDOR</Text>
-							<Dato etiqueta="Razón social" valor={proveedor?.razonSocial ?? ""} />
-							<Dato etiqueta="Dirección legal" valor={proveedor?.direccion ?? ""} />
-							<Dato etiqueta="RUC" valor={proveedor?.ruc ?? ""} />
-							<Dato etiqueta="Teléfonos" valor={proveedor?.representanteTelefono ?? ""} />
+							<Dato etiqueta="Razón social" valor={proveedor.razonSocial} />
+							<Dato etiqueta="Dirección legal" valor={proveedor.direccion} />
+							<Dato etiqueta="RUC" valor={proveedor.ruc} />
+							<Dato etiqueta="Teléfonos" valor={proveedor.telefono} />
 						</View>
 					</View>
 				</View>
@@ -403,9 +411,9 @@ export function ValorizacionPDF(datos: DatosPdf) {
 				</View>
 
 				<View wrap={false} style={estilos.firmas}>
-					<Text style={estilos.firma}>{`${empresa.razonSocial}\nCONTRATANTE`}</Text>
+					<Text style={estilos.firma}>{`${contratante.razonSocial}\nCONTRATANTE`}</Text>
 					<Text style={estilos.firma}>{"GERENTE ADMINISTRATIVO"}</Text>
-					<Text style={estilos.firma}>{`${proveedor?.razonSocial ?? ""}\nPROVEEDOR`}</Text>
+					<Text style={estilos.firma}>{`${proveedor.razonSocial}\nPROVEEDOR`}</Text>
 				</View>
 
 				<Text

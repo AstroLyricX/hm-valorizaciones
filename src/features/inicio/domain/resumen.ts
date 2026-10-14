@@ -20,8 +20,10 @@ export interface ContratoEnAlerta {
 }
 
 export interface ResumenInicio {
-	// Total de las facturas emitidas este mes, por moneda.
-	valorizadoMes: Partial<Record<Moneda, number>>;
+	// Total de las valorizaciones emitidas este mes, por moneda: lo que H&M cobra (contratos
+	// emitidos) y lo que paga (contratos recibidos).
+	porCobrarMes: Partial<Record<Moneda, number>>;
+	porPagarMes: Partial<Record<Moneda, number>>;
 	contratosActivos: number;
 	equiposEnObra: number;
 	clientesActivos: number;
@@ -57,11 +59,15 @@ export function resumenInicio({
 	const emitidas = valorizaciones.filter((valorizacion) => valorizacion.estado === "EMITIDA");
 	const nombres = new Map(terceros.map((tercero) => [tercero.id, tercero.razonSocial]));
 
-	const valorizadoMes: Partial<Record<Moneda, number>> = {};
+	const tipoDe = new Map(contratos.map((contrato) => [contrato.id, contrato.tipo]));
+	const porCobrarMes: Partial<Record<Moneda, number>> = {};
+	const porPagarMes: Partial<Record<Moneda, number>> = {};
 	for (const valorizacion of emitidas) {
 		if (valorizacion.fechaEmision?.startsWith(mes) === true && valorizacion.totales) {
-			valorizadoMes[valorizacion.moneda] =
-				(valorizadoMes[valorizacion.moneda] ?? 0) + valorizacion.totales.total;
+			const destino =
+				tipoDe.get(valorizacion.contratoId) === "RECIBIDO" ? porPagarMes : porCobrarMes;
+			destino[valorizacion.moneda] =
+				(destino[valorizacion.moneda] ?? 0) + valorizacion.totales.total;
 		}
 	}
 
@@ -95,7 +101,8 @@ export function resumenInicio({
 		(b.numero ?? "").localeCompare(a.numero ?? "");
 
 	return {
-		valorizadoMes,
+		porCobrarMes,
+		porPagarMes,
 		contratosActivos: activos.length,
 		equiposEnObra: new Set(
 			contratoEquipos

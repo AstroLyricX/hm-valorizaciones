@@ -25,14 +25,18 @@ import {
 	estadoContrato,
 	ESTADOS_CONTRATO,
 	ETIQUETA_ESTADO_CONTRATO,
+	ETIQUETA_TIPO_CONTRATO,
 	hoyIso,
+	TIPOS_CONTRATO,
 } from "./domain/contrato";
 import { ContratoFormDialog } from "./ui/ContratoFormDialog";
 import { EstadoContratoPill } from "./ui/EstadoContratoPill";
+import { TipoContratoPill } from "./ui/TipoContratoPill";
 import { vigencia } from "./ui/vigencia";
 
 interface FilaContrato extends Contrato {
-	cliente: string;
+	// Cliente (emitido) o proveedor (recibido).
+	contraparte: string;
 	estado: EstadoContrato;
 }
 
@@ -43,7 +47,7 @@ export function ContratosPage() {
 	const datos = useLiveQuery(async () => {
 		const [contratos, terceros, equipos] = await Promise.all([
 			contratoRepository.listar(),
-			terceroRepository.listar("CLIENTE"),
+			terceroRepository.listar(),
 			equipoRepository.listar(),
 		]);
 		const nombres = new Map(terceros.map((tercero) => [tercero.id, tercero.razonSocial]));
@@ -52,20 +56,20 @@ export function ContratosPage() {
 		return {
 			filas: contratos.map((contrato): FilaContrato => ({
 				...contrato,
-				cliente: nombres.get(contrato.terceroId) ?? "—",
+				contraparte: nombres.get(contrato.terceroId) ?? "—",
 				estado: estadoContrato(contrato, hoy),
 			})),
-			clientes: terceros.filter((tercero) => tercero.estado === "ACTIVO"),
+			terceros: terceros.filter((tercero) => tercero.estado === "ACTIVO"),
 			equipos,
 		};
 	});
 	const [busqueda, setBusqueda] = useState("");
 	const [formularioAbierto, setFormularioAbierto] = useState(false);
 
-	// Un contrato necesita al menos un cliente activo y un equipo registrados.
+	// Un contrato necesita un cliente o proveedor activo y un equipo registrados.
 	const nuevo = () => {
-		if (!datos || datos.clientes.length === 0 || datos.equipos.length === 0) {
-			toast.warning("Primero registra al menos un cliente y un equipo.");
+		if (!datos || datos.terceros.length === 0 || datos.equipos.length === 0) {
+			toast.warning("Primero registra al menos un cliente o proveedor y un equipo.");
 
 			return;
 		}
@@ -89,8 +93,22 @@ export function ContratosPage() {
 						celda: "min-w-48 font-medium text-navy-900",
 					},
 				}),
-				columnHelper.accessor("cliente", {
-					header: "Cliente",
+				columnHelper.accessor("tipo", {
+					header: "Tipo",
+					filterFn: "igual",
+					meta: {
+						filtro: {
+							tipo: "opciones",
+							opciones: TIPOS_CONTRATO.map((tipo) => ({
+								valor: tipo,
+								etiqueta: ETIQUETA_TIPO_CONTRATO[tipo],
+							})),
+						},
+					},
+					cell: ({ getValue }) => <TipoContratoPill tipo={getValue()} />,
+				}),
+				columnHelper.accessor("contraparte", {
+					header: "Cliente o proveedor",
 					filterFn: "contiene",
 					meta: { filtro: { tipo: "texto" }, alineacion: "izquierda", celda: "min-w-36" },
 				}),
@@ -155,7 +173,7 @@ export function ContratosPage() {
 				coincide(busqueda, [
 					contrato.codigo,
 					contrato.proyecto,
-					contrato.cliente,
+					contrato.contraparte,
 					contrato.ubicacion,
 				]),
 			),
@@ -219,7 +237,7 @@ export function ContratosPage() {
 													<EstadoContratoPill estado={contrato.estado} />
 												</span>
 												<span className="text-[13px] text-muted-foreground">
-													{contrato.codigo} · {contrato.cliente}
+													{contrato.codigo} · {contrato.contraparte}
 												</span>
 												<span className="flex items-baseline justify-between text-[13px]">
 													<span className="text-muted-foreground">{vigencia(contrato)}</span>
@@ -241,7 +259,7 @@ export function ContratosPage() {
 				<ContratoFormDialog
 					open={formularioAbierto}
 					onOpenChange={setFormularioAbierto}
-					clientes={datos.clientes}
+					terceros={datos.terceros}
 					equipos={datos.equipos}
 				/>
 			)}

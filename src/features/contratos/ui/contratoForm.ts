@@ -33,6 +33,7 @@ const EquipoFormSchema = z.object({
 
 export const ContratoFormSchema = z
 	.object({
+		tipo: z.string(),
 		terceroId: z.string(),
 		proyecto: z.string(),
 		ubicacion: z.string(),
@@ -54,6 +55,7 @@ export type { ContratoDatos };
 export const EQUIPO_VACIO: EquipoFormInput = { equipoId: "", horasMinimas: "", costoHora: "" };
 
 export const FORMULARIO_VACIO: ContratoFormInput = {
+	tipo: "EMITIDO",
 	terceroId: "",
 	proyecto: "",
 	ubicacion: "",
@@ -71,6 +73,7 @@ export function aFormulario(
 	equipos: readonly ContratoEquipo[],
 ): ContratoFormInput {
 	return {
+		tipo: contrato.tipo,
 		terceroId: contrato.terceroId,
 		proyecto: contrato.proyecto,
 		ubicacion: contrato.ubicacion,

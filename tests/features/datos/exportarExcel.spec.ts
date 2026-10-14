@@ -100,17 +100,18 @@ test("exporta todos los registros sin perder datos", async () => {
 	const [filaContrato] = hoja("CONTRATOS");
 	expect(filaContrato).toMatchObject({
 		Código: "CTR-001",
-		Cliente: "CONSTRUCTORA ANDINA SAC",
+		Tipo: "Emitido",
+		"Cliente o proveedor": "CONSTRUCTORA ANDINA SAC",
 		Moneda: "USD",
 		"Monto contractual": 7050 + 17435.25,
 		"Fondo de garantía (%)": 5,
 	});
 	// Excel muestra la fecha tal cual, sin desfase de zona horaria.
-	const [, filaCruda] = utils.sheet_to_json<string[]>(libro.Sheets.CONTRATOS, {
+	const [encabezados, filaCruda] = utils.sheet_to_json<string[]>(libro.Sheets.CONTRATOS, {
 		header: 1,
 		raw: false,
 	});
-	expect(filaCruda[6]).toBe("01/08/2026");
+	expect(filaCruda[encabezados.indexOf("Fecha de inicio")]).toBe("01/08/2026");
 	expect(hoja("EQUIPOS_CONTRATO")).toEqual([
 		expect.objectContaining({ Contrato: "CTR-001", Ítem: 1, "Horas mínimas": 150, Parcial: 7050 }),
 		expect.objectContaining({

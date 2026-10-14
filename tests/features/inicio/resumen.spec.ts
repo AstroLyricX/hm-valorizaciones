@@ -1,5 +1,8 @@
 import { db } from "../../../src/data/db";
-import { clienteService } from "../../../src/features/clientes/application/terceroService.instance";
+import {
+	clienteService,
+	proveedorService,
+} from "../../../src/features/clientes/application/terceroService.instance";
 import {
 	contratoRepository,
 	contratoService,
@@ -69,7 +72,8 @@ describe("resumenInicio", () => {
 			clientesActivos: 1,
 			contratosActivos: 1,
 			equiposEnObra: 1,
-			valorizadoMes: {},
+			porCobrarMes: {},
+			porPagarMes: {},
 			alertas: [],
 		});
 	});
@@ -84,7 +88,8 @@ describe("resumenInicio", () => {
 		const datos = await resumen();
 
 		// Solo las emitidas en septiembre: 2,952.14 + 92 h × 100 × 1.18 = 10,856.00.
-		expect(datos.valorizadoMes).toEqual({ USD: 295214 + 1085600 });
+		expect(datos.porCobrarMes).toEqual({ USD: 295214 + 1085600 });
+		expect(datos.porPagarMes).toEqual({});
 		expect(
 			datos.alertas.map((alerta) => [alerta.contrato.codigo, alerta.avancePct, alerta.nivel]),
 		).toEqual([
@@ -105,9 +110,33 @@ describe("resumenInicio", () => {
 
 		const datos = await resumen();
 
-		expect(datos.valorizadoMes).toEqual({});
+		expect(datos.porCobrarMes).toEqual({});
 		expect(datos.alertas).toEqual([]);
 		expect(datos.borradores.map((borrador) => borrador.periodo)).toEqual(["2026-09"]);
 		expect(datos.ultimasEmitidas.map((valorizacion) => valorizacion.estado)).toEqual(["ANULADA"]);
+	});
+
+	it("separa lo que H&M cobra (emitidos) de lo que paga (recibidos)", async () => {
+		const proveedorId = (await proveedorService.crear(HUISE, "ana@hm.pe")).id;
+		const equipoId = (
+			await equipoService.crear(
+				excavadora(proveedorId, { activoFijo: "AF-020", placa: "HUI-020" }),
+				"ana@hm.pe",
+			)
+		).id;
+		const recibido = (
+			await contratoService.crear(
+				contratoDatos(proveedorId, equipoId, { tipo: "RECIBIDO" }),
+				"ana@hm.pe",
+			)
+		).contrato.id;
+		await valorizar(osur, "2026-08", "53.23", "2026-09-17");
+		await valorizar(recibido, "2026-08", "10", "2026-09-18");
+
+		const datos = await resumen();
+
+		expect(datos.porCobrarMes).toEqual({ USD: 295214 });
+		// 10 h × USD 47.00 + IGV 18 % = USD 554.60.
+		expect(datos.porPagarMes).toEqual({ USD: 55460 });
 	});
 });

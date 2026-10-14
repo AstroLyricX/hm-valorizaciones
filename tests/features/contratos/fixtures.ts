@@ -14,6 +14,7 @@ export function contratoDatos(
 	cambios: Partial<ContratoDatos> = {},
 ): ContratoDatos {
 	return {
+		tipo: "EMITIDO",
 		terceroId,
 		proyecto: "Gestión general de subcontratos - OSUR",
 		ubicacion: "Asillo - San Antón",
