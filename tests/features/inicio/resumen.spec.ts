@@ -1,5 +1,5 @@
 import { db } from "../../../src/data/db";
-import { terceroService } from "../../../src/features/clientes/application/terceroService.instance";
+import { clienteService } from "../../../src/features/clientes/application/terceroService.instance";
 import {
 	contratoRepository,
 	contratoService,
@@ -27,7 +27,7 @@ async function valorizar(contratoId: string, periodo: string, horas: string, fec
 
 async function resumen() {
 	return resumenInicio({
-		terceros: await terceroService.listar(),
+		terceros: await clienteService.listar(),
 		contratos: await contratoRepository.listar(),
 		contratoEquipos: await contratoRepository.todosLosEquipos(),
 		valorizaciones: await valorizacionService.listar(),
@@ -41,9 +41,9 @@ let antiguo: string;
 beforeEach(async () => {
 	await db.delete();
 	await db.open();
-	const andina = (await terceroService.crear(CLIENTE, "ana@hm.pe")).id;
-	const huise = (await terceroService.crear(HUISE, "ana@hm.pe")).id;
-	await terceroService.cambiarEstado(huise, "INACTIVO", "ana@hm.pe");
+	const andina = (await clienteService.crear(CLIENTE, "ana@hm.pe")).id;
+	const huise = (await clienteService.crear(HUISE, "ana@hm.pe")).id;
+	await clienteService.cambiarEstado(huise, "INACTIVO", "ana@hm.pe");
 	const excavadoraId = (await equipoService.crear(excavadora(andina), "ana@hm.pe")).id;
 	const volqueteId = (await equipoService.crear(volquete(andina), "ana@hm.pe")).id;
 	// OSUR: 150 h × USD 47.00 = USD 7,050.00, vigente.

@@ -1,11 +1,11 @@
-import { abrirNuevo, datosDelEquipo, registrarCliente, seleccionar } from "../support/datos";
+import { abrirNuevo, datosDelEquipo, registrarProveedor, seleccionar } from "../support/datos";
 import { iniciarSesion } from "../support/sesion";
 
 describe("Equipos", () => {
 	beforeEach(() => {
 		cy.viewport(1280, 800);
 		iniciarSesion();
-		registrarCliente("Constructora Andina SAC", "20602629903");
+		registrarProveedor("Huise Quea Antolin", "10098637074");
 		cy.get("[data-sidebar=sidebar]").findByRole("link", { name: "Equipos" }).click();
 	});
 
@@ -17,7 +17,7 @@ describe("Equipos", () => {
 			fabricante: "CAT",
 			modelo: "340",
 			placa: "EXC-340",
-			dueno: "CONSTRUCTORA ANDINA SAC",
+			dueno: "HUISE QUEA ANTOLIN",
 		});
 		cy.findByRole("dialog").findByRole("button", { name: "Guardar" }).click();
 		cy.findByText("Equipo AF-001 registrado.").should("exist");

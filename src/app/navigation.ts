@@ -5,6 +5,7 @@ import {
 	House,
 	type LucideIcon,
 	Settings,
+	Store,
 	Truck,
 } from "lucide-react";
 
@@ -26,13 +27,14 @@ export const NAV_ITEMS: NavItem[] = [
 	{ to: "/contratos", label: "Contratos", icon: FileSignature, mobile: "bar" },
 	{ to: "/equipos", label: "Equipos", icon: Truck, mobile: "bar" },
 	{ to: "/clientes", label: "Clientes", icon: Building2, mobile: "more" },
+	{ to: "/proveedores", label: "Proveedores", icon: Store, mobile: "more" },
 	{ to: "/configuracion", label: "Configuración", icon: Settings, mobile: "more", soloAdmin: true },
 ];
 
 export const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
 	{ label: "General", items: NAV_ITEMS.slice(0, 3) },
-	{ label: "Registros", items: NAV_ITEMS.slice(3, 5) },
-	{ label: "Administración", items: NAV_ITEMS.slice(5) },
+	{ label: "Registros", items: NAV_ITEMS.slice(3, 6) },
+	{ label: "Administración", items: NAV_ITEMS.slice(6) },
 ];
 
 export function findNavItem(pathname: string): NavItem | undefined {

@@ -1,7 +1,7 @@
 import { screen, within } from "@testing-library/react";
 
 import { db } from "../../../src/data/db";
-import { terceroService } from "../../../src/features/clientes/application/terceroService.instance";
+import { clienteService } from "../../../src/features/clientes/application/terceroService.instance";
 import { contratoService } from "../../../src/features/contratos/application/contratoService.instance";
 import { equipoService } from "../../../src/features/equipos/application/equipoService.instance";
 import { valorizacionService } from "../../../src/features/valorizaciones/application/valorizacionService.instance";
@@ -27,7 +27,7 @@ test("sin datos muestra los indicadores en cero y nada pendiente", async () => {
 });
 
 test("muestra lo valorizado del mes, el contrato excedido, el borrador y la última emitida", async () => {
-	const clienteId = (await terceroService.crear(CLIENTE, "ana@hm.pe")).id;
+	const clienteId = (await clienteService.crear(CLIENTE, "ana@hm.pe")).id;
 	const equipoId = (await equipoService.crear(excavadora(clienteId), "ana@hm.pe")).id;
 	const { contrato } = await contratoService.crear(contratoDatos(clienteId, equipoId), "ana@hm.pe");
 	// 160 h de 150 h: USD 7,520.00 + IGV = USD 8,873.60, emitida hoy.

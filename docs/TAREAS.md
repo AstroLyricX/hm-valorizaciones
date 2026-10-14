@@ -181,3 +181,11 @@ de D1), un Worker consulta una API de RUC (Decolecta / apis.net.pe) y guarda los
 - [x] Pruebas: el Worker con la API simulada, `RucService` con el Worker simulado y el formulario
 - [x] Verificar
 - [x] STOP
+
+## Proveedores ✅
+
+- [x] Proveedores como lista aparte de los clientes, con los mismos datos (formulario, validaciones y consulta de RUC compartidos) y código `PRO-001`
+- [x] El RUC es único dentro de cada lista: una empresa puede ser cliente y proveedor a la vez
+- [x] El dueño de un equipo es un proveedor; los contratos siguen siendo con un cliente
+- [x] Menú "Proveedores" en Registros, hoja PROVEEDORES en la exportación a Excel
+- [ ] Pendiente de definir: quién aparece como "Del proveedor" en la valorización y el PDF (hoy, el cliente del contrato)

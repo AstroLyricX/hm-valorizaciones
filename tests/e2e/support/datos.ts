@@ -36,13 +36,22 @@ export function datosDelCliente(razonSocial: string, ruc: string): void {
 	});
 }
 
-// Registra un cliente desde la pantalla de Clientes.
-export function registrarCliente(razonSocial: string, ruc: string): void {
-	cy.visit("/clientes");
-	abrirNuevo("Agregar cliente");
+// Registra un cliente o un proveedor desde su pantalla (mismos datos, listas separadas).
+function registrarTercero(ruta: string, etiqueta: string, razonSocial: string, ruc: string): void {
+	cy.visit(ruta);
+	abrirNuevo(etiqueta);
 	datosDelCliente(razonSocial, ruc);
 	cy.findByRole("dialog").findByRole("button", { name: "Guardar" }).click();
 	cy.findByRole("dialog").should("not.exist");
+}
+
+export function registrarCliente(razonSocial: string, ruc: string): void {
+	registrarTercero("/clientes", "Agregar cliente", razonSocial, ruc);
+}
+
+// Los dueños de los equipos son proveedores.
+export function registrarProveedor(razonSocial: string, ruc: string): void {
+	registrarTercero("/proveedores", "Agregar proveedor", razonSocial, ruc);
 }
 
 interface DatosEquipo {
@@ -92,16 +101,17 @@ export function llenarEquipo(numero: number, equipo: RegExp, horas: string, cost
 	cy.findByLabelText(`Costo por hora del ítem ${numero}`).type(costo);
 }
 
-// Cliente, excavadora y contrato de 150 h a USD 47.00 (USD 7,050.00), como el xlsm.
+// Cliente, proveedor dueño de la excavadora y contrato de 150 h a USD 47.00 (USD 7,050.00), como el xlsm.
 export function registrarContratoDelXlsm(): void {
 	registrarCliente("Constructora Andina SAC", "20602629903");
+	registrarProveedor("Huise Quea Antolin", "10098637074");
 	registrarEquipo({
 		activoFijo: "AF-001",
 		descripcion: "Excavadora",
 		fabricante: "CAT",
 		modelo: "340",
 		placa: "EXC-340",
-		dueno: "CONSTRUCTORA ANDINA SAC",
+		dueno: "HUISE QUEA ANTOLIN",
 	});
 	cy.visit("/contratos");
 	cy.findByRole("table").findByRole("button", { name: "Nuevo" }).click();

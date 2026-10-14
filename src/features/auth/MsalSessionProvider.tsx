@@ -3,7 +3,7 @@ import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react
 
 import { ruta } from "@/app/entorno";
 
-import { PERMISOS } from "./permisos";
+import { PERMISOS_LOGIN, PERMISOS_SYNC } from "./permisos";
 import { usuarioDesdeCuenta } from "./roles";
 import {
 	ReautenticacionRequeridaError,
@@ -77,7 +77,11 @@ export function MsalSessionProvider({
 		async (ruta?: string) => {
 			setIsSigningIn(true);
 			try {
-				await cliente.loginRedirect({ scopes: PERMISOS, state: ruta, prompt: "select_account" });
+				await cliente.loginRedirect({
+					scopes: PERMISOS_LOGIN,
+					state: ruta,
+					prompt: "select_account",
+				});
 			} catch (error) {
 				console.error(error);
 				setIsSigningIn(false);
@@ -110,7 +114,8 @@ export function MsalSessionProvider({
 			throw new ReautenticacionRequeridaError();
 		}
 		try {
-			return (await cliente.acquireTokenSilent({ scopes: PERMISOS, account: cuenta })).accessToken;
+			return (await cliente.acquireTokenSilent({ scopes: PERMISOS_SYNC, account: cuenta }))
+				.accessToken;
 		} catch (error) {
 			if (error instanceof InteractionRequiredAuthError) {
 				throw new ReautenticacionRequeridaError();
@@ -121,7 +126,7 @@ export function MsalSessionProvider({
 
 	const reautenticar = useCallback(async () => {
 		await cliente.acquireTokenRedirect({
-			scopes: PERMISOS,
+			scopes: PERMISOS_SYNC,
 			account: cliente.getActiveAccount() ?? undefined,
 			state: window.location.pathname,
 		});

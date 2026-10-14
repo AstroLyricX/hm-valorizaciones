@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 
 import { db } from "../../../src/data/db";
-import { terceroService } from "../../../src/features/clientes/application/terceroService.instance";
+import { clienteService } from "../../../src/features/clientes/application/terceroService.instance";
 import { contratoService } from "../../../src/features/contratos/application/contratoService.instance";
 import { equipoService } from "../../../src/features/equipos/application/equipoService.instance";
 import { calcularPlanilla } from "../../../src/features/valorizaciones/application/ValorizacionService";
@@ -42,7 +42,7 @@ let contratoId: string;
 beforeEach(async () => {
 	await db.delete();
 	await db.open();
-	const clienteId = (await terceroService.crear(CLIENTE, "ana@hm.pe")).id;
+	const clienteId = (await clienteService.crear(CLIENTE, "ana@hm.pe")).id;
 	const equipoId = (await equipoService.crear(excavadora(clienteId), "ana@hm.pe")).id;
 	contratoId = (await contratoService.crear(contratoDatos(clienteId, equipoId), "ana@hm.pe"))
 		.contrato.id;

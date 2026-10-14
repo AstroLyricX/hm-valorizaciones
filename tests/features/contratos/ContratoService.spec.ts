@@ -101,4 +101,15 @@ describe("ContratoService", () => {
 		expect(await database.outbox.where("entidad").equals("contratos").count()).toBe(1);
 		expect(await database.outbox.where("entidad").equals("contratoEquipos").count()).toBe(1);
 	});
+
+	it("no acepta un proveedor como cliente del contrato", async () => {
+		const proveedor = await new TerceroService(new TerceroRepository(database), "PROVEEDOR").crear(
+			{ ...CLIENTE, ruc: "10098637074" },
+			"ana@hm.pe",
+		);
+
+		await expect(
+			service.crear(contratoDatos(proveedor.id, excavadoraId), "ana@hm.pe"),
+		).rejects.toBeInstanceOf(ClienteNoValidoError);
+	});
 });

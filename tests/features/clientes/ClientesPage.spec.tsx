@@ -3,8 +3,8 @@ import userEvent from "@testing-library/user-event";
 
 import { db } from "../../../src/data/db";
 import {
+	clienteService,
 	rucService,
-	terceroService,
 } from "../../../src/features/clientes/application/terceroService.instance";
 import { seleccionar } from "../../support/campos";
 import { CLIENTE, HUISE } from "../../support/fixtures";
@@ -74,7 +74,7 @@ test("marca los obligatorios con * y muestra sus errores a la vez", async () => 
 
 test("avisa en el campo RUC si ya está registrado", async () => {
 	const user = userEvent.setup();
-	await terceroService.crear(CLIENTE, "ana@hm.pe");
+	await clienteService.crear(CLIENTE, "ana@hm.pe");
 	renderRoute("/clientes");
 
 	const formulario = await abrirNuevo(user);
@@ -89,7 +89,7 @@ test("avisa en el campo RUC si ya está registrado", async () => {
 
 test("edita un registro con el botón de editar de la fila", async () => {
 	const user = userEvent.setup();
-	await terceroService.crear(HUISE, "ana@hm.pe");
+	await clienteService.crear(HUISE, "ana@hm.pe");
 	renderRoute("/clientes");
 
 	const tabla = await screen.findByRole("table");
@@ -106,7 +106,7 @@ test("edita un registro con el botón de editar de la fila", async () => {
 
 test("desactivar pide confirmación y cambia el estado a inactivo", async () => {
 	const user = userEvent.setup();
-	await terceroService.crear(HUISE, "ana@hm.pe");
+	await clienteService.crear(HUISE, "ana@hm.pe");
 	renderRoute("/clientes");
 
 	const tabla = await screen.findByRole("table");
@@ -124,8 +124,8 @@ test("desactivar pide confirmación y cambia el estado a inactivo", async () => 
 
 test("filtra por columna sin importar tildes ni mayúsculas", async () => {
 	const user = userEvent.setup();
-	await terceroService.crear(HUISE, "ana@hm.pe");
-	await terceroService.crear(
+	await clienteService.crear(HUISE, "ana@hm.pe");
+	await clienteService.crear(
 		{ ...CLIENTE, razonSocial: "Minera Ñuñoa", estado: "INACTIVO" },
 		"ana@hm.pe",
 	);

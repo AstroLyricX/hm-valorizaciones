@@ -35,7 +35,7 @@ export function NuevaValorizacionPage() {
 	const opciones = useLiveQuery(async () => {
 		const [contratos, terceros] = await Promise.all([
 			contratoRepository.listar(),
-			terceroRepository.listar(),
+			terceroRepository.listar("CLIENTE"),
 		]);
 		const nombres = new Map(terceros.map((tercero) => [tercero.id, tercero.razonSocial]));
 		const hoy = hoyIso();

@@ -14,7 +14,7 @@ import { RadioOptions } from "@/shared/components/RadioOptions";
 import { SelectField } from "@/shared/components/SelectField";
 import { rucValido } from "@/shared/domain/ruc";
 
-import { rucService, terceroService } from "../application/terceroService.instance";
+import { rucService, servicioDe } from "../application/terceroService.instance";
 import {
 	BANCOS,
 	ESTADOS_CIVILES,
@@ -26,6 +26,7 @@ import {
 	type TerceroDatos,
 	type TerceroDatosInput,
 	TerceroDatosSchema,
+	type TipoTercero,
 } from "../domain/tercero";
 import { type EstadoConsulta, EstadoConsultaRuc } from "./EstadoConsultaRuc";
 
@@ -73,7 +74,21 @@ const OPCIONES_ESTADO_CIVIL = ESTADOS_CIVILES.map((estado) => ({
 }));
 const OPCIONES_BANCO = BANCOS.map((banco) => ({ value: banco, label: banco }));
 
-function useTerceroFormulario({ tercero, onDone }: { tercero?: Tercero; onDone: () => void }) {
+const NOMBRE: Record<TipoTercero, { singular: string; titulo: string }> = {
+	CLIENTE: { singular: "cliente", titulo: "Cliente" },
+	PROVEEDOR: { singular: "proveedor", titulo: "Proveedor" },
+};
+
+function useTerceroFormulario({
+	tipo,
+	tercero,
+	onDone,
+}: {
+	tipo: TipoTercero;
+	tercero?: Tercero;
+	onDone: () => void;
+}) {
+	const servicio = servicioDe(tipo);
 	const { user } = useSession();
 	const {
 		register,
@@ -111,11 +126,11 @@ function useTerceroFormulario({ tercero, onDone }: { tercero?: Tercero; onDone: 
 		const usuario = user?.email ?? "desconocido";
 		try {
 			if (tercero) {
-				await terceroService.actualizar(tercero.id, datos, usuario);
+				await servicio.actualizar(tercero.id, datos, usuario);
 				toast.success("Cambios guardados.");
 			} else {
-				const creado = await terceroService.crear(datos, usuario);
-				toast.success(`Cliente ${creado.codigo} registrado.`);
+				const creado = await servicio.crear(datos, usuario);
+				toast.success(`${NOMBRE[tipo].titulo} ${creado.codigo} registrado.`);
 			}
 			onDone();
 		} catch (error) {
@@ -334,23 +349,26 @@ function useTerceroFormulario({ tercero, onDone }: { tercero?: Tercero; onDone: 
 }
 
 function ContenidoFormulario({
+	tipo,
 	tercero,
 	onDone,
 	onOpenChange,
 	open,
 }: {
+	tipo: TipoTercero;
 	tercero?: Tercero;
 	onDone: () => void;
 	onOpenChange: (open: boolean) => void;
 	open: boolean;
 }) {
-	const { onSubmit, isSubmitting, campos } = useTerceroFormulario({ tercero, onDone });
+	const { onSubmit, isSubmitting, campos } = useTerceroFormulario({ tipo, tercero, onDone });
+	const { singular } = NOMBRE[tipo];
 
 	return (
 		<FormDialog
 			open={open}
 			onOpenChange={onOpenChange}
-			title={tercero ? `Editar cliente ${tercero.codigo}` : "Nuevo cliente"}
+			title={tercero ? `Editar ${singular} ${tercero.codigo}` : `Nuevo ${singular}`}
 			description="Datos de la empresa, del representante y bancarios."
 			onSubmit={onSubmit}
 			isSubmitting={isSubmitting}
@@ -362,10 +380,12 @@ function ContenidoFormulario({
 }
 
 export function TerceroFormDialog({
+	tipo,
 	open,
 	onOpenChange,
 	tercero,
 }: {
+	tipo: TipoTercero;
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	tercero?: Tercero;
@@ -374,6 +394,7 @@ export function TerceroFormDialog({
 	return open ? (
 		<ContenidoFormulario
 			key={tercero?.id ?? "nuevo"}
+			tipo={tipo}
 			open={open}
 			onOpenChange={onOpenChange}
 			tercero={tercero}

@@ -270,7 +270,7 @@ function Formulario({
 			</FormSeccion>
 
 			<FormSeccion titulo="Dueño y estado">
-				<FormField label="Dueño" required error={errors.duenoId?.message}>
+				<FormField label="Dueño (proveedor)" required error={errors.duenoId?.message}>
 					{(campo) => (
 						<Controller
 							control={control}

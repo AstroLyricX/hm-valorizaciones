@@ -1,3 +1,7 @@
-// Permisos que se piden al iniciar sesión: el perfil y el sitio de SharePoint de H&M, donde se
-// sincronizan los datos y los PDFs (fase 12).
-export const PERMISOS = ["User.Read", "Sites.ReadWrite.All"];
+// Al iniciar sesión solo se pide el perfil: así el login funciona aunque el directorio exija
+// aprobación del administrador para otros permisos.
+export const PERMISOS_LOGIN = ["User.Read"];
+
+// La sincronización pide además el sitio de SharePoint (fase 12). Solo se solicita si hay un
+// sitio configurado; el administrador debe aprobarlo una vez para todo el directorio.
+export const PERMISOS_SYNC = ["Sites.ReadWrite.All"];

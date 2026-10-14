@@ -2,10 +2,13 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { db } from "../../../src/data/db";
-import { terceroService } from "../../../src/features/clientes/application/terceroService.instance";
+import {
+	clienteService,
+	proveedorService,
+} from "../../../src/features/clientes/application/terceroService.instance";
 import { equipoService } from "../../../src/features/equipos/application/equipoService.instance";
 import { seleccionar } from "../../support/campos";
-import { CLIENTE, excavadora, volquete } from "../../support/fixtures";
+import { CLIENTE, excavadora, HUISE, volquete } from "../../support/fixtures";
 import { renderRoute, signInAs } from "../../support/renderRoute";
 
 let duenoId: string;
@@ -15,7 +18,9 @@ beforeEach(async () => {
 	await db.delete();
 	await db.open();
 	signInAs();
-	duenoId = (await terceroService.crear(CLIENTE, "ana@hm.pe")).id;
+	// El dueño de los equipos es un proveedor; el cliente no debe ofrecerse como dueño.
+	duenoId = (await proveedorService.crear(HUISE, "ana@hm.pe")).id;
+	await clienteService.crear(CLIENTE, "ana@hm.pe");
 });
 
 async function abrirNuevo(user: ReturnType<typeof userEvent.setup>) {
@@ -24,11 +29,15 @@ async function abrirNuevo(user: ReturnType<typeof userEvent.setup>) {
 	return screen.findByRole("dialog", { name: "Nuevo equipo" });
 }
 
-test("sin clientes pide registrar uno primero", async () => {
-	await db.terceros.clear();
+test("sin proveedores pide registrar uno primero, aunque haya clientes", async () => {
+	await db.terceros.where("tipo").equals("PROVEEDOR").delete();
 	renderRoute("/equipos");
 
-	expect(await screen.findByText("Primero registra un cliente")).toBeInTheDocument();
+	expect(await screen.findByText("Primero registra un proveedor")).toBeInTheDocument();
+	expect(screen.getByRole("link", { name: "Ir a proveedores" })).toHaveAttribute(
+		"href",
+		"/proveedores",
+	);
 });
 
 test("registra un equipo con su dueño y lo muestra en la lista", async () => {
@@ -43,7 +52,10 @@ test("registra un equipo con su dueño y lo muestra en la lista", async () => {
 	await user.type(within(formulario).getByLabelText(/Placa/), "exc-340");
 	await user.type(within(formulario).getByLabelText(/Año/), "2019");
 	await user.type(within(formulario).getByLabelText(/Marca del motor/), "Cat");
-	await seleccionar(user, within(formulario).getByLabelText(/Dueño/), "CONSTRUCTORA ANDINA SAC");
+	await user.click(within(formulario).getByLabelText(/Dueño/));
+	// Solo se ofrecen proveedores.
+	expect(screen.queryByRole("option", { name: "CONSTRUCTORA ANDINA SAC" })).not.toBeInTheDocument();
+	await user.click(await screen.findByRole("option", { name: "HUISE QUEA ANTOLIN" }));
 	await user.click(within(formulario).getByRole("button", { name: "Guardar" }));
 
 	expect(await screen.findByText("Equipo AF-001 registrado.")).toBeInTheDocument();

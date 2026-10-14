@@ -43,7 +43,7 @@ export function ContratosPage() {
 	const datos = useLiveQuery(async () => {
 		const [contratos, terceros, equipos] = await Promise.all([
 			contratoRepository.listar(),
-			terceroRepository.listar(),
+			terceroRepository.listar("CLIENTE"),
 			equipoRepository.listar(),
 		]);
 		const nombres = new Map(terceros.map((tercero) => [tercero.id, tercero.razonSocial]));

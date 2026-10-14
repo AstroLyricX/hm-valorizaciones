@@ -149,6 +149,17 @@ export class HmDatabase extends Dexie {
 			});
 		// Caché local de las consultas de RUC (fase 13).
 		this.version(10).stores({ rucConsultados: "ruc" });
+		// Proveedores (lista aparte de los clientes, mismos datos): el RUC es único por lista.
+		this.version(11)
+			.stores({ terceros: "id, codigo, estado, tipo, ruc, [tipo+ruc]" })
+			.upgrade(async (tx) => {
+				await tx
+					.table("terceros")
+					.toCollection()
+					.modify((tercero: Record<string, unknown>) => {
+						tercero.tipo ??= "CLIENTE";
+					});
+			});
 	}
 }
 

@@ -105,31 +105,38 @@ export function libroExcel(datos: DatosExportacion): Hoja[] {
 	const cliente = (terceroId: string | undefined) =>
 		terceroId === undefined ? undefined : porTercero.get(terceroId);
 
-	const clientes = hoja<Tercero>(
-		"CLIENTES",
+	// Clientes y proveedores tienen los mismos datos: cada lista en su hoja.
+	const columnasTercero: Columnas<Tercero> = [
+		["Código", (tercero) => tercero.codigo],
+		["Razón social", (tercero) => tercero.razonSocial],
+		["RUC", (tercero) => tercero.ruc],
+		["Dirección", (tercero) => tercero.direccion],
+		["Correo", (tercero) => tercero.correo],
+		["Estado", (tercero) => ETIQUETA_ESTADO[tercero.estado]],
+		["Representante", (tercero) => tercero.representanteNombre],
+		["DNI del representante", (tercero) => tercero.representanteDni],
+		["Teléfono del representante", (tercero) => tercero.representanteTelefono],
+		["Dirección del representante", (tercero) => tercero.representanteDireccion],
 		[
-			["Código", (tercero) => tercero.codigo],
-			["Razón social", (tercero) => tercero.razonSocial],
-			["RUC", (tercero) => tercero.ruc],
-			["Dirección", (tercero) => tercero.direccion],
-			["Correo", (tercero) => tercero.correo],
-			["Estado", (tercero) => ETIQUETA_ESTADO[tercero.estado]],
-			["Representante", (tercero) => tercero.representanteNombre],
-			["DNI del representante", (tercero) => tercero.representanteDni],
-			["Teléfono del representante", (tercero) => tercero.representanteTelefono],
-			["Dirección del representante", (tercero) => tercero.representanteDireccion],
-			[
-				"Estado civil",
-				(tercero) =>
-					tercero.representanteEstadoCivil
-						? ETIQUETA_ESTADO_CIVIL[tercero.representanteEstadoCivil]
-						: "",
-			],
-			["Banco", (tercero) => tercero.banco],
-			["N.° de cuenta", (tercero) => tercero.numeroCuenta],
-			["CCI", (tercero) => tercero.cci],
+			"Estado civil",
+			(tercero) =>
+				tercero.representanteEstadoCivil
+					? ETIQUETA_ESTADO_CIVIL[tercero.representanteEstadoCivil]
+					: "",
 		],
-		terceros,
+		["Banco", (tercero) => tercero.banco],
+		["N.° de cuenta", (tercero) => tercero.numeroCuenta],
+		["CCI", (tercero) => tercero.cci],
+	];
+	const clientes = hoja(
+		"CLIENTES",
+		columnasTercero,
+		terceros.filter((tercero) => tercero.tipo === "CLIENTE"),
+	);
+	const proveedores = hoja(
+		"PROVEEDORES",
+		columnasTercero,
+		terceros.filter((tercero) => tercero.tipo === "PROVEEDOR"),
 	);
 
 	const hojaEquipos = hoja<Equipo>(
@@ -309,6 +316,7 @@ export function libroExcel(datos: DatosExportacion): Hoja[] {
 
 	return [
 		clientes,
+		proveedores,
 		hojaEquipos,
 		hojaContratos,
 		hojaEquiposContrato,

@@ -1,7 +1,10 @@
 import { read, utils } from "xlsx";
 
 import { db } from "../../../src/data/db";
-import { terceroService } from "../../../src/features/clientes/application/terceroService.instance";
+import {
+	clienteService,
+	proveedorService,
+} from "../../../src/features/clientes/application/terceroService.instance";
 import { contratoService } from "../../../src/features/contratos/application/contratoService.instance";
 import { datosExportacion } from "../../../src/features/datos/application/datosExportacion";
 import { escribirExcel } from "../../../src/features/datos/application/escribirExcel";
@@ -24,11 +27,12 @@ function leer(buffer: ArrayBuffer) {
 	return { nombres: libro.SheetNames, hoja, libro };
 }
 
-test("sin datos exporta las seis hojas con sus encabezados", async () => {
+test("sin datos exporta las siete hojas con sus encabezados", async () => {
 	const { nombres, libro } = leer(escribirExcel(libroExcel(await datosExportacion())));
 
 	expect(nombres).toEqual([
 		"CLIENTES",
+		"PROVEEDORES",
 		"EQUIPOS",
 		"CONTRATOS",
 		"EQUIPOS_CONTRATO",
@@ -40,11 +44,11 @@ test("sin datos exporta las seis hojas con sus encabezados", async () => {
 });
 
 test("exporta todos los registros sin perder datos", async () => {
-	const andina = await terceroService.crear(
+	const andina = await clienteService.crear(
 		{ ...CLIENTE, banco: "BCP", cci: "00219100123456789012", representanteEstadoCivil: "CASADO" },
 		"ana@hm.pe",
 	);
-	await terceroService.crear(HUISE, "ana@hm.pe");
+	await proveedorService.crear(HUISE, "ana@hm.pe");
 	const excavadoraId = (await equipoService.crear(excavadora(andina.id), "ana@hm.pe")).id;
 	const volqueteId = (await equipoService.crear(volquete(andina.id), "ana@hm.pe")).id;
 	const { contrato, equipos } = await contratoService.crear(
@@ -70,7 +74,10 @@ test("exporta todos los registros sin perder datos", async () => {
 
 	const { hoja, libro } = leer(escribirExcel(libroExcel(await datosExportacion())));
 
-	expect(hoja("CLIENTES")).toHaveLength(2);
+	expect(hoja("CLIENTES")).toHaveLength(1);
+	expect(hoja("PROVEEDORES")).toEqual([
+		expect.objectContaining({ Código: "PRO-001", "Razón social": "HUISE QUEA ANTOLIN" }),
+	]);
 	expect(hoja("CLIENTES")[0]).toMatchObject({
 		Código: "CLI-001",
 		"Razón social": "CONSTRUCTORA ANDINA SAC",

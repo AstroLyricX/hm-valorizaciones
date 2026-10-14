@@ -102,7 +102,9 @@ export function resumenInicio({
 				.filter((contratoEquipo) => idsActivos.has(contratoEquipo.contratoId))
 				.map((contratoEquipo) => contratoEquipo.equipoId),
 		).size,
-		clientesActivos: terceros.filter((tercero) => tercero.estado === "ACTIVO").length,
+		clientesActivos: terceros.filter(
+			(tercero) => tercero.tipo === "CLIENTE" && tercero.estado === "ACTIVO",
+		).length,
 		alertas,
 		borradores: valorizaciones
 			.filter((valorizacion) => valorizacion.estado === "BORRADOR")

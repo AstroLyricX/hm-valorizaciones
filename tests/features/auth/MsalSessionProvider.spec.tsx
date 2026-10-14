@@ -113,8 +113,9 @@ test("iniciar sesión redirige a Microsoft pidiendo los permisos y la ruta de vu
 	expect(await screen.findByText("Sin sesión")).toBeInTheDocument();
 	await user.click(screen.getByRole("button", { name: "Entrar" }));
 
+	// El login pide solo el perfil; SharePoint se pide al sincronizar.
 	expect(cliente.loginRedirect).toHaveBeenCalledWith({
-		scopes: ["User.Read", "Sites.ReadWrite.All"],
+		scopes: ["User.Read"],
 		state: "/contratos",
 		prompt: "select_account",
 	});
@@ -164,7 +165,7 @@ test("da el token de Graph en silencio y pide volver a entrar si Microsoft lo ex
 
 	expect(await obtener?.()).toBe("token-graph");
 	expect(cliente.acquireTokenSilent).toHaveBeenCalledWith({
-		scopes: ["User.Read", "Sites.ReadWrite.All"],
+		scopes: ["Sites.ReadWrite.All"],
 		account: ANA,
 	});
 

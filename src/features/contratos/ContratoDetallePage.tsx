@@ -192,7 +192,7 @@ export function ContratoDetallePage() {
 		const [cliente, equipos, terceros, valorizaciones] = await Promise.all([
 			terceroRepository.obtener(detalle.contrato.terceroId),
 			equipoRepository.listar(),
-			terceroRepository.listar(),
+			terceroRepository.listar("CLIENTE"),
 			valorizacionRepository.delContrato(id),
 		]);
 

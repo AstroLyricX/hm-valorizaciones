@@ -4,7 +4,10 @@ import { BaseSchema } from "@/data/base";
 import { siguienteCodigo as siguienteCodigoConPrefijo } from "@/shared/domain/codigo";
 import { rucValido } from "@/shared/domain/ruc";
 
-// Clientes según VALORIZACIONES.txt (hoja CLIENTES del xlsm). También son los dueños de los equipos.
+// Clientes y proveedores según VALORIZACIONES.txt (hoja CLIENTES del xlsm): tienen los mismos
+// datos, pero son listas separadas. El cliente es para quien trabaja H&M (contratos); el
+// proveedor alquila sus equipos a H&M (dueño de los equipos).
+export const TIPOS_TERCERO = ["CLIENTE", "PROVEEDOR"] as const;
 export const ESTADOS_TERCERO = ["ACTIVO", "INACTIVO"] as const;
 export const ESTADOS_CIVILES = ["SOLTERO", "CASADO", "CONVIVIENTE", "DIVORCIADO", "VIUDO"] as const;
 export const BANCOS = [
@@ -20,7 +23,10 @@ export const BANCOS = [
 	"OTRO",
 ] as const;
 
+export type TipoTercero = (typeof TIPOS_TERCERO)[number];
 export type EstadoTercero = (typeof ESTADOS_TERCERO)[number];
+
+const PREFIJO: Record<TipoTercero, string> = { CLIENTE: "CLI-", PROVEEDOR: "PRO-" };
 export type EstadoCivil = (typeof ESTADOS_CIVILES)[number];
 
 export const ETIQUETA_ESTADO: Record<EstadoTercero, string> = {
@@ -88,16 +94,18 @@ export const TerceroDatosSchema = z.object({
 
 export const TerceroSchema = BaseSchema.extend({
 	...TerceroDatosSchema.shape,
-	codigo: z.string().regex(/^CLI-\d{3,}$/),
+	// Los registros anteriores a los proveedores eran todos clientes.
+	tipo: z.enum(TIPOS_TERCERO).default("CLIENTE"),
+	codigo: z.string().regex(/^(CLI|PRO)-\d{3,}$/),
 });
 
 export type TerceroDatos = z.infer<typeof TerceroDatosSchema>;
 export type TerceroDatosInput = z.input<typeof TerceroDatosSchema>;
 export type Tercero = z.infer<typeof TerceroSchema>;
 
-// Siguiente código correlativo (CLI-001, CLI-002…), igual que GenerarCodigoCliente del xlsm.
-export function siguienteCodigo(codigos: readonly string[]): string {
-	return siguienteCodigoConPrefijo("CLI-", codigos);
+// Siguiente código correlativo (CLI-001, CLI-002… o PRO-001…), como GenerarCodigoCliente del xlsm.
+export function siguienteCodigo(codigos: readonly string[], tipo: TipoTercero = "CLIENTE"): string {
+	return siguienteCodigoConPrefijo(PREFIJO[tipo], codigos);
 }
 
 export class RucDuplicadoError extends Error {

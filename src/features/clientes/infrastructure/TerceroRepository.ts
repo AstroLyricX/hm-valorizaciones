@@ -1,28 +1,33 @@
 import type { HmDatabase } from "@/data/db";
 import { guardarConOutbox } from "@/data/outbox";
 
-import { type Tercero, TerceroSchema } from "../domain/tercero";
+import { type Tercero, TerceroSchema, type TipoTercero } from "../domain/tercero";
 
 export class TerceroRepository {
 	constructor(private readonly database: HmDatabase) {}
 
-	// Todos los registros no eliminados, ordenados por código.
-	async listar(): Promise<Tercero[]> {
+	// Registros no eliminados, ordenados por código; solo los del tipo indicado si se pide.
+	async listar(tipo?: TipoTercero): Promise<Tercero[]> {
 		const terceros = await this.database.terceros.orderBy("codigo").toArray();
 
-		return terceros.filter((tercero) => tercero.deletedAt === null);
+		return terceros.filter(
+			(tercero) => tercero.deletedAt === null && (tipo === undefined || tercero.tipo === tipo),
+		);
 	}
 
 	async obtener(id: string): Promise<Tercero | undefined> {
 		return this.database.terceros.get(id);
 	}
 
-	async buscarPorRuc(ruc: string): Promise<Tercero | undefined> {
-		return this.database.terceros.where("ruc").equals(ruc).first();
+	// El RUC es único dentro de cada lista: una empresa puede ser cliente y también proveedor.
+	async buscarPorRuc(ruc: string, tipo: TipoTercero): Promise<Tercero | undefined> {
+		return this.database.terceros.where("[tipo+ruc]").equals([tipo, ruc]).first();
 	}
 
-	async codigos(): Promise<string[]> {
-		return (await this.database.terceros.orderBy("codigo").keys()).map(String);
+	async codigos(tipo: TipoTercero): Promise<string[]> {
+		return (await this.database.terceros.where("tipo").equals(tipo).toArray()).map(
+			(tercero) => tercero.codigo,
+		);
 	}
 
 	async guardar(tercero: Tercero): Promise<void> {

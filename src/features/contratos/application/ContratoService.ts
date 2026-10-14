@@ -145,7 +145,12 @@ export class ContratoService {
 	private async asegurarCliente(terceroId: string): Promise<void> {
 		const tercero = await this.terceros.obtener(terceroId);
 
-		if (!tercero || tercero.deletedAt !== null || tercero.estado !== "ACTIVO") {
+		if (
+			!tercero ||
+			tercero.deletedAt !== null ||
+			tercero.estado !== "ACTIVO" ||
+			tercero.tipo !== "CLIENTE"
+		) {
 			throw new ClienteNoValidoError();
 		}
 	}

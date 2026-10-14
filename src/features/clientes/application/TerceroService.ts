@@ -9,14 +9,19 @@ import {
 	type Tercero,
 	type TerceroDatosInput,
 	TerceroDatosSchema,
+	type TipoTercero,
 } from "../domain/tercero";
 import type { TerceroRepository } from "../infrastructure/TerceroRepository";
 
+// Un servicio por lista (clientes o proveedores) sobre el mismo repositorio.
 export class TerceroService {
-	constructor(private readonly repository: TerceroRepository) {}
+	constructor(
+		private readonly repository: TerceroRepository,
+		readonly tipo: TipoTercero = "CLIENTE",
+	) {}
 
 	async listar(): Promise<Tercero[]> {
-		return this.repository.listar();
+		return this.repository.listar(this.tipo);
 	}
 
 	async crear(datos: TerceroDatosInput, usuario: string): Promise<Tercero> {
@@ -26,7 +31,8 @@ export class TerceroService {
 		const ahora = ahoraIso();
 		const tercero: Tercero = {
 			id: uuidv7(),
-			codigo: siguienteCodigo(await this.repository.codigos()),
+			tipo: this.tipo,
+			codigo: siguienteCodigo(await this.repository.codigos(this.tipo), this.tipo),
 			...validos,
 			createdAt: ahora,
 			updatedAt: ahora,
@@ -72,7 +78,7 @@ export class TerceroService {
 	private async obtenerExistente(id: string): Promise<Tercero> {
 		const tercero = await this.repository.obtener(id);
 
-		if (!tercero || tercero.deletedAt !== null) {
+		if (!tercero || tercero.deletedAt !== null || tercero.tipo !== this.tipo) {
 			throw new Error(`No existe el registro ${id}.`);
 		}
 
@@ -80,7 +86,7 @@ export class TerceroService {
 	}
 
 	private async asegurarRucDisponible(ruc: string, idPropio?: string): Promise<void> {
-		const existente = await this.repository.buscarPorRuc(ruc);
+		const existente = await this.repository.buscarPorRuc(ruc, this.tipo);
 
 		if (existente && existente.id !== idPropio) {
 			throw new RucDuplicadoError(ruc, existente.codigo);

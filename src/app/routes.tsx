@@ -4,6 +4,7 @@ import { LoginPage } from "@/features/auth/LoginPage";
 import { RequireRol } from "@/features/auth/RequireRol";
 import { RequireSession } from "@/features/auth/RequireSession";
 import { ClientesPage } from "@/features/clientes/ClientesPage";
+import { ProveedoresPage } from "@/features/clientes/ProveedoresPage";
 import { ConfiguracionPage } from "@/features/configuracion/ConfiguracionPage";
 import { ContratoDetallePage } from "@/features/contratos/ContratoDetallePage";
 import { ContratosPage } from "@/features/contratos/ContratosPage";
@@ -33,6 +34,7 @@ export const routes: RouteObject[] = [
 					{ path: "/contratos/:id", element: <ContratoDetallePage /> },
 					{ path: "/equipos", element: <EquiposPage /> },
 					{ path: "/clientes", element: <ClientesPage /> },
+					{ path: "/proveedores", element: <ProveedoresPage /> },
 					{
 						element: <RequireRol accion="configurar" />,
 						children: [{ path: "/configuracion", element: <ConfiguracionPage /> }],

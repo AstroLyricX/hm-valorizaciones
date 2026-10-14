@@ -2,7 +2,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { db } from "../../../src/data/db";
-import { terceroService } from "../../../src/features/clientes/application/terceroService.instance";
+import { clienteService } from "../../../src/features/clientes/application/terceroService.instance";
 import { contratoService } from "../../../src/features/contratos/application/contratoService.instance";
 import { equipoService } from "../../../src/features/equipos/application/equipoService.instance";
 import { elegirFecha, seleccionar } from "../../support/campos";
@@ -20,7 +20,7 @@ beforeEach(async () => {
 	await db.delete();
 	await db.open();
 	signInAs();
-	clienteId = (await terceroService.crear(CLIENTE, "ana@hm.pe")).id;
+	clienteId = (await clienteService.crear(CLIENTE, "ana@hm.pe")).id;
 	excavadoraId = (await equipoService.crear(excavadora(clienteId), "ana@hm.pe")).id;
 	volqueteId = (await equipoService.crear(volquete(clienteId), "ana@hm.pe")).id;
 });

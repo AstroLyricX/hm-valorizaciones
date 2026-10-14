@@ -3,6 +3,24 @@
 Pasos para quien administra Microsoft 365 de H&M. Sin estos datos la app funciona con una
 **sesión de prueba** de administrador (se ve el aviso "Modo de prueba" en el login).
 
+## Opción rápida (recomendada): script
+
+Con la cuenta **administradora** de Microsoft 365 de H&M:
+
+```bash
+brew install azure-cli                              # una sola vez
+az login --allow-no-subscriptions --use-device-code # iniciar sesión con la cuenta de H&M
+./scripts/registrar-azure.sh
+```
+
+El script hace los pasos 1 a 3 de abajo (registro, direcciones de vuelta, permisos, roles y el rol
+ADMIN para quien lo ejecuta), concede el consentimiento, guarda `.env.local` y, si `gh` tiene
+sesión, actualiza las variables del repositorio. Después: `gh workflow run deploy -R
+AstroLyricX/hm-valorizaciones` para publicar. Se puede volver a ejecutar sin duplicar nada.
+
+Una cuenta de universidad u otra sin permisos de administrador no puede registrar apps
+("Insufficient privileges").
+
 ## 1. Registrar la aplicación
 
 1. Entrar a <https://entra.microsoft.com> → **Aplicaciones** → **Registros de aplicaciones** → **Nuevo registro**.
@@ -19,8 +37,8 @@ Pasos para quien administra Microsoft 365 de H&M. Sin estos datos la app funcion
 
 En **Permisos de API** → **Agregar un permiso** → **Microsoft Graph** → **Permisos delegados**:
 
-- `User.Read` (perfil del usuario)
-- `Sites.ReadWrite.All` (leer y escribir en el sitio de SharePoint donde se sincronizan los datos y los PDFs)
+- `User.Read` (perfil del usuario; es lo único que se pide al iniciar sesión)
+- `Sites.ReadWrite.All` (leer y escribir en el sitio de SharePoint donde se sincronizan los datos y los PDFs; se pide recién al sincronizar)
 
 Luego pulsar **Conceder consentimiento de administrador para H&M** (`Sites.ReadWrite.All` lo requiere).
 

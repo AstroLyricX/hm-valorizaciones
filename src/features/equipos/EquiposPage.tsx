@@ -55,7 +55,7 @@ export function EquiposPage() {
 	const datos = useLiveQuery(async () => {
 		const [equipos, terceros] = await Promise.all([
 			equipoRepository.listar(),
-			terceroRepository.listar(),
+			terceroRepository.listar("PROVEEDOR"),
 		]);
 		const nombres = new Map(terceros.map((tercero) => [tercero.id, tercero.razonSocial]));
 
@@ -186,11 +186,14 @@ export function EquiposPage() {
 			{duenos.length === 0 && equipos.length === 0 ? (
 				<EmptyState
 					icon={Building2}
-					title="Primero registra un cliente"
-					description="Cada equipo tiene un dueño, que debe estar registrado como cliente."
+					title="Primero registra un proveedor"
+					description="Cada equipo tiene un dueño, que debe estar registrado como proveedor."
 				>
-					<Link to="/clientes" className={cn(buttonVariants({ variant: "outline" }), "h-9 px-3.5")}>
-						Ir a clientes
+					<Link
+						to="/proveedores"
+						className={cn(buttonVariants({ variant: "outline" }), "h-9 px-3.5")}
+					>
+						Ir a proveedores
 					</Link>
 				</EmptyState>
 			) : (

@@ -3,16 +3,18 @@ import {
 	llenarEquipo,
 	registrarCliente,
 	registrarEquipo,
+	registrarProveedor,
 } from "../support/datos";
 import { iniciarSesion } from "../support/sesion";
 
-const DUENO = "CONSTRUCTORA ANDINA SAC";
+const DUENO = "HUISE QUEA ANTOLIN";
 
 describe("Contratos", () => {
 	beforeEach(() => {
 		cy.viewport(1280, 900);
 		iniciarSesion();
 		registrarCliente("Constructora Andina SAC", "20602629903");
+		registrarProveedor("Huise Quea Antolin", "10098637074");
 		registrarEquipo({
 			activoFijo: "AF-001",
 			descripcion: "Excavadora",

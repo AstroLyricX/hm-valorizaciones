@@ -76,4 +76,40 @@ describe("TerceroService", () => {
 		const pendientes = await database.outbox.where("entidad").equals("terceros").toArray();
 		expect(pendientes).toHaveLength(2);
 	});
+
+	describe("proveedores", () => {
+		let proveedores: TerceroService;
+
+		beforeEach(() => {
+			proveedores = new TerceroService(new TerceroRepository(database), "PROVEEDOR");
+		});
+
+		it("tienen su propio correlativo PRO-001 y su propia lista", async () => {
+			await service.crear(HM, "ana@hm.pe");
+			const proveedor = await proveedores.crear(HUISE, "ana@hm.pe");
+
+			expect(proveedor).toMatchObject({ tipo: "PROVEEDOR", codigo: "PRO-001" });
+			expect((await proveedores.listar()).map((tercero) => tercero.codigo)).toEqual(["PRO-001"]);
+			expect((await service.listar()).map((tercero) => tercero.codigo)).toEqual(["CLI-001"]);
+		});
+
+		it("una empresa puede ser cliente y proveedor, pero no repetirse en la misma lista", async () => {
+			await service.crear(HUISE, "ana@hm.pe");
+			await expect(proveedores.crear(HUISE, "ana@hm.pe")).resolves.toMatchObject({
+				codigo: "PRO-001",
+			});
+
+			await expect(
+				proveedores.crear({ ...HUISE, razonSocial: "Otro nombre" }, "ana@hm.pe"),
+			).rejects.toThrow("ya está registrado (PRO-001)");
+		});
+
+		it("cada servicio solo modifica los registros de su lista", async () => {
+			const cliente = await service.crear(HUISE, "ana@hm.pe");
+
+			await expect(
+				proveedores.cambiarEstado(cliente.id, "INACTIVO", "ana@hm.pe"),
+			).rejects.toThrow();
+		});
+	});
 });
