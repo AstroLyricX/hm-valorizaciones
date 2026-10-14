@@ -2,7 +2,10 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { db } from "../../../src/data/db";
-import { terceroService } from "../../../src/features/clientes/application/terceroService.instance";
+import {
+	rucService,
+	terceroService,
+} from "../../../src/features/clientes/application/terceroService.instance";
 import { seleccionar } from "../../support/campos";
 import { CLIENTE, HUISE } from "../../support/fixtures";
 import { renderRoute, signInAs } from "../../support/renderRoute";
@@ -143,4 +146,85 @@ test("filtra por columna sin importar tildes ni mayúsculas", async () => {
 	expect(within(tabla).getByText("HUISE QUEA ANTOLIN")).toBeInTheDocument();
 	expect(within(tabla).queryByText("MINERA ÑUÑOA")).not.toBeInTheDocument();
 	expect(screen.getByText("1 de 2 registros")).toBeInTheDocument();
+});
+
+describe("consulta de RUC", () => {
+	const SUNAT = {
+		ruc: "20602629903",
+		razonSocial: "CONSTRUCTORA ANDINA S.A.C.",
+		estado: "ACTIVO",
+		condicion: "HABIDO",
+		direccion: "JR. BELLAVISTA S/N - OLLACHEA - CARABAYA - PUNO",
+	};
+
+	afterEach(() => {
+		jest.restoreAllMocks();
+	});
+
+	test("al escribir el RUC completa la razón social y la dirección con SUNAT", async () => {
+		const user = userEvent.setup();
+		jest.spyOn(rucService, "disponible", "get").mockReturnValue(true);
+		const consultar = jest
+			.spyOn(rucService, "consultar")
+			.mockResolvedValue({ tipo: "encontrado", datos: SUNAT, desde: "sunat" });
+		renderRoute("/clientes");
+
+		const formulario = await abrirNuevo(user);
+		await user.type(within(formulario).getByLabelText(/RUC/), "20602629903");
+
+		expect(
+			await within(formulario).findByText("Datos de SUNAT: ACTIVO · HABIDO."),
+		).toBeInTheDocument();
+		expect(within(formulario).getByLabelText(/Razón social/)).toHaveValue(
+			"CONSTRUCTORA ANDINA S.A.C.",
+		);
+		expect(within(formulario).getAllByLabelText(/^Dirección/)[0]).toHaveValue(SUNAT.direccion);
+		expect(consultar).toHaveBeenCalledWith("20602629903");
+	});
+
+	test("avisa si el contribuyente no está activo o habido", async () => {
+		const user = userEvent.setup();
+		jest.spyOn(rucService, "disponible", "get").mockReturnValue(true);
+		jest.spyOn(rucService, "consultar").mockResolvedValue({
+			tipo: "encontrado",
+			datos: { ...SUNAT, estado: "BAJA DE OFICIO", condicion: "NO HABIDO" },
+			desde: "sunat",
+		});
+		renderRoute("/clientes");
+
+		const formulario = await abrirNuevo(user);
+		await user.type(within(formulario).getByLabelText(/RUC/), "20602629903");
+
+		expect(
+			await within(formulario).findByText("Atención: en SUNAT figura BAJA DE OFICIO · NO HABIDO."),
+		).toBeInTheDocument();
+	});
+
+	test("si SUNAT no responde, deja completar a mano", async () => {
+		const user = userEvent.setup();
+		jest.spyOn(rucService, "disponible", "get").mockReturnValue(true);
+		jest.spyOn(rucService, "consultar").mockResolvedValue({ tipo: "no-disponible" });
+		renderRoute("/clientes");
+
+		const formulario = await abrirNuevo(user);
+		await user.type(within(formulario).getByLabelText(/RUC/), "20602629903");
+
+		expect(
+			await within(formulario).findByText(
+				"No se pudo consultar SUNAT ahora. Completa los datos a mano.",
+			),
+		).toBeInTheDocument();
+		expect(within(formulario).getByLabelText(/Razón social/)).toHaveValue("");
+	});
+
+	test("sin Worker configurado no aparece el botón de SUNAT", async () => {
+		const user = userEvent.setup();
+		renderRoute("/clientes");
+
+		const formulario = await abrirNuevo(user);
+
+		expect(
+			within(formulario).queryByRole("button", { name: /Buscar en SUNAT/ }),
+		).not.toBeInTheDocument();
+	});
 });

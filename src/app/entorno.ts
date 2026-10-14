@@ -9,6 +9,8 @@ export const entorno = {
 	// Sitio de SharePoint de H&M para sincronizar: "hmcontratistas.sharepoint.com:/sites/SistemaHM".
 	// Vacío: los datos quedan solo en el dispositivo.
 	sharepointSitio: (import.meta.env.VITE_SHAREPOINT_SITIO as string | undefined) ?? "",
+	// Worker de consulta de RUC (worker/ruc): "https://hm-ruc.<cuenta>.workers.dev". Vacío: carga manual.
+	rucApiUrl: (import.meta.env.VITE_RUC_API_URL as string | undefined) ?? "",
 };
 
 // Ruta base de la app ("/" en local, "/hm-valorizaciones/" en GitHub Pages), siempre con "/" final.

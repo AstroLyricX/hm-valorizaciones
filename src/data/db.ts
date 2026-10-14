@@ -40,6 +40,16 @@ export interface ArchivoPendiente {
 	createdAt: string;
 }
 
+// Consultas de RUC ya hechas: sirven sin conexión y ahorran consultas a la API (fase 13).
+export interface RucConsultado {
+	ruc: string;
+	razonSocial: string;
+	estado: string;
+	condicion: string;
+	direccion: string;
+	consultadoEn: string;
+}
+
 export class HmDatabase extends Dexie {
 	empresa!: EntityTable<Empresa, "id">;
 	terceros!: EntityTable<Tercero, "id">;
@@ -52,6 +62,7 @@ export class HmDatabase extends Dexie {
 	syncMeta!: EntityTable<SyncMeta, "clave">;
 	syncArchivos!: EntityTable<SyncArchivo, "clave">;
 	archivosPendientes!: EntityTable<ArchivoPendiente, "id">;
+	rucConsultados!: EntityTable<RucConsultado, "ruc">;
 
 	constructor(name = "hm-valorizaciones") {
 		super(name);
@@ -136,6 +147,8 @@ export class HmDatabase extends Dexie {
 						valorizacion.pdfPath ??= null;
 					});
 			});
+		// Caché local de las consultas de RUC (fase 13).
+		this.version(10).stores({ rucConsultados: "ruc" });
 	}
 }
 

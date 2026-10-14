@@ -42,6 +42,8 @@ jobs:
           VITE_MSAL_AUTHORITY: ${{ vars.VITE_MSAL_AUTHORITY || 'https://login.microsoftonline.com/common' }}
           # Sincronización: sitio de SharePoint de H&M (ver docs/AZURE.md).
           VITE_SHAREPOINT_SITIO: ${{ vars.VITE_SHAREPOINT_SITIO }}
+          # Consulta de RUC: dirección del Worker (ver worker/ruc/README.md).
+          VITE_RUC_API_URL: ${{ vars.VITE_RUC_API_URL }}
 
       # GitHub Pages no conoce las rutas de la app: al recargar /contratos devuelve 404.html,
       # que es la misma app y abre la ruta pedida.

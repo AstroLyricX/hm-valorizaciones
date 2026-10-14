@@ -1,0 +1,17 @@
+# Cloudflare Worker de consulta de RUC. Ver worker/ruc/README.md.
+name = "hm-ruc"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+
+[vars]
+# Orígenes que pueden consultar el Worker (la app en local y en GitHub Pages).
+ORIGENES = "http://localhost:3000,https://astrolyricx.github.io"
+# RUC_API_URL = "https://api.decolecta.com/v1/sunat/ruc?numero="
+
+# Caché de consultas (un mes). Crear con: npx wrangler kv namespace create RUC_CACHE
+[[kv_namespaces]]
+binding = "RUC_CACHE"
+id = "<ID_DEL_NAMESPACE>"
+
+# El token de la API va como secreto, nunca en este archivo:
+#   npx wrangler secret put RUC_API_TOKEN

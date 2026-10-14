@@ -1,7 +1,10 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Search } from "lucide-react";
+import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useSession } from "@/features/auth/useSession";
 import { FormDialog } from "@/shared/components/FormDialog";
@@ -9,8 +12,9 @@ import { FormField } from "@/shared/components/FormField";
 import { FormSeccion } from "@/shared/components/FormSeccion";
 import { RadioOptions } from "@/shared/components/RadioOptions";
 import { SelectField } from "@/shared/components/SelectField";
+import { rucValido } from "@/shared/domain/ruc";
 
-import { terceroService } from "../application/terceroService.instance";
+import { rucService, terceroService } from "../application/terceroService.instance";
 import {
 	BANCOS,
 	ESTADOS_CIVILES,
@@ -23,6 +27,7 @@ import {
 	type TerceroDatosInput,
 	TerceroDatosSchema,
 } from "../domain/tercero";
+import { type EstadoConsulta, EstadoConsultaRuc } from "./EstadoConsultaRuc";
 
 const VACIO: TerceroDatosInput = {
 	razonSocial: "",
@@ -75,11 +80,32 @@ function useTerceroFormulario({ tercero, onDone }: { tercero?: Tercero; onDone: 
 		control,
 		handleSubmit,
 		setError,
+		setValue,
+		getValues,
 		formState: { errors, isSubmitting },
 	} = useForm<TerceroDatosInput, unknown, TerceroDatos>({
 		resolver: zodResolver(TerceroDatosSchema),
 		defaultValues: aFormulario(tercero),
 	});
+
+	const [consulta, setConsulta] = useState<EstadoConsulta>({ tipo: "inicial" });
+
+	// Completa la razón social y la dirección con los datos de SUNAT (siguen siendo editables).
+	const consultarRuc = async (ruc: string) => {
+		setConsulta({ tipo: "buscando" });
+		const resultado = await rucService.consultar(ruc);
+		setConsulta(resultado);
+		if (resultado.tipo === "invalido") {
+			setError("ruc", { message: "El RUC no es válido. Revisa los dígitos." });
+		}
+		if (resultado.tipo === "encontrado") {
+			const opciones = { shouldValidate: true, shouldDirty: true };
+			setValue("razonSocial", resultado.datos.razonSocial, opciones);
+			if (resultado.datos.direccion) {
+				setValue("direccion", resultado.datos.direccion, opciones);
+			}
+		}
+	};
 
 	const guardar = async (datos: TerceroDatos) => {
 		const usuario = user?.email ?? "desconocido";
@@ -133,14 +159,39 @@ function useTerceroFormulario({ tercero, onDone }: { tercero?: Tercero; onDone: 
 					/>
 					<FormField label="RUC" required error={errors.ruc?.message}>
 						{(campo) => (
-							<Input
-								{...campo}
-								{...register("ruc")}
-								inputMode="numeric"
-								maxLength={11}
-								placeholder="Ingresar RUC"
-								className="tabular-nums"
-							/>
+							<div className="flex flex-col gap-1.5">
+								<div className="flex gap-2">
+									<Input
+										{...campo}
+										{...register("ruc", {
+											// Al completar los 11 dígitos de un cliente nuevo se consulta solo.
+											onChange: (event: React.ChangeEvent<HTMLInputElement>) => {
+												const ruc = event.target.value.trim();
+												if (!tercero && rucService.disponible && rucValido(ruc)) {
+													void consultarRuc(ruc);
+												}
+											},
+										})}
+										inputMode="numeric"
+										maxLength={11}
+										placeholder="Ingresar RUC"
+										className="tabular-nums"
+									/>
+									{rucService.disponible && (
+										<Button
+											type="button"
+											variant="outline"
+											className="h-10 shrink-0 px-3"
+											disabled={consulta.tipo === "buscando"}
+											onClick={() => void consultarRuc(getValues("ruc"))}
+										>
+											<Search />
+											<span className="max-sm:sr-only">Buscar en SUNAT</span>
+										</Button>
+									)}
+								</div>
+								<EstadoConsultaRuc estado={consulta} />
+							</div>
 						)}
 					</FormField>
 					<FormField label="Correo" required error={errors.correo?.message}>
