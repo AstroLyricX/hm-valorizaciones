@@ -169,12 +169,12 @@ las cuentas personales como invitados.
 - [x] Verificar
 - [x] STOP
 
-## Fase 13: Consulta de RUC ✅ (pendiente publicar el Worker)
+## Fase 13: Consulta de RUC ✅
 
 Decisión: en lugar del padrón completo de SUNAT (unos 12 millones de RUC, más que el límite gratuito
 de D1), un Worker consulta una API de RUC (Decolecta / apis.net.pe) y guarda los resultados en caché.
 
-- [ ] Publicar el Worker en Cloudflare (cuenta gratuita y token de Decolecta; pasos en `worker/ruc/README.md`)
+- [x] Worker publicado en `https://hm-ruc.ruc.workers.dev` (Cloudflare, caché KV y token de Decolecta como secreto); la app lo usa con `VITE_RUC_API_URL`
 - [x] Cloudflare Worker `GET /ruc/:numero` (`worker/ruc`): valida el RUC, caché de un mes en KV, token secreto, CORS solo para la app; entiende Decolecta y apis.net.pe
 - [x] `RucService`: primero valida el RUC, luego busca en la caché local (un mes, también sin conexión), después en el Worker, y si todo falla permite la carga manual
 - [x] Autocompletar la razón social y la dirección en el formulario de clientes (al escribir los 11 dígitos o con "Buscar en SUNAT"), con aviso si no está ACTIVO · HABIDO

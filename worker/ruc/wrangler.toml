@@ -11,7 +11,7 @@ ORIGENES = "http://localhost:3000,https://astrolyricx.github.io"
 # Caché de consultas (un mes). Crear con: npx wrangler kv namespace create RUC_CACHE
 [[kv_namespaces]]
 binding = "RUC_CACHE"
-id = "<ID_DEL_NAMESPACE>"
+id = "92e45d6276df463ba8977e9592ee601e"
 
 # El token de la API va como secreto, nunca en este archivo:
 #   npx wrangler secret put RUC_API_TOKEN
