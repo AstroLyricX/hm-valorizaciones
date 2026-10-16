@@ -3,7 +3,6 @@ import { Outlet, ScrollRestoration, useLocation } from "react-router";
 import { ruta } from "@/app/entorno";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { SyncStatus } from "@/features/sincronizacion/SyncStatus";
-import { NuevaValorizacionButton } from "@/shared/components/NuevaValorizacionButton";
 import { OfflineBanner } from "@/shared/components/OfflineBanner";
 
 import { findNavItem, NUEVA_VALORIZACION_PATH } from "../navigation";
@@ -33,7 +32,6 @@ export function AppLayout() {
 					<span className="truncate font-semibold text-navy-900 md:hidden">{titulo}</span>
 					<div className="ml-auto flex items-center gap-3">
 						<SyncStatus className="max-md:hidden" />
-						{!isNuevaValorizacion && <NuevaValorizacionButton className="hidden md:inline-flex" />}
 					</div>
 				</header>
 				<OfflineBanner className="md:hidden" />

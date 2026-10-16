@@ -19,9 +19,12 @@ describe("Navegación en escritorio", () => {
 		});
 	});
 
-	it("abre la nueva valorización desde la cabecera", () => {
-		cy.get("[data-sidebar=sidebar]").findByRole("link", { name: "Contratos" }).click();
+	it("abre la nueva valorización desde Valorizaciones (la barra de arriba no la repite)", () => {
+		cy.get("[data-sidebar=sidebar]").findByRole("link", { name: "Valorizaciones" }).click();
 		cy.get("header")
+			.findByRole("link", { name: /Nueva valorización/ })
+			.should("not.exist");
+		cy.get("main")
 			.findByRole("link", { name: /Nueva valorización/ })
 			.click();
 		cy.findByRole("heading", { level: 1, name: "Nueva valorización" }).should("exist");

@@ -53,20 +53,20 @@ test.each(["Contratos", "Equipos", "Clientes", "Configuración", "Valorizaciones
 	},
 );
 
-test("el botón Nueva valorización de la cabecera abre la planilla y se oculta en ella", async () => {
+test("la barra de arriba no repite el botón Nueva valorización; está junto al título de Inicio", async () => {
 	const user = userEvent.setup();
 	signInAs();
-	renderRoute("/contratos");
+	renderRoute("/");
 
-	const header = await screen.findByRole("banner");
-	await user.click(within(header).getByRole("link", { name: "Nueva valorización" }));
+	await screen.findByRole("heading", { level: 1, name: /Hola,/ });
+	expect(
+		within(screen.getByRole("banner")).queryByRole("link", { name: "Nueva valorización" }),
+	).not.toBeInTheDocument();
+	await user.click(screen.getByRole("link", { name: "Nueva valorización" }));
 
 	expect(
 		await screen.findByRole("heading", { level: 1, name: "Nueva valorización" }),
 	).toBeInTheDocument();
-	expect(
-		within(screen.getByRole("banner")).queryByRole("link", { name: "Nueva valorización" }),
-	).not.toBeInTheDocument();
 });
 
 test("Inicio muestra los indicadores y las valorizaciones recientes", async () => {

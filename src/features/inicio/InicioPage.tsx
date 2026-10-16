@@ -187,7 +187,7 @@ export function InicioPage() {
 			<PageHeader
 				title={`Hola, ${firstName}`}
 				description={`Resumen de la operación al ${fecha}.`}
-				actions={<NuevaValorizacionButton className="md:hidden" />}
+				actions={<NuevaValorizacionButton />}
 			/>
 
 			<AvisoInstalacion />

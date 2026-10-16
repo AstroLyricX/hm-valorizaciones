@@ -203,7 +203,7 @@ export function ValorizacionesPage() {
 			<PageHeader
 				title="Valorizaciones"
 				description="Borradores en curso y valorizaciones emitidas, por periodo."
-				actions={<NuevaValorizacionButton className="md:hidden" />}
+				actions={<NuevaValorizacionButton />}
 			/>
 			{filas === undefined ? (
 				<Skeleton aria-label="Cargando" className="h-72 w-full rounded-xl" />
