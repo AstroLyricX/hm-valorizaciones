@@ -186,7 +186,8 @@ export function ContratosPage() {
 				title="Contratos"
 				description="Contratos con sus equipos, horas mínimas, montos y vigencia."
 				actions={
-					<Button className="h-9 px-3.5" onClick={nuevo}>
+					// Mientras cargan los clientes y equipos no se sabe si se puede crear un contrato.
+					<Button className="h-9 px-3.5" onClick={nuevo} disabled={datos === undefined}>
 						<Plus />
 						Nuevo contrato
 					</Button>

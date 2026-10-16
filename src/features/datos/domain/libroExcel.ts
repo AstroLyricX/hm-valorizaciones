@@ -14,6 +14,7 @@ import {
 	parcialEquipo,
 } from "@/features/contratos/domain/contrato";
 import {
+	DUENO_PROPIO,
 	type Equipo,
 	ETIQUETA_CATEGORIA,
 	ETIQUETA_ESTADO_EQUIPO,
@@ -156,7 +157,13 @@ export function libroExcel(datos: DatosExportacion): Hoja[] {
 			["Año", (equipo) => Number(equipo.anio)],
 			["Categoría", (equipo) => ETIQUETA_CATEGORIA[equipo.categoria]],
 			["Estado", (equipo) => `${equipo.estado} · ${ETIQUETA_ESTADO_EQUIPO[equipo.estado]}`],
-			["Dueño", (equipo) => cliente(equipo.duenoId)?.razonSocial ?? ""],
+			[
+				"Dueño",
+				(equipo) =>
+					equipo.propiedad === "PROPIO"
+						? DUENO_PROPIO
+						: (cliente(equipo.duenoId)?.razonSocial ?? ""),
+			],
 			["Observaciones", (equipo) => equipo.observaciones],
 		],
 		equipos,

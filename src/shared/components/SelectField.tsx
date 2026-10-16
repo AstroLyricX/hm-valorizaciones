@@ -36,7 +36,13 @@ export function SelectField({
 		<Select
 			items={options}
 			value={value === "" ? null : value}
-			onValueChange={(nuevo) => onChange(typeof nuevo === "string" ? nuevo : "")}
+			// Solo se cambia al elegir una opción. Base UI manda null cuando el valor deja de estar entre
+			// las opciones (por ejemplo, al cambiar la lista de estados), y eso borraría el nuevo valor.
+			onValueChange={(nuevo) => {
+				if (typeof nuevo === "string") {
+					onChange(nuevo);
+				}
+			}}
 			disabled={disabled}
 		>
 			<SelectTrigger

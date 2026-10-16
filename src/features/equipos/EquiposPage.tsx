@@ -1,12 +1,10 @@
 import { useLiveQuery } from "dexie-react-hooks";
-import { Building2, Plus, Truck } from "lucide-react";
+import { Plus, Truck } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
-import { Link } from "react-router";
 
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { terceroRepository } from "@/features/clientes/application/terceroService.instance";
-import { cn } from "@/lib/utils";
 import { AccionesFila } from "@/shared/components/AccionesFila";
 import { DataTable } from "@/shared/components/DataTable";
 import { EmptyState } from "@/shared/components/EmptyState";
@@ -19,6 +17,7 @@ import { coincide } from "@/shared/lib/texto";
 import { equipoRepository } from "./application/equipoService.instance";
 import {
 	CATEGORIAS_EQUIPO,
+	DUENO_PROPIO,
 	type Equipo,
 	type EstadoEquipo,
 	ESTADOS_EQUIPO,
@@ -35,6 +34,9 @@ const TONO_ESTADO: Record<EstadoEquipo, PillTone> = {
 	OP: "warning",
 	P: "brand",
 	D: "neutral",
+	PR: "brand",
+	EO: "success",
+	DV: "neutral",
 };
 
 interface FilaEquipo extends Equipo {
@@ -62,7 +64,7 @@ export function EquiposPage() {
 		return {
 			equipos: equipos.map((equipo): FilaEquipo => ({
 				...equipo,
-				dueno: nombres.get(equipo.duenoId) ?? "—",
+				dueno: equipo.propiedad === "PROPIO" ? DUENO_PROPIO : (nombres.get(equipo.duenoId) ?? "—"),
 			})),
 			duenos: terceros.filter((tercero) => tercero.estado === "ACTIVO"),
 		};
@@ -120,6 +122,24 @@ export function EquiposPage() {
 					filterFn: "contiene",
 					meta: { filtro: { tipo: "texto" }, alineacion: "izquierda", celda: "min-w-36" },
 				}),
+				columnHelper.accessor("propiedad", {
+					header: "Propiedad",
+					filterFn: "igual",
+					meta: {
+						filtro: {
+							tipo: "opciones",
+							opciones: [
+								{ valor: "PROPIO", etiqueta: "Propios" },
+								{ valor: "PROVEEDOR", etiqueta: "De proveedores" },
+							],
+						},
+					},
+					cell: ({ getValue }) => (
+						<Pill tone={getValue() === "PROPIO" ? "brand" : "neutral"}>
+							{getValue() === "PROPIO" ? "Propio" : "Proveedor"}
+						</Pill>
+					),
+				}),
 				columnHelper.accessor("estado", {
 					header: "Estado",
 					filterFn: "igual",
@@ -174,83 +194,66 @@ export function EquiposPage() {
 				title="Equipos"
 				description="Maquinaria con su activo fijo, placa, dueño y estado."
 				actions={
-					duenos.length > 0 && (
-						<Button className="h-9 px-3.5" onClick={nuevo}>
-							<Plus />
-							Agregar equipo
-						</Button>
-					)
+					<Button className="h-9 px-3.5" onClick={nuevo}>
+						<Plus />
+						Agregar equipo
+					</Button>
 				}
 			/>
 
-			{duenos.length === 0 && equipos.length === 0 ? (
-				<EmptyState
-					icon={Building2}
-					title="Primero registra un proveedor"
-					description="Cada equipo tiene un dueño, que debe estar registrado como proveedor."
-				>
-					<Link
-						to="/proveedores"
-						className={cn(buttonVariants({ variant: "outline" }), "h-9 px-3.5")}
-					>
-						Ir a proveedores
-					</Link>
-				</EmptyState>
-			) : (
-				<>
-					<div className="hidden md:block">
-						<DataTable
-							data={equipos}
-							columns={columns}
-							initialSorting={[{ id: "activoFijo", desc: false }]}
-							buscar="Buscar por equipo, activo fijo, placa o dueño"
-							vacio={
-								<span className="text-muted-foreground">
-									No hay equipos registrados. Usa «Nuevo» para agregar el primero.
-								</span>
-							}
+			<>
+				<div className="hidden md:block">
+					<DataTable
+						data={equipos}
+						columns={columns}
+						initialSorting={[{ id: "activoFijo", desc: false }]}
+						buscar="Buscar por equipo, activo fijo, placa o dueño"
+						vacio={
+							<span className="text-muted-foreground">
+								No hay equipos registrados. Usa «Nuevo» para agregar el primero.
+							</span>
+						}
+					/>
+				</div>
+				<div className="md:hidden">
+					{equipos.length === 0 ? (
+						<EmptyState
+							icon={Truck}
+							title="No hay equipos registrados"
+							description="Registra la maquinaria para asociarla a los contratos."
 						/>
-					</div>
-					<div className="md:hidden">
-						{equipos.length === 0 ? (
-							<EmptyState
-								icon={Truck}
-								title="No hay equipos registrados"
-								description="Registra la maquinaria para asociarla a los contratos."
-							/>
-						) : (
-							<ListCard
-								busqueda={busqueda}
-								onBusquedaChange={setBusqueda}
-								placeholder="Buscar por equipo, activo fijo, placa o dueño"
-								total={equipos.length}
-								visibles={filtradosMovil.length}
-							>
-								<ul className="divide-y divide-navy-100">
-									{filtradosMovil.map((equipo) => (
-										<li key={equipo.id}>
-											<button
-												type="button"
-												onClick={() => editar(equipo)}
-												className="flex w-full flex-col gap-1.5 px-4 py-3.5 text-left"
-											>
-												<span className="flex items-start justify-between gap-3">
-													<span className="font-medium text-navy-900">{nombreEquipo(equipo)}</span>
-													<EstadoPill estado={equipo.estado} />
-												</span>
-												<span className="text-[13px] text-muted-foreground">
-													{equipo.activoFijo} · Placa {equipo.placa} · {equipo.anio}
-												</span>
-												<span className="text-[13px] text-navy-600">{equipo.dueno}</span>
-											</button>
-										</li>
-									))}
-								</ul>
-							</ListCard>
-						)}
-					</div>
-				</>
-			)}
+					) : (
+						<ListCard
+							busqueda={busqueda}
+							onBusquedaChange={setBusqueda}
+							placeholder="Buscar por equipo, activo fijo, placa o dueño"
+							total={equipos.length}
+							visibles={filtradosMovil.length}
+						>
+							<ul className="divide-y divide-navy-100">
+								{filtradosMovil.map((equipo) => (
+									<li key={equipo.id}>
+										<button
+											type="button"
+											onClick={() => editar(equipo)}
+											className="flex w-full flex-col gap-1.5 px-4 py-3.5 text-left"
+										>
+											<span className="flex items-start justify-between gap-3">
+												<span className="font-medium text-navy-900">{nombreEquipo(equipo)}</span>
+												<EstadoPill estado={equipo.estado} />
+											</span>
+											<span className="text-[13px] text-muted-foreground">
+												{equipo.activoFijo} · Placa {equipo.placa} · {equipo.anio}
+											</span>
+											<span className="text-[13px] text-navy-600">{equipo.dueno}</span>
+										</button>
+									</li>
+								))}
+							</ul>
+						</ListCard>
+					)}
+				</div>
+			</>
 
 			<EquipoFormDialog
 				open={formulario.open}

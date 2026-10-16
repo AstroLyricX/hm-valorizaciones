@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 
 import { Input } from "@/components/ui/input";
@@ -15,15 +15,21 @@ import { equipoService } from "../application/equipoService.instance";
 import {
 	ActivoFijoDuplicadoError,
 	CATEGORIAS_EQUIPO,
+	DUENO_PROPIO,
 	type Equipo,
 	type EquipoDatos,
 	type EquipoDatosInput,
 	EquipoDatosSchema,
-	ESTADOS_EQUIPO,
+	ESTADO_INICIAL,
+	ESTADOS_POR_PROPIEDAD,
 	ETIQUETA_CATEGORIA,
 	ETIQUETA_ESTADO_EQUIPO,
 	PlacaDuplicadaError,
+	type PropiedadEquipo,
 } from "../domain/equipo";
+
+// Valor del selector para "H&M (propio)"; los demás valores son ids de proveedores.
+const PROPIO = "__propio__";
 
 const VACIO: EquipoDatosInput = {
 	activoFijo: "",
@@ -37,7 +43,9 @@ const VACIO: EquipoDatosInput = {
 	placa: "",
 	anio: "",
 	categoria: "PESADO",
-	estado: "P",
+	estado: ESTADO_INICIAL.PROPIO,
+	// La mayoría de la maquinaria es de H&M.
+	propiedad: "PROPIO",
 	duenoId: "",
 	observaciones: "",
 };
@@ -63,10 +71,11 @@ const OPCIONES_CATEGORIA = CATEGORIAS_EQUIPO.map((categoria) => ({
 	value: categoria,
 	label: ETIQUETA_CATEGORIA[categoria],
 }));
-const OPCIONES_ESTADO = ESTADOS_EQUIPO.map((estado) => ({
-	value: estado,
-	label: `${estado} · ${ETIQUETA_ESTADO_EQUIPO[estado]}`,
-}));
+const opcionesEstado = (propiedad: PropiedadEquipo) =>
+	ESTADOS_POR_PROPIEDAD[propiedad].map((estado) => ({
+		value: estado,
+		label: `${estado} · ${ETIQUETA_ESTADO_EQUIPO[estado]}`,
+	}));
 const mayus = "uppercase placeholder:normal-case";
 
 function Formulario({
@@ -86,12 +95,20 @@ function Formulario({
 		control,
 		handleSubmit,
 		setError,
+		setValue,
+		getValues,
 		formState: { errors, isSubmitting },
 	} = useForm<EquipoDatosInput, unknown, EquipoDatos>({
 		resolver: zodResolver(EquipoDatosSchema),
 		defaultValues: aFormulario(equipo),
 	});
-	const opcionesDueno = duenos.map((dueno) => ({ value: dueno.id, label: dueno.razonSocial }));
+	// Primero la maquinaria de H&M; luego los proveedores activos.
+	const opcionesDueno = [
+		{ value: PROPIO, label: DUENO_PROPIO },
+		...duenos.map((dueno) => ({ value: dueno.id, label: dueno.razonSocial })),
+	];
+	const propiedad = useWatch({ control, name: "propiedad" });
+	const duenoId = useWatch({ control, name: "duenoId" });
 
 	const guardar = async (datos: EquipoDatos) => {
 		const usuario = user?.email ?? "desconocido";
@@ -270,20 +287,24 @@ function Formulario({
 			</FormSeccion>
 
 			<FormSeccion titulo="Dueño y estado">
-				<FormField label="Dueño (proveedor)" required error={errors.duenoId?.message}>
+				<FormField label="Dueño" required error={errors.duenoId?.message}>
 					{(campo) => (
-						<Controller
-							control={control}
-							name="duenoId"
-							render={({ field }) => (
-								<SelectField
-									{...campo}
-									value={field.value}
-									onChange={field.onChange}
-									options={opcionesDueno}
-									placeholder="Seleccionar dueño"
-								/>
-							)}
+						<SelectField
+							{...campo}
+							// "H&M (propio)" o el proveedor: un solo selector para los dos datos.
+							value={propiedad === "PROPIO" ? PROPIO : duenoId}
+							onChange={(valor) => {
+								const opciones = { shouldDirty: true, shouldValidate: true };
+								const nueva = valor === PROPIO ? "PROPIO" : "PROVEEDOR";
+								setValue("propiedad", nueva, opciones);
+								setValue("duenoId", valor === PROPIO ? "" : valor, opciones);
+								// Al pasar de propio a proveedor (o al revés) cambia la lista de estados.
+								if (!ESTADOS_POR_PROPIEDAD[nueva].includes(getValues("estado"))) {
+									setValue("estado", ESTADO_INICIAL[nueva], opciones);
+								}
+							}}
+							options={opcionesDueno}
+							placeholder="Seleccionar dueño"
 						/>
 					)}
 				</FormField>
@@ -297,7 +318,7 @@ function Formulario({
 									{...campo}
 									value={field.value}
 									onChange={field.onChange}
-									options={OPCIONES_ESTADO}
+									options={opcionesEstado(propiedad)}
 									placeholder="Seleccionar estado"
 								/>
 							)}

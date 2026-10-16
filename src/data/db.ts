@@ -3,7 +3,7 @@ import Dexie, { type EntityTable } from "dexie";
 import type { Tercero } from "@/features/clientes/domain/tercero";
 import type { Empresa } from "@/features/configuracion/domain/empresa";
 import type { Contrato, ContratoEquipo } from "@/features/contratos/domain/contrato";
-import type { Equipo } from "@/features/equipos/domain/equipo";
+import { type Equipo, estadoDeProveedor } from "@/features/equipos/domain/equipo";
 import type { Valorizacion, ValorizacionItem } from "@/features/valorizaciones/domain/valorizacion";
 
 export type OperacionOutbox = "upsert" | "delete";
@@ -167,6 +167,28 @@ export class HmDatabase extends Dexie {
 				.toCollection()
 				.modify((contrato: Record<string, unknown>) => {
 					contrato.tipo ??= "EMITIDO";
+				});
+		});
+		// Equipos propios de H&M o de un proveedor (los existentes eran de proveedores).
+		this.version(13)
+			.stores({ equipos: "id, activoFijo, placa, estado, duenoId, propiedad" })
+			.upgrade(async (tx) => {
+				await tx
+					.table("equipos")
+					.toCollection()
+					.modify((equipo: Record<string, unknown>) => {
+						equipo.propiedad ??= "PROVEEDOR";
+					});
+			});
+		// Los equipos de proveedor pasan a su propia lista de estados (ciclo del alquiler).
+		this.version(14).upgrade(async (tx) => {
+			await tx
+				.table("equipos")
+				.toCollection()
+				.modify((equipo: Record<string, unknown>) => {
+					if (equipo.propiedad === "PROVEEDOR") {
+						equipo.estado = estadoDeProveedor(String(equipo.estado));
+					}
 				});
 		});
 	}

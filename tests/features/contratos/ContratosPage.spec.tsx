@@ -187,6 +187,16 @@ test("un contrato recibido pide un proveedor y solo ofrece sus equipos", async (
 		}),
 		"ana@hm.pe",
 	);
+	// Un equipo propio de H&M: nunca entra en un contrato recibido.
+	await equipoService.crear(
+		excavadora("", {
+			activoFijo: "AF-100",
+			placa: "HM-100",
+			descripcion: "Motoniveladora",
+			propiedad: "PROPIO",
+		}),
+		"ana@hm.pe",
+	);
 	renderRoute("/contratos");
 
 	await user.click(await screen.findByRole("button", { name: "Nuevo contrato" }));
@@ -204,6 +214,7 @@ test("un contrato recibido pide un proveedor y solo ofrece sus equipos", async (
 	await user.click(screen.getByRole("combobox", { name: "Equipo del ítem 1" }));
 	expect(await screen.findByRole("option", { name: /RETROEXCAVADORA/ })).toBeInTheDocument();
 	expect(screen.queryByRole("option", { name: /VOLQUETE/ })).not.toBeInTheDocument();
+	expect(screen.queryByRole("option", { name: /MOTONIVELADORA/ })).not.toBeInTheDocument();
 });
 
 test("un contrato se puede pactar en dólares", async () => {

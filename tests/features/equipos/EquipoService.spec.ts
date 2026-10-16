@@ -75,7 +75,7 @@ describe("EquipoService", () => {
 
 	it("deja cada cambio pendiente de sincronizar", async () => {
 		const equipo = await service.crear(EXCAVADORA, "ana@hm.pe");
-		await service.actualizar(equipo.id, { ...EXCAVADORA, estado: "SB" }, "ana@hm.pe");
+		await service.actualizar(equipo.id, { ...EXCAVADORA, estado: "EO" }, "ana@hm.pe");
 
 		expect(await database.outbox.where("entidad").equals("equipos").count()).toBe(2);
 	});

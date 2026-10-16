@@ -73,6 +73,7 @@ export function datosDelEquipo(equipo: DatosEquipo): void {
 		cy.findByLabelText(/Año/).type("2019");
 		cy.findByLabelText(/Marca del motor/).type(equipo.fabricante);
 	});
+	// Los equipos de prueba son de un proveedor (el valor por defecto es "H&M (propio)").
 	seleccionar(/Dueño/, equipo.dueno);
 }
 

@@ -15,3 +15,9 @@
 
 // Import commands.js using ES2015 syntax:
 import "./commands";
+
+// Las pruebas no dependen del servicio real de RUC (SUNAT): responde "no disponible" y el
+// formulario sigue con la carga manual, haya o no un Worker configurado en .env.local.
+beforeEach(() => {
+	cy.intercept("GET", "**/ruc/*", { statusCode: 503, body: { error: "Sin servicio en pruebas." } });
+});

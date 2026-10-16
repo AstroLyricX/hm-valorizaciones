@@ -94,7 +94,7 @@ test("exporta todos los registros sin perder datos", async () => {
 		Descripción: "VOLQUETE",
 		Placa: "V3K-882",
 		Año: 2019,
-		Estado: "P · Proyectado",
+		Estado: "PR · Por recibir",
 		Dueño: "CONSTRUCTORA ANDINA SAC",
 	});
 	const [filaContrato] = hoja("CONTRATOS");
