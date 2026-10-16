@@ -85,6 +85,10 @@ test("registra un contrato con 2 equipos y abre su ficha con el monto total", as
 	expect(within(formulario).getByText("Costo por hora (S/)", { exact: false })).toBeInTheDocument();
 	expect(screen.getByLabelText("Parcial del equipo 1")).toHaveTextContent("S/ 7,050.00");
 	expect(screen.getByLabelText("Monto contractual")).toHaveTextContent("S/ 24,050.00");
+	// IGV referencial de Configuración (18 %): S/ 4,329.00 y total S/ 28,379.00.
+	expect(within(formulario).getByText("IGV (18 %)")).toBeInTheDocument();
+	expect(screen.getByLabelText("IGV")).toHaveTextContent("S/ 4,329.00");
+	expect(screen.getByLabelText("Total con IGV")).toHaveTextContent("S/ 28,379.00");
 
 	await user.click(within(formulario).getByRole("button", { name: "Guardar" }));
 
@@ -92,9 +96,32 @@ test("registra un contrato con 2 equipos y abre su ficha con el monto total", as
 	expect(await screen.findByRole("heading", { level: 1, name: "OSUR" })).toBeInTheDocument();
 	const resumen = screen.getByRole("region", { name: "Resumen del contrato" });
 	expect(within(resumen).getAllByText("S/ 24,050.00")).toHaveLength(2);
-	expect(screen.getByRole("region", { name: "Equipos del contrato" })).toHaveTextContent(
-		"VOLQUETE VOLVO FMX",
-	);
+	const tablaEquipos = screen.getByRole("region", { name: "Equipos del contrato" });
+	expect(tablaEquipos).toHaveTextContent("VOLQUETE VOLVO FMX");
+	expect(within(tablaEquipos).getAllByText("S/ 28,379.00").length).toBeGreaterThan(0);
+});
+
+test("no deja elegir dos veces el mismo equipo y avisa cuando ya están todos", async () => {
+	const user = userEvent.setup();
+	renderRoute("/contratos");
+
+	const formulario = await abrirNuevo(user);
+	await user.click(within(formulario).getByRole("button", { name: "Agregar equipo" }));
+	await llenarEquipo(user, 1, /EXCAVADORA CAT 340/, "150", "47");
+	await user.click(within(formulario).getByRole("button", { name: "Agregar equipo" }));
+	await user.click(screen.getByRole("combobox", { name: "Equipo del ítem 2" }));
+
+	// La excavadora se ve, pero deshabilitada y con el ítem donde ya está.
+	const repetida = await screen.findByRole("option", { name: /EXCAVADORA CAT 340/ });
+	expect(repetida).toHaveTextContent("(ya está en el ítem 1)");
+	expect(repetida).toHaveAttribute("aria-disabled", "true");
+	await user.click(screen.getByRole("option", { name: /VOLQUETE VOLVO FMX/ }));
+
+	await user.click(within(formulario).getByRole("button", { name: "Agregar equipo" }));
+	expect(
+		await screen.findByText("Todos los equipos disponibles ya están en el contrato."),
+	).toBeInTheDocument();
+	expect(screen.queryByRole("combobox", { name: "Equipo del ítem 3" })).not.toBeInTheDocument();
 });
 
 test("muestra todos los errores obligatorios a la vez", async () => {
@@ -181,7 +208,6 @@ test("un contrato recibido pide un proveedor y solo ofrece sus equipos", async (
 	const proveedorId = (await proveedorService.crear(HUISE, "ana@hm.pe")).id;
 	await equipoService.crear(
 		excavadora(proveedorId, {
-			activoFijo: "AF-009",
 			placa: "HUI-009",
 			descripcion: "Retroexcavadora",
 		}),
@@ -190,7 +216,6 @@ test("un contrato recibido pide un proveedor y solo ofrece sus equipos", async (
 	// Un equipo propio de H&M: nunca entra en un contrato recibido.
 	await equipoService.crear(
 		excavadora("", {
-			activoFijo: "AF-100",
 			placa: "HM-100",
 			descripcion: "Motoniveladora",
 			propiedad: "PROPIO",

@@ -40,8 +40,9 @@ beforeEach(async () => {
 	);
 	clienteId = (await new TerceroService(terceros, "CLIENTE").crear(CLIENTE, "ana@hm.pe")).id;
 	proveedorId = (await new TerceroService(terceros, "PROVEEDOR").crear(HUISE, "ana@hm.pe")).id;
-	equipoId = (await new EquipoService(equipoRepository).crear(excavadora(proveedorId), "ana@hm.pe"))
-		.id;
+	equipoId = (
+		await new EquipoService(equipoRepository, terceros).crear(excavadora(proveedorId), "ana@hm.pe")
+	).id;
 });
 
 afterEach(async () => {

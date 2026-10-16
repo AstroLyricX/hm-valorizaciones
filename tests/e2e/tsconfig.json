@@ -1,9 +1,9 @@
 {
-  "extends": "../../tsconfig.json",
-  "compilerOptions": {
-    "types": ["cypress", "@testing-library/cypress", "node"],
-    "isolatedModules": false
-  },
-  "include": ["./**/*.ts"],
-  "exclude": []
+	"extends": "../../tsconfig.json",
+	"compilerOptions": {
+		"types": ["cypress", "@testing-library/cypress", "node"],
+		"isolatedModules": false
+	},
+	"include": ["./**/*.ts"],
+	"exclude": []
 }

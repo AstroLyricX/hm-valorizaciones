@@ -259,6 +259,7 @@ export function EquiposPage() {
 				open={formulario.open}
 				equipo={formulario.equipo}
 				duenos={duenos}
+				activosFijos={equipos.map((equipo) => equipo.activoFijo)}
 				onOpenChange={(open: boolean) => setFormulario((actual) => ({ ...actual, open }))}
 			/>
 		</div>

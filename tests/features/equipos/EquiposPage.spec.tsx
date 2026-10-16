@@ -30,7 +30,6 @@ async function abrirNuevo(user: ReturnType<typeof userEvent.setup>) {
 }
 
 async function datosBasicos(user: ReturnType<typeof userEvent.setup>, formulario: HTMLElement) {
-	await user.type(within(formulario).getByLabelText(/Activo fijo/), "af-001");
 	await user.type(within(formulario).getByLabelText(/Descripción del equipo/), "Excavadora");
 	await user.type(within(formulario).getByLabelText(/Fabricante/), "Cat");
 	await user.type(within(formulario).getByLabelText(/^Modelo/), "340");
@@ -47,10 +46,13 @@ test("registra un equipo propio de H&M, aunque no haya proveedores", async () =>
 	const formulario = await abrirNuevo(user);
 	// "H&M (propio)" es la opción por defecto del selector Dueño.
 	expect(within(formulario).getByLabelText(/Dueño/)).toHaveTextContent("H&M (propio)");
+	// El activo fijo es automático: HM + número para los equipos propios.
+	expect(within(formulario).getByLabelText(/Activo fijo/)).toHaveValue("HM001");
+	expect(within(formulario).getByLabelText(/Activo fijo/)).toHaveAttribute("readonly");
 	await datosBasicos(user, formulario);
 	await user.click(within(formulario).getByRole("button", { name: "Guardar" }));
 
-	expect(await screen.findByText("Equipo AF-001 registrado.")).toBeInTheDocument();
+	expect(await screen.findByText("Equipo HM001 registrado.")).toBeInTheDocument();
 	const filas = within((await screen.findAllByRole("rowgroup"))[1]);
 	expect(filas.getByText("H&M (propio)")).toBeInTheDocument();
 	expect(filas.getByText("Propio")).toBeInTheDocument();
@@ -86,9 +88,11 @@ test("registra un equipo de un proveedor y lo muestra en la lista", async () => 
 	// Solo se ofrecen proveedores.
 	expect(screen.queryByRole("option", { name: "CONSTRUCTORA ANDINA SAC" })).not.toBeInTheDocument();
 	await user.click(await screen.findByRole("option", { name: "HUISE QUEA ANTOLIN" }));
+	// Con el código de equipos del proveedor (iniciales de HUISE QUEA ANTOLIN).
+	expect(within(formulario).getByLabelText(/Activo fijo/)).toHaveValue("HQA001");
 	await user.click(within(formulario).getByRole("button", { name: "Guardar" }));
 
-	expect(await screen.findByText("Equipo AF-001 registrado.")).toBeInTheDocument();
+	expect(await screen.findByText("Equipo HQA001 registrado.")).toBeInTheDocument();
 	const filas = (await screen.findAllByRole("rowgroup"))[1];
 	expect(within(filas).getByText("EXCAVADORA CAT 340")).toBeInTheDocument();
 	expect(within(filas).getByText("EXC-340")).toBeInTheDocument();
@@ -102,10 +106,8 @@ test("marca los obligatorios y muestra sus errores a la vez", async () => {
 	const formulario = await abrirNuevo(user);
 	await user.click(within(formulario).getByRole("button", { name: "Guardar" }));
 
-	expect(
-		await within(formulario).findByText("Ingresa el código de activo fijo."),
-	).toBeInTheDocument();
-	expect(within(formulario).getByText("Ingresa la placa.")).toBeInTheDocument();
+	expect(await within(formulario).findByText("Ingresa la placa.")).toBeInTheDocument();
+	expect(within(formulario).getByText("Ingresa el fabricante.")).toBeInTheDocument();
 	expect(within(formulario).getByLabelText(/Placa/)).toBeRequired();
 	expect(within(formulario).getByLabelText(/Serie del equipo/)).not.toBeRequired();
 	expect(await db.equipos.count()).toBe(0);
@@ -116,8 +118,8 @@ test("cambia el estado a falla mecánica y lo refleja en la lista", async () => 
 	await equipoService.crear(excavadora(duenoId), "ana@hm.pe");
 	renderRoute("/equipos");
 
-	await user.click(await screen.findByRole("button", { name: "Editar AF-001" }));
-	const formulario = await screen.findByRole("dialog", { name: "Editar equipo AF-001" });
+	await user.click(await screen.findByRole("button", { name: "Editar HQA001" }));
+	const formulario = await screen.findByRole("dialog", { name: "Editar equipo HQA001" });
 	await seleccionar(user, within(formulario).getByLabelText(/^Estado/), /Falla mecánica/);
 	await user.click(within(formulario).getByRole("button", { name: "Guardar" }));
 
@@ -169,4 +171,30 @@ test("el equipo propio usa los estados de obra y el de proveedor los del alquile
 		"DV · Devuelto al dueño",
 	]);
 	expect(screen.queryByRole("option", { name: "SB · Stand by" })).not.toBeInTheDocument();
+});
+
+test("un clic fuera del formulario no lo cierra ni pierde lo escrito", async () => {
+	const user = userEvent.setup();
+	renderRoute("/equipos");
+
+	const formulario = await abrirNuevo(user);
+	await user.type(within(formulario).getByLabelText(/Placa/), "exc-340");
+	await user.click(document.body);
+
+	expect(screen.getByRole("dialog", { name: "Nuevo equipo" })).toBeInTheDocument();
+	expect(within(formulario).getByLabelText(/Placa/)).toHaveValue("exc-340");
+});
+
+test("el activo fijo sigue la numeración de cada dueño", async () => {
+	const user = userEvent.setup();
+	await equipoService.crear(excavadora(duenoId), "ana@hm.pe");
+	await equipoService.crear(volquete("", { propiedad: "PROPIO" }), "ana@hm.pe");
+	renderRoute("/equipos");
+
+	const formulario = await abrirNuevo(user);
+	const activoFijo = within(formulario).getByLabelText(/Activo fijo/);
+	expect(activoFijo).toHaveValue("HM002");
+	await seleccionar(user, within(formulario).getByLabelText(/Dueño/), "HUISE QUEA ANTOLIN");
+
+	expect(activoFijo).toHaveValue("HQA002");
 });

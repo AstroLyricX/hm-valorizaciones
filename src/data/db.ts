@@ -1,6 +1,6 @@
 import Dexie, { type EntityTable } from "dexie";
 
-import type { Tercero } from "@/features/clientes/domain/tercero";
+import { sugerirPrefijo, type Tercero } from "@/features/clientes/domain/tercero";
 import type { Empresa } from "@/features/configuracion/domain/empresa";
 import type { Contrato, ContratoEquipo } from "@/features/contratos/domain/contrato";
 import { type Equipo, estadoDeProveedor } from "@/features/equipos/domain/equipo";
@@ -189,6 +189,24 @@ export class HmDatabase extends Dexie {
 					if (equipo.propiedad === "PROVEEDOR") {
 						equipo.estado = estadoDeProveedor(String(equipo.estado));
 					}
+				});
+		});
+		// Cada proveedor recibe su código de equipos (iniciales) para el activo fijo automático.
+		this.version(15).upgrade(async (tx) => {
+			const usados: string[] = [];
+			await tx
+				.table("terceros")
+				.toCollection()
+				.modify((tercero: Record<string, unknown>) => {
+					if (tercero.tipo !== "PROVEEDOR") {
+						tercero.prefijoEquipos = "";
+
+						return;
+					}
+					const prefijo = typeof tercero.prefijoEquipos === "string" ? tercero.prefijoEquipos : "";
+					tercero.prefijoEquipos =
+						prefijo === "" ? sugerirPrefijo(String(tercero.razonSocial), usados) : prefijo;
+					usados.push(String(tercero.prefijoEquipos));
 				});
 		});
 	}

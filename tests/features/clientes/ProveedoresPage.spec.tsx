@@ -25,6 +25,12 @@ test("registra un proveedor con su código PRO y no lo mezcla con los clientes",
 	await user.click(await screen.findByRole("button", { name: "Agregar proveedor" }));
 	const formulario = await screen.findByRole("dialog", { name: "Nuevo proveedor" });
 	await user.type(within(formulario).getByLabelText(/Razón social/), "Huise Quea Antolin");
+	// El código de equipos se propone con las iniciales.
+	expect(within(formulario).getByLabelText(/Código de equipos/)).toHaveAttribute(
+		"placeholder",
+		"HQA",
+	);
+	expect(within(formulario).getByText("Sus equipos serán HQA001, HQA002…")).toBeInTheDocument();
 	await user.type(within(formulario).getByLabelText(/RUC/), "10098637074");
 	await user.type(within(formulario).getByLabelText(/Correo/), "huise@correo.pe");
 	await user.type(within(formulario).getAllByLabelText(/^Dirección/)[0], "Jr. Bellavista S/N");
@@ -52,4 +58,14 @@ test("el menú tiene Clientes y Proveedores", async () => {
 	await screen.findByRole("heading", { level: 1, name: /Hola,/ });
 	expect(screen.getAllByRole("link", { name: "Proveedores" }).length).toBeGreaterThan(0);
 	expect(screen.getAllByRole("link", { name: "Clientes" }).length).toBeGreaterThan(0);
+});
+
+test("el formulario de clientes no pide código de equipos", async () => {
+	const user = userEvent.setup();
+	renderRoute("/clientes");
+
+	await user.click(await screen.findByRole("button", { name: "Agregar cliente" }));
+	const formulario = await screen.findByRole("dialog", { name: "Nuevo cliente" });
+
+	expect(within(formulario).queryByLabelText(/Código de equipos/)).not.toBeInTheDocument();
 });

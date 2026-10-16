@@ -12,6 +12,8 @@ import type { CampoProps } from "./FormField";
 export interface Opcion {
 	value: string;
 	label: string;
+	// Se ve en la lista pero no se puede elegir (por ejemplo, un equipo ya agregado).
+	disabled?: boolean;
 }
 
 // Selector propio (no el del navegador): se ve igual en escritorio y celular.
@@ -56,7 +58,7 @@ export function SelectField({
 			</SelectTrigger>
 			<SelectContent className="max-h-72">
 				{options.map((opcion) => (
-					<SelectItem key={opcion.value} value={opcion.value}>
+					<SelectItem key={opcion.value} value={opcion.value} disabled={opcion.disabled}>
 						{opcion.label}
 					</SelectItem>
 				))}

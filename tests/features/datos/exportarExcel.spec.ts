@@ -76,7 +76,11 @@ test("exporta todos los registros sin perder datos", async () => {
 
 	expect(hoja("CLIENTES")).toHaveLength(1);
 	expect(hoja("PROVEEDORES")).toEqual([
-		expect.objectContaining({ Código: "PRO-001", "Razón social": "HUISE QUEA ANTOLIN" }),
+		expect.objectContaining({
+			Código: "PRO-001",
+			"Razón social": "HUISE QUEA ANTOLIN",
+			"Código de equipos": "HQA",
+		}),
 	]);
 	expect(hoja("CLIENTES")[0]).toMatchObject({
 		Código: "CLI-001",
@@ -90,7 +94,7 @@ test("exporta todos los registros sin perder datos", async () => {
 		CCI: "00219100123456789012",
 	});
 	expect(hoja("EQUIPOS")[1]).toMatchObject({
-		"Activo fijo": "AF-002",
+		"Activo fijo": "CA002",
 		Descripción: "VOLQUETE",
 		Placa: "V3K-882",
 		Año: 2019,

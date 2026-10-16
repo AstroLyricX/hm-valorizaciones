@@ -17,7 +17,6 @@ describe("Contratos", () => {
 		registrarCliente("Constructora Andina SAC", "20602629903");
 		registrarProveedor("Huise Quea Antolin", "10098637074");
 		registrarEquipo({
-			activoFijo: "AF-001",
 			descripcion: "Excavadora",
 			fabricante: "CAT",
 			modelo: "340",
@@ -25,7 +24,6 @@ describe("Contratos", () => {
 			dueno: DUENO,
 		});
 		registrarEquipo({
-			activoFijo: "AF-002",
 			descripcion: "Volquete",
 			fabricante: "Volvo",
 			modelo: "FMX",

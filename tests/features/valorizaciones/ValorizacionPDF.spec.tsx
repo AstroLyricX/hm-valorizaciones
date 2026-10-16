@@ -132,10 +132,7 @@ test("el archivo de una emitida se llama VAL-número-contrato.pdf", async () => 
 test("en una valorización de recepción H&M es el contratante y el proveedor cobra", async () => {
 	const proveedorId = (await proveedorService.crear(HUISE, "ana@hm.pe")).id;
 	const equipoId = (
-		await equipoService.crear(
-			excavadora(proveedorId, { activoFijo: "AF-010", placa: "HUI-010" }),
-			"ana@hm.pe",
-		)
+		await equipoService.crear(excavadora(proveedorId, { placa: "HUI-010" }), "ana@hm.pe")
 	).id;
 	const { contrato } = await contratoService.crear(
 		contratoDatos(proveedorId, equipoId, { tipo: "RECIBIDO" }),

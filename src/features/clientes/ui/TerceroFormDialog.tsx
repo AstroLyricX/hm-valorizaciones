@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Search } from "lucide-react";
 import { useState } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,9 @@ import {
 	ESTADOS_TERCERO,
 	ETIQUETA_ESTADO,
 	ETIQUETA_ESTADO_CIVIL,
+	PrefijoEquiposDuplicadoError,
 	RucDuplicadoError,
+	sugerirPrefijo,
 	type Tercero,
 	type TerceroDatos,
 	type TerceroDatosInput,
@@ -44,6 +46,7 @@ const VACIO: TerceroDatosInput = {
 	banco: "",
 	numeroCuenta: "",
 	cci: "",
+	prefijoEquipos: "",
 };
 
 function aFormulario(tercero?: Tercero): TerceroDatosInput {
@@ -104,6 +107,13 @@ function useTerceroFormulario({
 	});
 
 	const [consulta, setConsulta] = useState<EstadoConsulta>({ tipo: "inicial" });
+	const razonSocial = useWatch({ control, name: "razonSocial" });
+	const prefijoEscrito = useWatch({ control, name: "prefijoEquipos" });
+	// Lo que se usará si el campo queda vacío: el código actual o las iniciales de la razón social.
+	const prefijoPorDefecto =
+		(tercero?.prefijoEquipos ?? "") ||
+		(razonSocial.trim().length >= 3 ? sugerirPrefijo(razonSocial) : "");
+	const prefijoFinal = prefijoEscrito.trim().toUpperCase() || prefijoPorDefecto;
 
 	// Completa la razón social y la dirección con los datos de SUNAT (siguen siendo editables).
 	const consultarRuc = async (ruc: string) => {
@@ -136,6 +146,13 @@ function useTerceroFormulario({
 		} catch (error) {
 			if (error instanceof RucDuplicadoError) {
 				setError("ruc", { message: `Este RUC ya está registrado como ${error.codigoExistente}.` });
+
+				return;
+			}
+			if (error instanceof PrefijoEquiposDuplicadoError) {
+				setError("prefijoEquipos", {
+					message: `Este código ya lo usa ${error.codigoExistente}. Elige otro.`,
+				});
 
 				return;
 			}
@@ -235,6 +252,27 @@ function useTerceroFormulario({
 							/>
 						)}
 					</FormField>
+					{tipo === "PROVEEDOR" && (
+						<FormField
+							label="Código de equipos"
+							error={errors.prefijoEquipos?.message}
+							hint={
+								prefijoFinal
+									? `Sus equipos serán ${prefijoFinal}001, ${prefijoFinal}002…`
+									: "Vacío: se usan las iniciales de la razón social."
+							}
+						>
+							{(campo) => (
+								<Input
+									{...campo}
+									{...register("prefijoEquipos")}
+									maxLength={4}
+									placeholder={prefijoPorDefecto || "Ingresar código, por ejemplo HQA"}
+									className="uppercase"
+								/>
+							)}
+						</FormField>
+					)}
 				</FormSeccion>
 
 				<FormSeccion titulo="Representante">

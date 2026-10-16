@@ -7,13 +7,15 @@ import {
 	type UseFormRegister,
 	useWatch,
 } from "react-hook-form";
+import { toast } from "sonner";
 
 import { Input } from "@/components/ui/input";
+import { useIgvPorcentaje } from "@/features/configuracion/useIgv";
 import { type Equipo, nombreEquipo } from "@/features/equipos/domain/equipo";
 import { formatearMoneda } from "@/lib/dinero";
 import { SelectField } from "@/shared/components/SelectField";
 
-import { type Moneda, SIMBOLO_MONEDA } from "../domain/contrato";
+import { type Moneda, montosConIgv, SIMBOLO_MONEDA } from "../domain/contrato";
 import {
 	type ContratoDatos,
 	type ContratoFormInput,
@@ -41,11 +43,37 @@ export function EquiposEditor({
 	const { fields, append, remove } = useFieldArray({ control, name: "equipos" });
 	const filas = useWatch({ control, name: "equipos" });
 	const parciales = filas.map((fila) => parcialEnVivo(fila));
-	const total = parciales.reduce((suma, parcial) => suma + parcial, 0);
-	const opciones = equipos.map((equipo) => ({
-		value: equipo.id,
-		label: `${equipo.activoFijo} · ${nombreEquipo(equipo)}`,
-	}));
+	const igvPct = useIgvPorcentaje();
+	const montos = montosConIgv(
+		parciales.reduce((suma, parcial) => suma + parcial, 0),
+		igvPct,
+	);
+	// Un equipo ya elegido en otro ítem se ve en la lista, pero no se puede volver a elegir.
+	const opcionesDelItem = (index: number) =>
+		equipos.map((equipo) => {
+			const enOtroItem = filas.findIndex(
+				(fila, otro) => otro !== index && fila.equipoId === equipo.id,
+			);
+
+			return {
+				value: equipo.id,
+				label: `${equipo.activoFijo} · ${nombreEquipo(equipo)}${
+					enOtroItem === -1 ? "" : ` (ya está en el ítem ${enOtroItem + 1})`
+				}`,
+				disabled: enOtroItem !== -1,
+			};
+		});
+	const agregar = () => {
+		const usados = new Set(filas.map((fila) => fila.equipoId));
+		if (equipos.length > 0 && equipos.every((equipo) => usados.has(equipo.id))) {
+			toast.warning("Todos los equipos disponibles ya están en el contrato.", {
+				description: "Un equipo no se puede agregar dos veces.",
+			});
+
+			return;
+		}
+		append(EQUIPO_VACIO);
+	};
 
 	return (
 		<section aria-labelledby="equipos-contrato" className="flex flex-col gap-3 pt-5">
@@ -55,7 +83,7 @@ export function EquiposEditor({
 				</h3>
 				<button
 					type="button"
-					onClick={() => append(EQUIPO_VACIO)}
+					onClick={agregar}
 					className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-amber-500 px-3.5 text-sm font-medium text-white transition-colors hover:bg-amber-600"
 				>
 					<Plus className="size-4" aria-hidden="true" />
@@ -111,7 +139,7 @@ export function EquiposEditor({
 														aria-invalid={Boolean(error?.equipoId)}
 														value={campo.value}
 														onChange={campo.onChange}
-														options={opciones}
+														options={opcionesDelItem(index)}
 														placeholder="Seleccionar equipo"
 													/>
 												)}
@@ -169,20 +197,50 @@ export function EquiposEditor({
 								);
 							})}
 						</tbody>
-						<tfoot>
-							<tr className="bg-navy-50/70 font-semibold text-navy-900">
+						<tfoot className="text-navy-900">
+							<tr className="bg-navy-50/40">
+								<td className={celda} />
+								<td colSpan={3} className={`${celda} text-left font-medium`}>
+									Subtotal (monto contractual)
+								</td>
+								<td className={`${celda} text-right font-semibold whitespace-nowrap tabular-nums`}>
+									<output aria-label="Monto contractual">
+										{formatearMoneda(montos.subtotal, moneda)}
+									</output>
+								</td>
+								<td className={celda} />
+							</tr>
+							<tr className="bg-navy-50/40 text-navy-600">
 								<td className={celda} />
 								<td colSpan={3} className={`${celda} text-left`}>
-									Monto contractual
+									IGV ({igvPct.toLocaleString("es-PE")} %)
 								</td>
 								<td className={`${celda} text-right whitespace-nowrap tabular-nums`}>
-									<output aria-label="Monto contractual">{formatearMoneda(total, moneda)}</output>
+									<output aria-label="IGV">{formatearMoneda(montos.igv, moneda)}</output>
+								</td>
+								<td className={celda} />
+							</tr>
+							<tr className="bg-navy-50/70 font-semibold">
+								<td className={celda} />
+								<td colSpan={3} className={`${celda} text-left`}>
+									Total con IGV
+								</td>
+								<td className={`${celda} text-right whitespace-nowrap tabular-nums`}>
+									<output aria-label="Total con IGV">
+										{formatearMoneda(montos.total, moneda)}
+									</output>
 								</td>
 								<td className={celda} />
 							</tr>
 						</tfoot>
 					</table>
 				</div>
+			)}
+			{fields.length > 0 && (
+				<p className="text-xs text-muted-foreground">
+					El IGV es referencial: el monto contractual y el saldo se llevan sin IGV, y cada
+					valorización calcula el suyo.
+				</p>
 			)}
 			{errors.equipos?.root?.message && (
 				<p className="text-sm text-destructive">{errors.equipos.root.message}</p>

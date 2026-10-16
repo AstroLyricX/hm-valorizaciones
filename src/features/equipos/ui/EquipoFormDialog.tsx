@@ -5,13 +5,14 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useSession } from "@/features/auth/useSession";
-import type { Tercero } from "@/features/clientes/domain/tercero";
+import { sugerirPrefijo, type Tercero } from "@/features/clientes/domain/tercero";
 import { FormDialog } from "@/shared/components/FormDialog";
 import { FormField } from "@/shared/components/FormField";
 import { FormSeccion } from "@/shared/components/FormSeccion";
 import { SelectField } from "@/shared/components/SelectField";
 
 import { equipoService } from "../application/equipoService.instance";
+import { PREFIJO_PROPIO, siguienteActivoFijo } from "../domain/activoFijo";
 import {
 	ActivoFijoDuplicadoError,
 	CATEGORIAS_EQUIPO,
@@ -32,7 +33,6 @@ import {
 const PROPIO = "__propio__";
 
 const VACIO: EquipoDatosInput = {
-	activoFijo: "",
 	descripcion: "",
 	fabricante: "",
 	modelo: "",
@@ -61,6 +61,7 @@ function aFormulario(equipo?: Equipo): EquipoDatosInput {
 		updatedBy: _b,
 		deletedAt: _d,
 		version: _v,
+		activoFijo: _a,
 		...datos
 	} = equipo;
 
@@ -78,14 +79,55 @@ const opcionesEstado = (propiedad: PropiedadEquipo) =>
 	}));
 const mayus = "uppercase placeholder:normal-case";
 
+// Activo fijo que tendrá el equipo: el suyo, o el siguiente del dueño elegido (HM001, HQA002…).
+function vistaActivoFijo({
+	equipo,
+	duenos,
+	activosFijos,
+	propiedad,
+	duenoId,
+}: {
+	equipo?: Equipo;
+	duenos: readonly Tercero[];
+	activosFijos: readonly string[];
+	propiedad: PropiedadEquipo;
+	duenoId: string;
+}): { codigo: string; ayuda: string } {
+	if (
+		equipo &&
+		equipo.propiedad === propiedad &&
+		(propiedad === "PROPIO" || equipo.duenoId === duenoId)
+	) {
+		return { codigo: equipo.activoFijo, ayuda: "Código del equipo; no cambia." };
+	}
+	const dueno = duenos.find((tercero) => tercero.id === duenoId);
+	const prefijo =
+		propiedad === "PROPIO"
+			? PREFIJO_PROPIO
+			: dueno && (dueno.prefijoEquipos || sugerirPrefijo(dueno.razonSocial));
+	if (!prefijo) {
+		return { codigo: "", ayuda: "Se asigna al guardar, según el dueño." };
+	}
+	const codigo = siguienteActivoFijo(prefijo, activosFijos);
+
+	return {
+		codigo,
+		ayuda: equipo
+			? `Cambia a ${codigo} por el nuevo dueño.`
+			: `Automático: ${prefijo} (${propiedad === "PROPIO" ? "H&M" : "código del proveedor"}) + número.`,
+	};
+}
+
 function Formulario({
 	equipo,
 	duenos,
+	activosFijos,
 	open,
 	onOpenChange,
 }: {
 	equipo?: Equipo;
 	duenos: readonly Tercero[];
+	activosFijos: readonly string[];
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 }) {
@@ -109,6 +151,7 @@ function Formulario({
 	];
 	const propiedad = useWatch({ control, name: "propiedad" });
 	const duenoId = useWatch({ control, name: "duenoId" });
+	const activoFijo = vistaActivoFijo({ equipo, duenos, activosFijos, propiedad, duenoId });
 
 	const guardar = async (datos: EquipoDatos) => {
 		const usuario = user?.email ?? "desconocido";
@@ -123,7 +166,9 @@ function Formulario({
 			onOpenChange(false);
 		} catch (error) {
 			if (error instanceof ActivoFijoDuplicadoError) {
-				setError("activoFijo", { message: "Este activo fijo ya está registrado." });
+				toast.error(
+					`El activo fijo ${error.activoFijo} ya existe en otro dispositivo. Sincroniza e inténtalo de nuevo.`,
+				);
 
 				return;
 			}
@@ -149,13 +194,14 @@ function Formulario({
 			size="lg"
 		>
 			<FormSeccion titulo="Identificación">
-				<FormField label="Activo fijo" required error={errors.activoFijo?.message}>
+				<FormField label="Activo fijo" hint={activoFijo.ayuda}>
 					{(campo) => (
 						<Input
 							{...campo}
-							{...register("activoFijo")}
-							placeholder="Ingresar código de activo fijo"
-							className={mayus}
+							value={activoFijo.codigo}
+							readOnly
+							placeholder="Elige el dueño"
+							className="font-medium tabular-nums text-navy-700"
 						/>
 					)}
 				</FormField>
@@ -349,11 +395,13 @@ export function EquipoFormDialog({
 	onOpenChange,
 	equipo,
 	duenos,
+	activosFijos,
 }: {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	equipo?: Equipo;
 	duenos: readonly Tercero[];
+	activosFijos: readonly string[];
 }) {
 	return open ? (
 		<Formulario
@@ -362,6 +410,7 @@ export function EquipoFormDialog({
 			onOpenChange={onOpenChange}
 			equipo={equipo}
 			duenos={duenos}
+			activosFijos={activosFijos}
 		/>
 	) : null;
 }

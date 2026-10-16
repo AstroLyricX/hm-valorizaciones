@@ -1,7 +1,9 @@
 import { uuidv7 } from "uuidv7";
 
+import { sugerirPrefijo, type Tercero } from "@/features/clientes/domain/tercero";
 import { ahoraIso } from "@/lib/fechas";
 
+import { PREFIJO_PROPIO, siguienteActivoFijo } from "../domain/activoFijo";
 import {
 	ActivoFijoDuplicadoError,
 	type Equipo,
@@ -12,8 +14,16 @@ import {
 } from "../domain/equipo";
 import type { EquipoRepository } from "../infrastructure/EquipoRepository";
 
+// Lo que el servicio necesita de los proveedores: el código de equipos del dueño.
+export interface DuenosDeEquipos {
+	obtener(id: string): Promise<Tercero | undefined>;
+}
+
 export class EquipoService {
-	constructor(private readonly repository: EquipoRepository) {}
+	constructor(
+		private readonly repository: EquipoRepository,
+		private readonly duenos: DuenosDeEquipos,
+	) {}
 
 	async listar(): Promise<Equipo[]> {
 		return this.repository.listar();
@@ -27,6 +37,7 @@ export class EquipoService {
 		const equipo: Equipo = {
 			id: uuidv7(),
 			...validos,
+			activoFijo: await this.nuevoActivoFijo(validos),
 			createdAt: ahora,
 			updatedAt: ahora,
 			updatedBy: usuario,
@@ -47,9 +58,12 @@ export class EquipoService {
 		}
 		await this.asegurarUnicos(validos, id);
 
+		// El activo fijo se conserva; solo cambia si el equipo pasa a otro dueño.
+		const mismoDueno = actual.propiedad === validos.propiedad && actual.duenoId === validos.duenoId;
 		const actualizado: Equipo = {
 			...actual,
 			...validos,
+			activoFijo: mismoDueno ? actual.activoFijo : await this.nuevoActivoFijo(validos, id),
 			updatedAt: ahoraIso(),
 			updatedBy: usuario,
 			version: actual.version + 1,
@@ -59,13 +73,39 @@ export class EquipoService {
 		return actualizado;
 	}
 
-	// El activo fijo y la placa identifican al equipo: no pueden repetirse.
+	// Código del dueño (HM o el del proveedor) + el siguiente número de sus equipos.
+	async siguienteActivoFijo(datos: Pick<EquipoDatos, "propiedad" | "duenoId">): Promise<string> {
+		const activosFijos = (await this.repository.listar()).map((equipo) => equipo.activoFijo);
+
+		return siguienteActivoFijo(await this.prefijoDe(datos), activosFijos);
+	}
+
+	private async prefijoDe({ propiedad, duenoId }: Pick<EquipoDatos, "propiedad" | "duenoId">) {
+		if (propiedad === "PROPIO") {
+			return PREFIJO_PROPIO;
+		}
+		const dueno = await this.duenos.obtener(duenoId);
+		if (!dueno) {
+			throw new Error(`No existe el proveedor ${duenoId}.`);
+		}
+
+		return dueno.prefijoEquipos || sugerirPrefijo(dueno.razonSocial);
+	}
+
+	private async nuevoActivoFijo(datos: EquipoDatos, idPropio?: string): Promise<string> {
+		const activoFijo = await this.siguienteActivoFijo(datos);
+		const otros = (await this.repository.listar()).filter((equipo) => equipo.id !== idPropio);
+		// Respaldo: otro dispositivo pudo registrar el mismo código antes de sincronizar.
+		if (otros.some((equipo) => equipo.activoFijo === activoFijo)) {
+			throw new ActivoFijoDuplicadoError(activoFijo);
+		}
+
+		return activoFijo;
+	}
+
+	// La placa identifica al equipo: no puede repetirse.
 	private async asegurarUnicos(datos: EquipoDatos, idPropio?: string): Promise<void> {
 		const otros = (await this.repository.listar()).filter((equipo) => equipo.id !== idPropio);
-
-		if (otros.some((equipo) => equipo.activoFijo === datos.activoFijo)) {
-			throw new ActivoFijoDuplicadoError(datos.activoFijo);
-		}
 		const conPlaca = otros.find((equipo) => equipo.placa === datos.placa);
 		if (conPlaca) {
 			throw new PlacaDuplicadaError(datos.placa, conPlaca.activoFijo);

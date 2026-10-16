@@ -6,6 +6,7 @@ import { Link, useParams } from "react-router";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { terceroRepository } from "@/features/clientes/application/terceroService.instance";
+import { useIgvPorcentaje } from "@/features/configuracion/useIgv";
 import { equipoRepository } from "@/features/equipos/application/equipoService.instance";
 import { type Equipo, nombreEquipo } from "@/features/equipos/domain/equipo";
 import { valorizacionRepository } from "@/features/valorizaciones/application/valorizacionService.instance";
@@ -22,6 +23,7 @@ import {
 	type ContratoEquipo,
 	estadoContrato,
 	hoyIso,
+	montosConIgv,
 	parcialEquipo,
 } from "./domain/contrato";
 import { ContratoFormDialog } from "./ui/ContratoFormDialog";
@@ -93,6 +95,15 @@ function TablaEquipos({
 	filas: ContratoEquipo[];
 	equipos: Map<string, Equipo>;
 }) {
+	const igvPct = useIgvPorcentaje();
+	const montos = montosConIgv(contrato.montoContractual, igvPct);
+	// Subtotal, IGV y total: el IGV es referencial (ver montosConIgv).
+	const resumen = [
+		{ label: "Subtotal (monto contractual)", valor: montos.subtotal, fuerte: false },
+		{ label: `IGV (${igvPct.toLocaleString("es-PE")} %)`, valor: montos.igv, fuerte: false },
+		{ label: "Total con IGV", valor: montos.total, fuerte: true },
+	];
+
 	return (
 		<section aria-labelledby="equipos-detalle" className={tarjeta}>
 			<h2
@@ -140,15 +151,22 @@ function TablaEquipos({
 						);
 					})}
 				</tbody>
-				<tfoot>
-					<tr className="border-t border-navy-100 bg-navy-50/60">
-						<td colSpan={3} className="px-6 py-3 text-right text-sm text-muted-foreground">
-							Monto contractual
-						</td>
-						<td className="px-6 py-3 text-right text-base font-semibold text-navy-900 tabular-nums">
-							{formatearMoneda(contrato.montoContractual, contrato.moneda)}
-						</td>
-					</tr>
+				<tfoot className="border-t border-navy-100 bg-navy-50/60">
+					{resumen.map((fila) => (
+						<tr key={fila.label}>
+							<td colSpan={3} className="px-6 py-2 text-right text-sm text-muted-foreground">
+								{fila.label}
+							</td>
+							<td
+								className={cn(
+									"px-6 py-2 text-right text-navy-900 tabular-nums",
+									fila.fuerte ? "text-base font-semibold" : "font-medium",
+								)}
+							>
+								{formatearMoneda(fila.valor, contrato.moneda)}
+							</td>
+						</tr>
+					))}
 				</tfoot>
 			</table>
 			<ul className="divide-y divide-navy-100 md:hidden">
@@ -172,12 +190,22 @@ function TablaEquipos({
 						</li>
 					);
 				})}
-				<li className="flex items-baseline justify-between bg-navy-50/60 px-5 py-3">
-					<span className="text-sm text-muted-foreground">Monto contractual</span>
-					<span className="font-semibold text-navy-900 tabular-nums">
-						{formatearMoneda(contrato.montoContractual, contrato.moneda)}
-					</span>
-				</li>
+				{resumen.map((fila) => (
+					<li
+						key={fila.label}
+						className="flex items-baseline justify-between bg-navy-50/60 px-5 py-2.5"
+					>
+						<span className="text-sm text-muted-foreground">{fila.label}</span>
+						<span
+							className={cn(
+								"text-navy-900 tabular-nums",
+								fila.fuerte ? "font-semibold" : "font-medium",
+							)}
+						>
+							{formatearMoneda(fila.valor, contrato.moneda)}
+						</span>
+					</li>
+				))}
 			</ul>
 		</section>
 	);

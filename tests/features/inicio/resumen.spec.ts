@@ -119,10 +119,7 @@ describe("resumenInicio", () => {
 	it("separa lo que H&M cobra (emitidos) de lo que paga (recibidos)", async () => {
 		const proveedorId = (await proveedorService.crear(HUISE, "ana@hm.pe")).id;
 		const equipoId = (
-			await equipoService.crear(
-				excavadora(proveedorId, { activoFijo: "AF-020", placa: "HUI-020" }),
-				"ana@hm.pe",
-			)
+			await equipoService.crear(excavadora(proveedorId, { placa: "HUI-020" }), "ana@hm.pe")
 		).id;
 		const recibido = (
 			await contratoService.crear(

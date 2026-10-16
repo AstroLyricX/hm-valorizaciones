@@ -2,6 +2,7 @@ import {
 	ContratoDatosSchema,
 	estadoContrato,
 	montoContractual,
+	montosConIgv,
 	parcialEquipo,
 } from "../../../src/features/contratos/domain/contrato";
 import {
@@ -61,9 +62,19 @@ describe("ContratoDatosSchema", () => {
 				equipos: [equipoDelContrato("eq-1"), equipoDelContrato("eq-1")],
 			}),
 		);
-		expect(repetido.error?.issues[0]?.message).toBe(
-			"Cada equipo puede aparecer una sola vez en el contrato.",
-		);
+		// El error queda en el ítem repetido (el segundo), con el ítem donde ya está.
+		expect(repetido.error?.issues[0]).toMatchObject({
+			message: "Este equipo ya está en el ítem 1.",
+			path: ["equipos", 1, "equipoId"],
+		});
+	});
+
+	it("calcula el IGV referencial sobre el monto contractual", () => {
+		// USD 7,050.00 + 18 % = USD 8,319.00
+		expect(montosConIgv(705000, 18)).toEqual({ subtotal: 705000, igv: 126900, total: 831900 });
+		// Redondeo al centavo: 0.18 × 0.05 = 0.009 → 0.01
+		expect(montosConIgv(5, 18)).toEqual({ subtotal: 5, igv: 1, total: 6 });
+		expect(montosConIgv(705000, 0).total).toBe(705000);
 	});
 });
 

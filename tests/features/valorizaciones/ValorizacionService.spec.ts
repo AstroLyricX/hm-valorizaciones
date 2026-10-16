@@ -37,7 +37,10 @@ beforeEach(async () => {
 	);
 	const clienteId = (await new TerceroService(terceroRepository).crear(CLIENTE, "ana@hm.pe")).id;
 	const equipoId = (
-		await new EquipoService(equipoRepository).crear(excavadora(clienteId), "ana@hm.pe")
+		await new EquipoService(equipoRepository, terceroRepository).crear(
+			excavadora(clienteId),
+			"ana@hm.pe",
+		)
 	).id;
 	contratoId = (
 		await new ContratoService(contratoRepository, terceroRepository).crear(

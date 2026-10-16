@@ -104,6 +104,38 @@ describe("TerceroService", () => {
 			).rejects.toThrow("ya está registrado (PRO-001)");
 		});
 
+		it("reciben su código de equipos con las iniciales, sin repetirse", async () => {
+			const huise = await proveedores.crear(HUISE, "ana@hm.pe");
+			const otro = await proveedores.crear(
+				{ ...HUISE, ruc: "20602629903", razonSocial: "Hugo Quispe Arias" },
+				"ana@hm.pe",
+			);
+
+			expect(huise.prefijoEquipos).toBe("HQA");
+			expect(otro.prefijoEquipos).toBe("HUG");
+			// Un cliente no lleva código de equipos.
+			expect((await service.crear(HM, "ana@hm.pe")).prefijoEquipos).toBe("");
+		});
+
+		it("conservan el código al editar y no aceptan el de otro proveedor", async () => {
+			const huise = await proveedores.crear({ ...HUISE, prefijoEquipos: "hui" }, "ana@hm.pe");
+			const otro = await proveedores.crear(
+				{ ...HUISE, ruc: "20602629903", razonSocial: "Otro Proveedor" },
+				"ana@hm.pe",
+			);
+
+			await expect(
+				proveedores.actualizar(huise.id, { ...HUISE, prefijoEquipos: "" }, "ana@hm.pe"),
+			).resolves.toMatchObject({ prefijoEquipos: "HUI" });
+			await expect(
+				proveedores.actualizar(
+					otro.id,
+					{ ...HUISE, ruc: "20602629903", prefijoEquipos: "HUI" },
+					"ana@hm.pe",
+				),
+			).rejects.toThrow("ya lo usa PRO-001");
+		});
+
 		it("cada servicio solo modifica los registros de su lista", async () => {
 			const cliente = await service.crear(HUISE, "ana@hm.pe");
 

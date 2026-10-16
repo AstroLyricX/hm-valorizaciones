@@ -138,7 +138,11 @@ export function libroExcel(datos: DatosExportacion): Hoja[] {
 	);
 	const proveedores = hoja(
 		"PROVEEDORES",
-		columnasTercero,
+		[
+			...columnasTercero.slice(0, 2),
+			["Código de equipos", (tercero) => tercero.prefijoEquipos],
+			...columnasTercero.slice(2),
+		],
 		terceros.filter((tercero) => tercero.tipo === "PROVEEDOR"),
 	);
 

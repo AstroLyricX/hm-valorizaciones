@@ -4,9 +4,12 @@ import { ahoraIso } from "@/lib/fechas";
 
 import {
 	type EstadoTercero,
+	PrefijoEquiposDuplicadoError,
 	RucDuplicadoError,
 	siguienteCodigo,
+	sugerirPrefijo,
 	type Tercero,
+	type TerceroDatos,
 	type TerceroDatosInput,
 	TerceroDatosSchema,
 	type TipoTercero,
@@ -25,7 +28,7 @@ export class TerceroService {
 	}
 
 	async crear(datos: TerceroDatosInput, usuario: string): Promise<Tercero> {
-		const validos = TerceroDatosSchema.parse(datos);
+		const validos = await this.conPrefijo(TerceroDatosSchema.parse(datos));
 		await this.asegurarRucDisponible(validos.ruc);
 
 		const ahora = ahoraIso();
@@ -46,8 +49,8 @@ export class TerceroService {
 	}
 
 	async actualizar(id: string, datos: TerceroDatosInput, usuario: string): Promise<Tercero> {
-		const validos = TerceroDatosSchema.parse(datos);
 		const actual = await this.obtenerExistente(id);
+		const validos = await this.conPrefijo(TerceroDatosSchema.parse(datos), actual);
 		await this.asegurarRucDisponible(validos.ruc, id);
 
 		return this.guardarCambios(actual, validos, usuario);
@@ -83,6 +86,29 @@ export class TerceroService {
 		}
 
 		return tercero;
+	}
+
+	// Código de equipos: solo para proveedores, único entre ellos. Si se deja vacío se conserva el
+	// que tenía o se genera con las iniciales de la razón social.
+	private async conPrefijo(datos: TerceroDatos, actual?: Tercero): Promise<TerceroDatos> {
+		if (this.tipo !== "PROVEEDOR") {
+			return { ...datos, prefijoEquipos: "" };
+		}
+		const otros = (await this.repository.listar("PROVEEDOR")).filter(
+			(proveedor) => proveedor.id !== actual?.id && proveedor.prefijoEquipos !== "",
+		);
+		const prefijo =
+			[datos.prefijoEquipos, actual?.prefijoEquipos ?? ""].find((codigo) => codigo !== "") ??
+			sugerirPrefijo(
+				datos.razonSocial,
+				otros.map((proveedor) => proveedor.prefijoEquipos),
+			);
+		const repetido = otros.find((proveedor) => proveedor.prefijoEquipos === prefijo);
+		if (repetido) {
+			throw new PrefijoEquiposDuplicadoError(prefijo, repetido.codigo);
+		}
+
+		return { ...datos, prefijoEquipos: prefijo };
 	}
 
 	private async asegurarRucDisponible(ruc: string, idPropio?: string): Promise<void> {

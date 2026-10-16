@@ -55,7 +55,6 @@ export function registrarProveedor(razonSocial: string, ruc: string): void {
 }
 
 interface DatosEquipo {
-	activoFijo: string;
 	descripcion: string;
 	fabricante: string;
 	modelo: string;
@@ -65,7 +64,6 @@ interface DatosEquipo {
 
 export function datosDelEquipo(equipo: DatosEquipo): void {
 	cy.findByRole("dialog").within(() => {
-		cy.findByLabelText(/Activo fijo/).type(equipo.activoFijo);
 		cy.findByLabelText(/Descripción del equipo/).type(equipo.descripcion);
 		cy.findByLabelText(/Fabricante/).type(equipo.fabricante);
 		cy.findByLabelText(/^Modelo/).type(equipo.modelo);
@@ -107,7 +105,6 @@ export function registrarContratoDelXlsm(): void {
 	registrarCliente("Constructora Andina SAC", "20602629903");
 	registrarProveedor("Huise Quea Antolin", "10098637074");
 	registrarEquipo({
-		activoFijo: "AF-001",
 		descripcion: "Excavadora",
 		fabricante: "CAT",
 		modelo: "340",

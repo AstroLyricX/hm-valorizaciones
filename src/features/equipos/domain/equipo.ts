@@ -67,7 +67,6 @@ const opcionalMayusculas = (max: number) =>
 		.transform((valor) => valor.toUpperCase());
 
 const EquipoCamposSchema = z.object({
-	activoFijo: mayusculas(1, 30, "Ingresa el código de activo fijo."),
 	descripcion: mayusculas(3, 120, "Ingresa la descripción del equipo, por ejemplo Excavadora."),
 	fabricante: mayusculas(1, 60, "Ingresa el fabricante."),
 	modelo: mayusculas(1, 60, "Ingresa el modelo."),
@@ -131,6 +130,8 @@ export function estadoDeProveedor(estado: string): EstadoEquipo {
 
 export const EquipoSchema = BaseSchema.extend({
 	...EquipoCamposSchema.shape,
+	// Automático: lo asigna el servicio con el código del dueño (ver activoFijo.ts).
+	activoFijo: z.string().min(1),
 	// Los equipos anteriores a esta opción eran todos de proveedores.
 	propiedad: z.enum(PROPIEDADES_EQUIPO).default("PROVEEDOR"),
 });

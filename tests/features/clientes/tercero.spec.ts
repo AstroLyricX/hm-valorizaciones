@@ -1,4 +1,8 @@
-import { siguienteCodigo, TerceroDatosSchema } from "../../../src/features/clientes/domain/tercero";
+import {
+	siguienteCodigo,
+	sugerirPrefijo,
+	TerceroDatosSchema,
+} from "../../../src/features/clientes/domain/tercero";
 import { HUISE } from "../../support/fixtures";
 
 describe("siguienteCodigo", () => {
@@ -41,5 +45,39 @@ describe("TerceroDatosSchema", () => {
 	it("rechaza un RUC con dígito verificador incorrecto y un CCI incompleto", () => {
 		expect(TerceroDatosSchema.safeParse({ ...HUISE, ruc: "20123456789" }).success).toBe(false);
 		expect(TerceroDatosSchema.safeParse({ ...HUISE, cci: "0021" }).success).toBe(false);
+	});
+});
+
+describe("sugerirPrefijo", () => {
+	it("usa las iniciales de la razón social sin la forma societaria", () => {
+		expect(sugerirPrefijo("HUISE QUEA ANTOLIN")).toBe("HQA");
+		expect(sugerirPrefijo("Constructora Andina S.A.C.")).toBe("CA");
+		expect(sugerirPrefijo("MAQUINARIAS DEL SUR E.I.R.L.")).toBe("MS");
+	});
+
+	it("con una sola palabra usa sus primeras letras", () => {
+		expect(sugerirPrefijo("MAQSUR SAC")).toBe("MAQ");
+		expect(sugerirPrefijo("Ñuñez")).toBe("NUN");
+	});
+
+	it("no repite un código usado ni el HM de H&M", () => {
+		expect(sugerirPrefijo("HUISE QUEA ANTOLIN", ["HQA"])).toBe("HUI");
+		expect(sugerirPrefijo("HUISE QUEA ANTOLIN", ["HQA", "HUI", "HUIS"])).toBe("HUIA");
+		expect(sugerirPrefijo("HERMANOS MAMANI")).toBe("HER");
+	});
+});
+
+describe("código de equipos", () => {
+	it("acepta de 2 a 4 letras, en mayúsculas, o vacío", () => {
+		expect(TerceroDatosSchema.parse({ ...HUISE, prefijoEquipos: "hqa" }).prefijoEquipos).toBe(
+			"HQA",
+		);
+		expect(TerceroDatosSchema.safeParse({ ...HUISE, prefijoEquipos: "" }).success).toBe(true);
+		expect(TerceroDatosSchema.safeParse({ ...HUISE, prefijoEquipos: "H1" }).success).toBe(false);
+		expect(TerceroDatosSchema.safeParse({ ...HUISE, prefijoEquipos: "HUISE" }).success).toBe(false);
+	});
+
+	it("no permite HM, que es de los equipos propios", () => {
+		expect(TerceroDatosSchema.safeParse({ ...HUISE, prefijoEquipos: "hm" }).success).toBe(false);
 	});
 });

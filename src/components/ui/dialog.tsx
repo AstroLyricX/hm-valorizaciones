@@ -7,8 +7,15 @@ import * as React from "react";
 
 import { Button } from "@/components/ui/button";
 
-function Dialog({ ...props }: DialogPrimitive.Root.Props) {
-	return <DialogPrimitive.Root data-slot="dialog" {...props} />;
+// Un clic fuera del modal no lo cierra (no se pierde lo escrito); se cierra con la X, Cancelar o Esc.
+function Dialog({ disablePointerDismissal = true, ...props }: DialogPrimitive.Root.Props) {
+	return (
+		<DialogPrimitive.Root
+			data-slot="dialog"
+			disablePointerDismissal={disablePointerDismissal}
+			{...props}
+		/>
+	);
 }
 
 function DialogTrigger({ ...props }: DialogPrimitive.Trigger.Props) {

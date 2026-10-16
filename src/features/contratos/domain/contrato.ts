@@ -104,14 +104,22 @@ export const ContratoDatosSchema = ContratoCabeceraSchema.extend({
 		message: "La fecha de fin debe ser igual o posterior a la de inicio.",
 		path: ["fechaFin"],
 	})
-	.refine(
-		(datos) =>
-			new Set(datos.equipos.map((equipo) => equipo.equipoId)).size === datos.equipos.length,
-		{
-			message: "Cada equipo puede aparecer una sola vez en el contrato.",
-			path: ["equipos"],
-		},
-	);
+	// Un equipo no puede repetirse: el error se marca en el ítem repetido.
+	.superRefine((datos, contexto) => {
+		const vistos = new Map<string, number>();
+		datos.equipos.forEach((equipo, index) => {
+			const anterior = vistos.get(equipo.equipoId);
+			if (equipo.equipoId !== "" && anterior !== undefined) {
+				contexto.addIssue({
+					code: "custom",
+					message: `Este equipo ya está en el ítem ${anterior + 1}.`,
+					path: ["equipos", index, "equipoId"],
+				});
+			} else {
+				vistos.set(equipo.equipoId, index);
+			}
+		});
+	});
 
 export const ContratoSchema = BaseSchema.extend({
 	...ContratoCabeceraSchema.shape,
@@ -148,6 +156,17 @@ export function montoContractual(
 	equipos: readonly Pick<ContratoEquipoDatos, "horasMinimas" | "costoHora">[],
 ): number {
 	return equipos.reduce((total, equipo) => total + parcialEquipo(equipo), 0);
+}
+
+// Montos referenciales con IGV. El monto contractual, el saldo y el avance se llevan sin IGV
+// (como el subtotal de las valorizaciones); el IGV real se calcula en cada valorización.
+export function montosConIgv(
+	subtotal: number,
+	igvPct: number,
+): { subtotal: number; igv: number; total: number } {
+	const igv = new Big(subtotal).times(igvPct).div(100).round(0, Big.roundHalfUp).toNumber();
+
+	return { subtotal, igv, total: subtotal + igv };
 }
 
 // El estado no se elige: el contrato vence cuando pasa su fecha de fin.

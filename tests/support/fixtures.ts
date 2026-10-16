@@ -16,6 +16,7 @@ export const CLIENTE: TerceroDatosInput = {
 	banco: "",
 	numeroCuenta: "",
 	cci: "",
+	prefijoEquipos: "",
 };
 
 export const HUISE: TerceroDatosInput = {
@@ -34,7 +35,6 @@ export function excavadora(
 	cambios: Partial<EquipoDatosInput> = {},
 ): EquipoDatosInput {
 	return {
-		activoFijo: "AF-001",
 		descripcion: "Excavadora",
 		fabricante: "CAT",
 		modelo: "340",
@@ -58,7 +58,6 @@ export function volquete(
 	cambios: Partial<EquipoDatosInput> = {},
 ): EquipoDatosInput {
 	return excavadora(duenoId, {
-		activoFijo: "AF-002",
 		descripcion: "Volquete",
 		fabricante: "Volvo",
 		modelo: "FMX",
