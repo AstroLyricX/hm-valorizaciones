@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { BaseSchema } from "@/data/base";
 import { MONEDAS } from "@/features/contratos/domain/contrato";
+import { formatearMoneda } from "@/lib/dinero";
 
 // Valorización según la hoja VALORIZACION del xlsm y VALORIZACIONES.txt: por cada equipo del
 // contrato se ingresan las horas del periodo; lo anterior, lo acumulado y los importes se calculan.
@@ -322,4 +323,24 @@ export class ValorizacionNoEditableError extends Error {
 		super("Solo se puede modificar una valorización en borrador.");
 		this.name = "ValorizacionNoEditableError";
 	}
+}
+
+// Mensaje para enviar por WhatsApp una valorización emitida (el PDF se adjunta aparte).
+export function mensajeValorizacion(
+	valorizacion: Pick<Valorizacion, "numero" | "periodo" | "moneda" | "totales">,
+	contrato: { codigo: string; proyecto: string },
+): string {
+	const lineas = [
+		`*Valorización N.° ${valorizacion.numero ?? "—"}* · H&M`,
+		`Contrato ${contrato.codigo} · ${contrato.proyecto}`,
+		`Periodo: ${formatearPeriodo(valorizacion.periodo)}`,
+	];
+	if (valorizacion.totales) {
+		lineas.push(
+			`Total: ${formatearMoneda(valorizacion.totales.total, valorizacion.moneda)}`,
+			`Neto a pagar: ${formatearMoneda(valorizacion.totales.netoPagable, valorizacion.moneda)}`,
+		);
+	}
+
+	return lineas.join("\n");
 }

@@ -2,6 +2,7 @@ import { Outlet, ScrollRestoration, useLocation } from "react-router";
 
 import { ruta } from "@/app/entorno";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { AvisosButton } from "@/features/avisos/ui/AvisosButton";
 import { SyncStatus } from "@/features/sincronizacion/SyncStatus";
 import { OfflineBanner } from "@/shared/components/OfflineBanner";
 
@@ -32,6 +33,7 @@ export function AppLayout() {
 					<span className="truncate font-semibold text-navy-900 md:hidden">{titulo}</span>
 					<div className="ml-auto flex items-center gap-3">
 						<SyncStatus className="max-md:hidden" />
+						<AvisosButton />
 					</div>
 				</header>
 				<OfflineBanner className="md:hidden" />

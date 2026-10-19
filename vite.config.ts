@@ -32,6 +32,8 @@ export default defineConfig({
 			},
 			workbox: {
 				globPatterns: ["**/*.{js,css,html,svg,png,ico,woff2}"],
+				// Abre la pantalla del aviso al tocar una notificación del sistema.
+				importScripts: ["avisos-sw.js"],
 				cleanupOutdatedCaches: true,
 			},
 			devOptions: {

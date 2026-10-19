@@ -45,32 +45,14 @@ function avance(valorizado: number, monto: number): number {
 	return monto === 0 ? 0 : Math.round((valorizado / monto) * 10000) / 100;
 }
 
-// Indicadores de la pantalla de Inicio (como la hoja INICIO del xlsm) con datos reales.
-export function resumenInicio({
-	terceros,
-	contratos,
-	contratoEquipos,
-	valorizaciones,
-	hoy,
-}: Datos): ResumenInicio {
-	const mes = hoy.slice(0, 7);
-	const activos = contratos.filter((contrato) => estadoContrato(contrato, hoy) === "ACTIVO");
-	const idsActivos = new Set(activos.map((contrato) => contrato.id));
-	const emitidas = valorizaciones.filter((valorizacion) => valorizacion.estado === "EMITIDA");
+// Contratos con lo valorizado (emitidas) en 90 % o más de su monto contractual.
+export function contratosEnAlerta(
+	contratos: readonly Contrato[],
+	valorizaciones: readonly Valorizacion[],
+	terceros: readonly Tercero[],
+): ContratoEnAlerta[] {
 	const nombres = new Map(terceros.map((tercero) => [tercero.id, tercero.razonSocial]));
-
-	const tipoDe = new Map(contratos.map((contrato) => [contrato.id, contrato.tipo]));
-	const porCobrarMes: Partial<Record<Moneda, number>> = {};
-	const porPagarMes: Partial<Record<Moneda, number>> = {};
-	for (const valorizacion of emitidas) {
-		if (valorizacion.fechaEmision?.startsWith(mes) === true && valorizacion.totales) {
-			const destino =
-				tipoDe.get(valorizacion.contratoId) === "RECIBIDO" ? porPagarMes : porCobrarMes;
-			destino[valorizacion.moneda] =
-				(destino[valorizacion.moneda] ?? 0) + valorizacion.totales.total;
-		}
-	}
-
+	const emitidas = valorizaciones.filter((valorizacion) => valorizacion.estado === "EMITIDA");
 	const valorizadoPorContrato = new Map<string, number>();
 	for (const valorizacion of emitidas) {
 		valorizadoPorContrato.set(
@@ -80,7 +62,7 @@ export function resumenInicio({
 		);
 	}
 
-	const alertas = contratos
+	return contratos
 		.map((contrato): ContratoEnAlerta => {
 			const valorizado = valorizadoPorContrato.get(contrato.id) ?? 0;
 			const avancePct = avance(valorizado, contrato.montoContractual);
@@ -95,6 +77,34 @@ export function resumenInicio({
 		})
 		.filter((alerta) => alerta.avancePct >= UMBRAL_AVANCE)
 		.sort((a, b) => b.avancePct - a.avancePct);
+}
+
+// Indicadores de la pantalla de Inicio (como la hoja INICIO del xlsm) con datos reales.
+export function resumenInicio({
+	terceros,
+	contratos,
+	contratoEquipos,
+	valorizaciones,
+	hoy,
+}: Datos): ResumenInicio {
+	const mes = hoy.slice(0, 7);
+	const activos = contratos.filter((contrato) => estadoContrato(contrato, hoy) === "ACTIVO");
+	const idsActivos = new Set(activos.map((contrato) => contrato.id));
+	const emitidas = valorizaciones.filter((valorizacion) => valorizacion.estado === "EMITIDA");
+
+	const tipoDe = new Map(contratos.map((contrato) => [contrato.id, contrato.tipo]));
+	const porCobrarMes: Partial<Record<Moneda, number>> = {};
+	const porPagarMes: Partial<Record<Moneda, number>> = {};
+	for (const valorizacion of emitidas) {
+		if (valorizacion.fechaEmision?.startsWith(mes) === true && valorizacion.totales) {
+			const destino =
+				tipoDe.get(valorizacion.contratoId) === "RECIBIDO" ? porPagarMes : porCobrarMes;
+			destino[valorizacion.moneda] =
+				(destino[valorizacion.moneda] ?? 0) + valorizacion.totales.total;
+		}
+	}
+
+	const alertas = contratosEnAlerta(contratos, valorizaciones, terceros);
 
 	const porFechaDesc = (a: Valorizacion, b: Valorizacion) =>
 		(b.fechaEmision ?? "").localeCompare(a.fechaEmision ?? "") ||

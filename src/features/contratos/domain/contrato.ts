@@ -2,6 +2,7 @@ import Big from "big.js";
 import { z } from "zod";
 
 import { BaseSchema } from "@/data/base";
+import { formatearMoneda } from "@/lib/dinero";
 import { formatearFechaNumerica } from "@/lib/fechas";
 import { siguienteCodigo } from "@/shared/domain/codigo";
 
@@ -245,4 +246,19 @@ export function hoyIso(): string {
 	const dia = String(ahora.getDate()).padStart(2, "0");
 
 	return `${ahora.getFullYear()}-${mes}-${dia}`;
+}
+
+// Mensaje para enviar por WhatsApp el resumen de un contrato.
+export function mensajeContrato(
+	contrato: Pick<
+		Contrato,
+		"codigo" | "proyecto" | "ubicacion" | "fechaInicio" | "fechaFin" | "moneda" | "montoContractual"
+	>,
+): string {
+	return [
+		`*Contrato ${contrato.codigo}* · H&M`,
+		`${contrato.proyecto} · ${contrato.ubicacion}`,
+		`Vigencia: ${formatearRangoVigencia(contrato)}`,
+		`Monto contractual: ${formatearMoneda(contrato.montoContractual, contrato.moneda)}`,
+	].join("\n");
 }

@@ -14,6 +14,7 @@ import { formatearPeriodo } from "@/features/valorizaciones/domain/valorizacion"
 import { EstadoValorizacionPill } from "@/features/valorizaciones/ui/EstadoValorizacionPill";
 import { formatearMoneda } from "@/lib/dinero";
 import { cn } from "@/lib/utils";
+import { CompartirWhatsApp } from "@/shared/components/CompartirWhatsApp";
 import { EmptyState } from "@/shared/components/EmptyState";
 
 import { contratoService } from "./application/contratoService.instance";
@@ -23,6 +24,7 @@ import {
 	type ContratoEquipo,
 	estadoContrato,
 	hoyIso,
+	mensajeContrato,
 	montosConIgv,
 	parcialEquipo,
 } from "./domain/contrato";
@@ -287,10 +289,20 @@ export function ContratoDetallePage() {
 							{vigencia(contrato)}
 						</p>
 					</div>
-					<Button variant="outline" className="h-9 w-fit px-3.5" onClick={() => setEditando(true)}>
-						<Pencil />
-						Editar
-					</Button>
+					<div className="flex flex-wrap items-center gap-3">
+						<CompartirWhatsApp
+							texto={mensajeContrato(contrato)}
+							telefono={datos.cliente?.representanteTelefono}
+						/>
+						<Button
+							variant="outline"
+							className="h-9 w-fit px-3.5"
+							onClick={() => setEditando(true)}
+						>
+							<Pencil />
+							Editar
+						</Button>
+					</div>
 				</div>
 			</div>
 
