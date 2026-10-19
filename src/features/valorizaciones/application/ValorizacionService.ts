@@ -5,7 +5,14 @@ import type { Tercero } from "@/features/clientes/domain/tercero";
 import type { TerceroRepository } from "@/features/clientes/infrastructure/TerceroRepository";
 import type { EmpresaService } from "@/features/configuracion/application/EmpresaService";
 import type { Empresa } from "@/features/configuracion/domain/empresa";
-import { type Contrato, hoyIso } from "@/features/contratos/domain/contrato";
+import {
+	type Contrato,
+	esVigente,
+	formatearRangoVigencia,
+	hoyIso,
+	periodoEnVigencia,
+	vigenciaContrato,
+} from "@/features/contratos/domain/contrato";
 import type { ContratoRepository } from "@/features/contratos/infrastructure/ContratoRepository";
 import { type Equipo, nombreEquipo } from "@/features/equipos/domain/equipo";
 import type { EquipoRepository } from "@/features/equipos/infrastructure/EquipoRepository";
@@ -56,6 +63,25 @@ export class ContratoNoEncontradoError extends Error {
 	constructor() {
 		super("El contrato no existe.");
 		this.name = "ContratoNoEncontradoError";
+	}
+}
+
+// Solo se valorizan contratos vigentes: ni los que aún no empiezan ni los vencidos.
+export class ContratoNoVigenteError extends Error {
+	constructor(readonly vigencia: "POR_INICIAR" | "VENCIDO") {
+		super(
+			vigencia === "VENCIDO"
+				? "El contrato ya venció: no se le pueden agregar valorizaciones."
+				: "El contrato aún no empieza: no se le pueden agregar valorizaciones.",
+		);
+		this.name = "ContratoNoVigenteError";
+	}
+}
+
+export class PeriodoFueraDeVigenciaError extends Error {
+	constructor(vigencia: string) {
+		super(`El periodo está fuera de la vigencia del contrato (${vigencia}).`);
+		this.name = "PeriodoFueraDeVigenciaError";
 	}
 }
 
@@ -128,7 +154,12 @@ export class ValorizacionService {
 
 	// Crea el borrador del periodo con la cabecera del contrato y la configuración (P11).
 	// Si ya hay un borrador del mismo contrato y periodo, lo devuelve para no duplicarlo.
-	async crearBorrador(datos: NuevaValorizacion, usuario: string): Promise<Valorizacion> {
+	// Uno nuevo solo se crea si el contrato está vigente hoy y el periodo cae en su vigencia.
+	async crearBorrador(
+		datos: NuevaValorizacion,
+		usuario: string,
+		hoy = hoyIso(),
+	): Promise<Valorizacion> {
 		const { contratoId, periodo } = NuevaValorizacionSchema.parse(datos);
 		const contrato = await this.contratos.obtener(contratoId);
 
@@ -140,6 +171,14 @@ export class ValorizacionService {
 		);
 		if (existente) {
 			return existente;
+		}
+		if (!esVigente(contrato, hoy)) {
+			throw new ContratoNoVigenteError(
+				vigenciaContrato(contrato, hoy) === "VENCIDO" ? "VENCIDO" : "POR_INICIAR",
+			);
+		}
+		if (!periodoEnVigencia(contrato, periodo)) {
+			throw new PeriodoFueraDeVigenciaError(formatearRangoVigencia(contrato));
 		}
 
 		const [empresa, equiposDelContrato] = await Promise.all([

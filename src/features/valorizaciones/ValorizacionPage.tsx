@@ -19,7 +19,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { puede } from "@/features/auth/roles";
 import { useSession } from "@/features/auth/useSession";
-import { CONTRAPARTE } from "@/features/contratos/domain/contrato";
+import { CONTRAPARTE, hoyIso } from "@/features/contratos/domain/contrato";
 import { useSincronizacion } from "@/features/sincronizacion/SyncContext";
 import { formatearMoneda } from "@/lib/dinero";
 import { formatearFechaNumerica } from "@/lib/fechas";
@@ -41,6 +41,7 @@ import {
 import { encolarPdf } from "./pdf/encolarPdf";
 import { AccionesPdf } from "./ui/AccionesPdf";
 import { AnularDialog } from "./ui/AnularDialog";
+import { AvisoVencimiento } from "./ui/AvisoVencimiento";
 import { DatosServicio } from "./ui/DatosServicio";
 import { EstadoValorizacionPill } from "./ui/EstadoValorizacionPill";
 import { horas } from "./ui/formato";
@@ -351,6 +352,8 @@ function Editor({ planilla }: { planilla: Planilla }) {
 					</div>
 				))}
 			</section>
+
+			{editable && <AvisoVencimiento contrato={contrato} hoy={hoyIso()} />}
 
 			{excedidos.length > 0 && (
 				<div

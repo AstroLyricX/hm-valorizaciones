@@ -274,6 +274,15 @@ export function nombreMes(mes: number): string {
 }
 
 // "2026-08" → "Agosto 2026".
+// Lleva el periodo "YYYY-MM" al rango [desde, hasta] si se sale de él.
+export function ajustarPeriodo(periodo: string, desde?: string, hasta?: string): string {
+	if (desde !== undefined && periodo < desde) {
+		return desde;
+	}
+
+	return hasta !== undefined && periodo > hasta ? hasta : periodo;
+}
+
 export function formatearPeriodo(periodo: string): string {
 	const [anio, mes] = periodo.split("-").map(Number);
 	const nombre = nombreMes(mes);

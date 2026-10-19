@@ -15,7 +15,7 @@ import {
 	ValorizacionService,
 } from "../../../src/features/valorizaciones/application/ValorizacionService";
 import { ValorizacionRepository } from "../../../src/features/valorizaciones/infrastructure/ValorizacionRepository";
-import { CLIENTE, excavadora, HUISE } from "../../support/fixtures";
+import { CLIENTE, excavadora, HOY, HUISE } from "../../support/fixtures";
 import { contratoDatos } from "./fixtures";
 
 let database: HmDatabase;
@@ -50,7 +50,7 @@ afterEach(async () => {
 });
 
 async function emitida(contratoId: string, periodo: string) {
-	const borrador = await valorizaciones.crearBorrador({ contratoId, periodo }, "ana@hm.pe");
+	const borrador = await valorizaciones.crearBorrador({ contratoId, periodo }, "ana@hm.pe", HOY);
 	const [fila] = (await valorizaciones.obtenerPlanilla(borrador.id))?.filas ?? [];
 	await valorizaciones.actualizarCantidad(borrador.id, fila.contratoEquipoId, "10", "ana@hm.pe");
 

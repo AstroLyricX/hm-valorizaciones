@@ -9,7 +9,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useSession } from "@/features/auth/useSession";
 import { terceroRepository } from "@/features/clientes/application/terceroService.instance";
 import { contratoRepository } from "@/features/contratos/application/contratoService.instance";
-import { estadoContrato, hoyIso } from "@/features/contratos/domain/contrato";
+import {
+	diasParaVencer,
+	esVigente,
+	hoyIso,
+	textoVencimiento,
+	vigenciaContrato,
+} from "@/features/contratos/domain/contrato";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/shared/components/EmptyState";
 import { FormField } from "@/shared/components/FormField";
@@ -17,7 +23,12 @@ import { PageHeader } from "@/shared/components/PageHeader";
 import { SelectField } from "@/shared/components/SelectField";
 
 import { valorizacionService } from "./application/valorizacionService.instance";
-import { ETIQUETA_TIPO_VALORIZACION, NuevaValorizacionSchema } from "./domain/valorizacion";
+import {
+	ajustarPeriodo,
+	ETIQUETA_TIPO_VALORIZACION,
+	NuevaValorizacionSchema,
+} from "./domain/valorizacion";
+import { AvisoVencimiento } from "./ui/AvisoVencimiento";
 import { PeriodoField } from "./ui/PeriodoField";
 
 function periodoActual(): string {
@@ -32,25 +43,41 @@ export function NuevaValorizacionPage() {
 	const [periodo, setPeriodo] = useState(periodoActual);
 	const [errores, setErrores] = useState<{ contratoId?: string; periodo?: string }>({});
 	const [creando, setCreando] = useState(false);
-	const opciones = useLiveQuery(async () => {
+	const [hoy] = useState(hoyIso);
+	const datos = useLiveQuery(async () => {
 		const [contratos, terceros] = await Promise.all([
 			contratoRepository.listar(),
 			terceroRepository.listar(),
 		]);
 		const nombres = new Map(terceros.map((tercero) => [tercero.id, tercero.razonSocial]));
-		const hoy = hoyIso();
+		// Solo se ofrecen los contratos vigentes hoy; los por vencer avisan cuántos días les quedan.
+		const vigentes = contratos.filter((contrato) => esVigente(contrato, hoy));
+		const opciones = vigentes.map((contrato) => {
+			const aviso =
+				vigenciaContrato(contrato, hoy) === "POR_VENCER"
+					? ` · ${textoVencimiento(diasParaVencer(contrato, hoy)).toLowerCase()}`
+					: "";
 
-		return contratos
-			.filter((contrato) => estadoContrato(contrato, hoy) === "ACTIVO")
-			.map((contrato) => ({
+			return {
 				value: contrato.id,
-				label: `${contrato.codigo} · ${ETIQUETA_TIPO_VALORIZACION[contrato.tipo]} · ${contrato.proyecto} · ${nombres.get(contrato.terceroId) ?? "—"}`,
-			}));
+				label: `${contrato.codigo} · ${ETIQUETA_TIPO_VALORIZACION[contrato.tipo]} · ${contrato.proyecto} · ${nombres.get(contrato.terceroId) ?? "—"}${aviso}`,
+			};
+		});
+
+		return { contratos, vigentes, opciones };
 	});
+	// Un enlace (?contrato=) a un contrato no vigente no lo deja elegido.
+	const contrato = datos?.vigentes.find((vigente) => vigente.id === contratoId);
+	// Solo se eligen meses dentro de la vigencia del contrato.
+	const desde = contrato?.fechaInicio.slice(0, 7);
+	const hasta = contrato?.fechaFin.slice(0, 7);
 
 	const crear = async (event: React.FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
-		const resultado = NuevaValorizacionSchema.safeParse({ contratoId, periodo });
+		const resultado = NuevaValorizacionSchema.safeParse({
+			contratoId: contrato ? contratoId : "",
+			periodo,
+		});
 		if (!resultado.success) {
 			setErrores(
 				Object.fromEntries(
@@ -65,6 +92,7 @@ export function NuevaValorizacionPage() {
 			const borrador = await valorizacionService.crearBorrador(
 				resultado.data,
 				user?.email ?? "desconocido",
+				hoy,
 			);
 			void navigate(`/valorizaciones/${borrador.id}`);
 		} catch {
@@ -79,12 +107,12 @@ export function NuevaValorizacionPage() {
 				title="Nueva valorización"
 				description="Elige el contrato y el periodo. Luego ingresas las horas de cada equipo."
 			/>
-			{opciones === undefined ? (
+			{datos === undefined ? (
 				<Skeleton aria-label="Cargando" className="h-56 w-full max-w-2xl rounded-xl" />
-			) : opciones.length === 0 ? (
+			) : datos.opciones.length === 0 ? (
 				<EmptyState
 					icon={FileSignature}
-					title="No hay contratos activos"
+					title="No hay contratos vigentes"
 					description="La planilla de medición se genera a partir de los equipos de un contrato vigente."
 				>
 					<Link
@@ -104,12 +132,22 @@ export function NuevaValorizacionPage() {
 						{(campo) => (
 							<SelectField
 								{...campo}
-								value={contratoId}
+								value={contrato ? contratoId : ""}
 								onChange={(valor) => {
+									const elegido = datos.vigentes.find((vigente) => vigente.id === valor);
 									setContratoId(valor);
 									setErrores((actual) => ({ ...actual, contratoId: undefined }));
+									if (elegido) {
+										setPeriodo((actual) =>
+											ajustarPeriodo(
+												actual,
+												elegido.fechaInicio.slice(0, 7),
+												elegido.fechaFin.slice(0, 7),
+											),
+										);
+									}
 								}}
-								options={opciones}
+								options={datos.opciones}
 								placeholder="Seleccionar contrato"
 							/>
 						)}
@@ -120,8 +158,20 @@ export function NuevaValorizacionPage() {
 						error={errores.periodo}
 						hint="Mes que se valoriza. Si ya hay un borrador de ese mes, se abre ese."
 					>
-						{(campo) => <PeriodoField {...campo} value={periodo} onChange={setPeriodo} />}
+						{(campo) => (
+							<PeriodoField
+								{...campo}
+								value={periodo}
+								onChange={(valor) => {
+									setPeriodo(valor);
+									setErrores((actual) => ({ ...actual, periodo: undefined }));
+								}}
+								desde={desde}
+								hasta={hasta}
+							/>
+						)}
 					</FormField>
+					{contrato && <AvisoVencimiento contrato={contrato} hoy={hoy} />}
 					<div className="flex justify-end">
 						<Button
 							type="submit"

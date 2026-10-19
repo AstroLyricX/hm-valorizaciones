@@ -11,7 +11,7 @@ import { escribirExcel } from "../../../src/features/datos/application/escribirE
 import { libroExcel } from "../../../src/features/datos/domain/libroExcel";
 import { equipoService } from "../../../src/features/equipos/application/equipoService.instance";
 import { valorizacionService } from "../../../src/features/valorizaciones/application/valorizacionService.instance";
-import { CLIENTE, excavadora, HUISE, volquete } from "../../support/fixtures";
+import { CLIENTE, excavadora, HOY, HUISE, volquete } from "../../support/fixtures";
 import { contratoDatos, equipoDelContrato } from "../contratos/fixtures";
 
 beforeEach(async () => {
@@ -64,12 +64,14 @@ test("exporta todos los registros sin perder datos", async () => {
 	const borrador = await valorizacionService.crearBorrador(
 		{ contratoId: contrato.id, periodo: "2026-08" },
 		"ana@hm.pe",
+		HOY,
 	);
 	await valorizacionService.actualizarCantidad(borrador.id, equipos[0].id, "53.23", "ana@hm.pe");
 	await valorizacionService.emitir(borrador.id, "ana@hm.pe", "2026-09-17");
 	await valorizacionService.crearBorrador(
 		{ contratoId: contrato.id, periodo: "2026-09" },
 		"ana@hm.pe",
+		HOY,
 	);
 
 	const { hoja, libro } = leer(escribirExcel(libroExcel(await datosExportacion())));

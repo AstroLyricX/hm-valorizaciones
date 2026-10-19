@@ -66,3 +66,7 @@ export function volquete(
 		...cambios,
 	});
 }
+
+// "Hoy" fijo para crear valorizaciones: dentro de la vigencia del contrato de prueba
+// (01/08/2026 al 31/12/2026), para que las pruebas no dependan de la fecha real.
+export const HOY = "2026-09-15";

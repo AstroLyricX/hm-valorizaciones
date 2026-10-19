@@ -6,7 +6,12 @@ import { useNavigate } from "react-router";
 import { Skeleton } from "@/components/ui/skeleton";
 import { terceroRepository } from "@/features/clientes/application/terceroService.instance";
 import { contratoRepository } from "@/features/contratos/application/contratoService.instance";
-import { type TipoContrato, TIPOS_CONTRATO } from "@/features/contratos/domain/contrato";
+import {
+	hoyIso,
+	type TipoContrato,
+	TIPOS_CONTRATO,
+	vigenciaContrato,
+} from "@/features/contratos/domain/contrato";
 import { formatearMoneda } from "@/lib/dinero";
 import { AccionesFila } from "@/shared/components/AccionesFila";
 import { DataTable } from "@/shared/components/DataTable";
@@ -26,6 +31,7 @@ import {
 	ETIQUETA_TIPO_VALORIZACION,
 	formatearPeriodo,
 } from "./domain/valorizacion";
+import { ContratosPorVencer } from "./ui/ContratosPorVencer";
 import { EstadoValorizacionPill } from "./ui/EstadoValorizacionPill";
 
 interface FilaValorizacion {
@@ -74,6 +80,13 @@ export function ValorizacionesPage() {
 			};
 		});
 	});
+
+	const [hoy] = useState(hoyIso);
+	const porVencer = useLiveQuery(async () =>
+		(await contratoRepository.listar())
+			.filter((contrato) => vigenciaContrato(contrato, hoy) === "POR_VENCER")
+			.sort((a, b) => a.fechaFin.localeCompare(b.fechaFin)),
+	);
 
 	const abrir = (id: string) => void navigate(`/valorizaciones/${id}`);
 
@@ -205,6 +218,7 @@ export function ValorizacionesPage() {
 				description="Borradores en curso y valorizaciones emitidas, por periodo."
 				actions={<NuevaValorizacionButton />}
 			/>
+			<ContratosPorVencer contratos={porVencer ?? []} hoy={hoy} />
 			{filas === undefined ? (
 				<Skeleton aria-label="Cargando" className="h-72 w-full rounded-xl" />
 			) : filas.length === 0 ? (

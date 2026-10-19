@@ -15,8 +15,19 @@ import { contratoDatos, equipoDelContrato } from "../contratos/fixtures";
 
 const HOY = "2026-09-20";
 
-async function valorizar(contratoId: string, periodo: string, horas: string, fecha: string) {
-	const borrador = await valorizacionService.crearBorrador({ contratoId, periodo }, "ana@hm.pe");
+async function valorizar(
+	contratoId: string,
+	periodo: string,
+	horas: string,
+	fecha: string,
+	// Día en que se creó el borrador: el contrato debía estar vigente.
+	hoy = HOY,
+) {
+	const borrador = await valorizacionService.crearBorrador(
+		{ contratoId, periodo },
+		"ana@hm.pe",
+		hoy,
+	);
 	const [fila] = (await valorizacionService.obtenerPlanilla(borrador.id))?.filas ?? [];
 	await valorizacionService.actualizarCantidad(
 		borrador.id,
@@ -49,9 +60,13 @@ beforeEach(async () => {
 	await clienteService.cambiarEstado(huise, "INACTIVO", "ana@hm.pe");
 	const excavadoraId = (await equipoService.crear(excavadora(andina), "ana@hm.pe")).id;
 	const volqueteId = (await equipoService.crear(volquete(andina), "ana@hm.pe")).id;
-	// OSUR: 150 h × USD 47.00 = USD 7,050.00, vigente.
-	osur = (await contratoService.crear(contratoDatos(andina, excavadoraId), "ana@hm.pe")).contrato
-		.id;
+	// OSUR: 150 h × USD 47.00 = USD 7,050.00, vigente desde julio.
+	osur = (
+		await contratoService.crear(
+			contratoDatos(andina, excavadoraId, { fechaInicio: "2026-07-01" }),
+			"ana@hm.pe",
+		)
+	).contrato.id;
 	// Contrato vencido con el volquete: no cuenta como activo ni su equipo como en obra.
 	antiguo = (
 		await contratoService.crear(
@@ -83,7 +98,7 @@ describe("resumenInicio", () => {
 		await valorizar(osur, "2026-07", "114.4", "2026-08-03");
 		await valorizar(osur, "2026-08", "53.23", "2026-09-17");
 		// 92 h de 100 en el contrato antiguo → 92 %, por agotarse.
-		await valorizar(antiguo, "2025-12", "92", "2026-09-05");
+		await valorizar(antiguo, "2025-12", "92", "2026-09-05", "2025-12-20");
 
 		const datos = await resumen();
 
@@ -106,7 +121,11 @@ describe("resumenInicio", () => {
 	it("lista los borradores pendientes y no cuenta las anuladas como valorizado", async () => {
 		const emitida = await valorizar(osur, "2026-07", "100", "2026-09-10");
 		await valorizacionService.anular(emitida.id, "Horas mal cargadas", "ana@hm.pe", "ADMIN");
-		await valorizacionService.crearBorrador({ contratoId: osur, periodo: "2026-09" }, "ana@hm.pe");
+		await valorizacionService.crearBorrador(
+			{ contratoId: osur, periodo: "2026-09" },
+			"ana@hm.pe",
+			HOY,
+		);
 
 		const datos = await resumen();
 

@@ -1,9 +1,14 @@
 import {
 	ContratoDatosSchema,
+	diasParaVencer,
 	estadoContrato,
+	esVigente,
 	montoContractual,
 	montosConIgv,
 	parcialEquipo,
+	periodoEnVigencia,
+	textoVencimiento,
+	vigenciaContrato,
 } from "../../../src/features/contratos/domain/contrato";
 import {
 	ContratoFormSchema,
@@ -33,6 +38,44 @@ describe("cálculos del contrato", () => {
 	it("el contrato vence cuando pasa la fecha de fin", () => {
 		expect(estadoContrato({ fechaFin: "2026-12-31" }, "2026-12-31")).toBe("ACTIVO");
 		expect(estadoContrato({ fechaFin: "2026-12-31" }, "2027-01-01")).toBe("VENCIDO");
+	});
+});
+
+describe("vigencia del contrato", () => {
+	const CONTRATO = { fechaInicio: "2026-08-01", fechaFin: "2026-12-31" };
+
+	it("está por iniciar, vigente, por vencer la última semana o vencido", () => {
+		expect(vigenciaContrato(CONTRATO, "2026-07-31")).toBe("POR_INICIAR");
+		expect(vigenciaContrato(CONTRATO, "2026-08-01")).toBe("VIGENTE");
+		expect(vigenciaContrato(CONTRATO, "2026-12-23")).toBe("VIGENTE");
+		expect(vigenciaContrato(CONTRATO, "2026-12-24")).toBe("POR_VENCER");
+		expect(vigenciaContrato(CONTRATO, "2026-12-31")).toBe("POR_VENCER");
+		expect(vigenciaContrato(CONTRATO, "2027-01-01")).toBe("VENCIDO");
+	});
+
+	it("solo admite valorizaciones mientras está vigente", () => {
+		expect(esVigente(CONTRATO, "2026-07-31")).toBe(false);
+		expect(esVigente(CONTRATO, "2026-12-31")).toBe(true);
+		expect(esVigente(CONTRATO, "2027-01-01")).toBe(false);
+	});
+
+	it("cuenta los días que faltan, también entre meses y años", () => {
+		expect(diasParaVencer(CONTRATO, "2026-12-31")).toBe(0);
+		expect(diasParaVencer(CONTRATO, "2026-12-24")).toBe(7);
+		expect(diasParaVencer({ fechaFin: "2026-03-02" }, "2026-02-27")).toBe(3);
+		expect(diasParaVencer(CONTRATO, "2027-01-02")).toBe(-2);
+		expect(textoVencimiento(0)).toBe("Vence hoy");
+		expect(textoVencimiento(1)).toBe("Vence mañana");
+		expect(textoVencimiento(5)).toBe("Vence en 5 días");
+	});
+
+	it("el periodo debe caer dentro de la vigencia", () => {
+		const aMitadDeMes = { fechaInicio: "2026-08-15", fechaFin: "2026-12-10" };
+
+		expect(periodoEnVigencia(aMitadDeMes, "2026-07")).toBe(false);
+		expect(periodoEnVigencia(aMitadDeMes, "2026-08")).toBe(true);
+		expect(periodoEnVigencia(aMitadDeMes, "2026-12")).toBe(true);
+		expect(periodoEnVigencia(aMitadDeMes, "2027-01")).toBe(false);
 	});
 });
 

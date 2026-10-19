@@ -10,7 +10,7 @@ import {
 	valorizacionService,
 } from "../../../src/features/valorizaciones/application/valorizacionService.instance";
 import { seleccionar } from "../../support/campos";
-import { CLIENTE, excavadora } from "../../support/fixtures";
+import { CLIENTE, excavadora, HOY } from "../../support/fixtures";
 import { renderRoute, signInAs } from "../../support/renderRoute";
 import { contratoDatos } from "../contratos/fixtures";
 
@@ -30,8 +30,12 @@ beforeEach(async () => {
 	signInAs();
 	const clienteId = (await clienteService.crear(CLIENTE, "ana@hm.pe")).id;
 	const equipoId = (await equipoService.crear(excavadora(clienteId), "ana@hm.pe")).id;
-	contratoId = (await contratoService.crear(contratoDatos(clienteId, equipoId), "ana@hm.pe"))
-		.contrato.id;
+	contratoId = (
+		await contratoService.crear(
+			contratoDatos(clienteId, equipoId, { fechaInicio: "2026-07-01" }),
+			"ana@hm.pe",
+		)
+	).contrato.id;
 });
 
 // Julio emitido con 114.40 h, como el acumulado anterior de la hoja VALORIZACION del xlsm.
@@ -39,6 +43,7 @@ async function julioEmitido() {
 	const julio = await valorizacionService.crearBorrador(
 		{ contratoId, periodo: "2026-07" },
 		"ana@hm.pe",
+		HOY,
 	);
 	const [fila] = (await valorizacionService.obtenerPlanilla(julio.id))?.filas ?? [];
 	await valorizacionService.actualizarCantidad(
@@ -82,6 +87,7 @@ test("calcula la planilla del xlsm al escribir las horas, avisa el exceso y lo g
 	const agosto = await valorizacionService.crearBorrador(
 		{ contratoId, periodo: "2026-08" },
 		"ana@hm.pe",
+		HOY,
 	);
 	renderRoute(`/valorizaciones/${agosto.id}`);
 
@@ -109,6 +115,7 @@ test("marca las horas inválidas y no las guarda", async () => {
 	const borrador = await valorizacionService.crearBorrador(
 		{ contratoId, periodo: "2026-08" },
 		"ana@hm.pe",
+		HOY,
 	);
 	renderRoute(`/valorizaciones/${borrador.id}`);
 
@@ -123,7 +130,7 @@ test("marca las horas inválidas y no las guarda", async () => {
 
 test("el listado muestra el borrador y lo descarta desde la planilla", async () => {
 	const user = userEvent.setup();
-	await valorizacionService.crearBorrador({ contratoId, periodo: "2026-08" }, "ana@hm.pe");
+	await valorizacionService.crearBorrador({ contratoId, periodo: "2026-08" }, "ana@hm.pe", HOY);
 	renderRoute("/valorizaciones");
 
 	const tabla = await screen.findByRole("table");
@@ -145,6 +152,7 @@ async function agostoEmitido() {
 	const agosto = await valorizacionService.crearBorrador(
 		{ contratoId, periodo: "2026-08" },
 		"ana@hm.pe",
+		HOY,
 	);
 	const [fila] = (await valorizacionService.obtenerPlanilla(agosto.id))?.filas ?? [];
 	await valorizacionService.actualizarCantidad(
@@ -163,6 +171,7 @@ test("emite con confirmación, avisa el exceso y deja la planilla en solo lectur
 	const agosto = await valorizacionService.crearBorrador(
 		{ contratoId, periodo: "2026-08" },
 		"ana@hm.pe",
+		HOY,
 	);
 	renderRoute(`/valorizaciones/${agosto.id}`);
 
@@ -189,6 +198,7 @@ test("no emite si no hay horas", async () => {
 	const borrador = await valorizacionService.crearBorrador(
 		{ contratoId, periodo: "2026-08" },
 		"ana@hm.pe",
+		HOY,
 	);
 	renderRoute(`/valorizaciones/${borrador.id}`);
 
@@ -268,6 +278,7 @@ test("al emitir y descargar en la misma pantalla, el PDF lleva el número asigna
 	const borrador = await valorizacionService.crearBorrador(
 		{ contratoId, periodo: "2026-08" },
 		"ana@hm.pe",
+		HOY,
 	);
 	renderRoute(`/valorizaciones/${borrador.id}`);
 
@@ -288,8 +299,8 @@ test("al emitir y descargar en la misma pantalla, el PDF lleva el número asigna
 
 test("el buscador del historial encuentra el periodo como se ve («agosto»)", async () => {
 	const user = userEvent.setup();
-	await valorizacionService.crearBorrador({ contratoId, periodo: "2026-08" }, "ana@hm.pe");
-	await valorizacionService.crearBorrador({ contratoId, periodo: "2026-09" }, "ana@hm.pe");
+	await valorizacionService.crearBorrador({ contratoId, periodo: "2026-08" }, "ana@hm.pe", HOY);
+	await valorizacionService.crearBorrador({ contratoId, periodo: "2026-09" }, "ana@hm.pe", HOY);
 	renderRoute("/valorizaciones");
 
 	const tabla = await screen.findByRole("table");

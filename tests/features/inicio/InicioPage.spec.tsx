@@ -5,7 +5,7 @@ import { clienteService } from "../../../src/features/clientes/application/terce
 import { contratoService } from "../../../src/features/contratos/application/contratoService.instance";
 import { equipoService } from "../../../src/features/equipos/application/equipoService.instance";
 import { valorizacionService } from "../../../src/features/valorizaciones/application/valorizacionService.instance";
-import { CLIENTE, excavadora } from "../../support/fixtures";
+import { CLIENTE, excavadora, HOY } from "../../support/fixtures";
 import { renderRoute, signInAs } from "../../support/renderRoute";
 import { contratoDatos } from "../contratos/fixtures";
 
@@ -34,6 +34,7 @@ test("muestra lo valorizado del mes, el contrato excedido, el borrador y la últ
 	const borrador = await valorizacionService.crearBorrador(
 		{ contratoId: contrato.id, periodo: "2026-08" },
 		"ana@hm.pe",
+		HOY,
 	);
 	const [fila] = (await valorizacionService.obtenerPlanilla(borrador.id))?.filas ?? [];
 	await valorizacionService.actualizarCantidad(
@@ -46,6 +47,7 @@ test("muestra lo valorizado del mes, el contrato excedido, el borrador y la últ
 	await valorizacionService.crearBorrador(
 		{ contratoId: contrato.id, periodo: "2026-09" },
 		"ana@hm.pe",
+		HOY,
 	);
 	renderRoute("/");
 

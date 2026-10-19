@@ -2,6 +2,7 @@ import Big from "big.js";
 import { z } from "zod";
 
 import { BaseSchema } from "@/data/base";
+import { formatearFechaNumerica } from "@/lib/fechas";
 import { siguienteCodigo } from "@/shared/domain/codigo";
 
 // Contrato según VALORIZACIONES.txt: cliente, proyecto, vigencia y, por cada equipo,
@@ -172,6 +173,70 @@ export function montosConIgv(
 // El estado no se elige: el contrato vence cuando pasa su fecha de fin.
 export function estadoContrato(contrato: Pick<Contrato, "fechaFin">, hoy: string): EstadoContrato {
 	return contrato.fechaFin < hoy ? "VENCIDO" : "ACTIVO";
+}
+
+// Días antes del fin en que se avisa que el contrato está por vencer.
+export const DIAS_AVISO_VENCIMIENTO = 7;
+
+// POR_INICIAR y VENCIDO no admiten valorizaciones nuevas. POR_VENCER sí, pero con aviso.
+export type VigenciaContrato = "POR_INICIAR" | "VIGENTE" | "POR_VENCER" | "VENCIDO";
+
+// Días de calendario entre dos fechas "YYYY-MM-DD" (0 si son el mismo día).
+export function diasEntre(desde: string, hasta: string): number {
+	return Math.round((Date.parse(hasta) - Date.parse(desde)) / 86_400_000);
+}
+
+// Días que le quedan al contrato: 0 si vence hoy, negativo si ya venció.
+export function diasParaVencer(contrato: Pick<Contrato, "fechaFin">, hoy: string): number {
+	return diasEntre(hoy, contrato.fechaFin);
+}
+
+export function vigenciaContrato(
+	contrato: Pick<Contrato, "fechaInicio" | "fechaFin">,
+	hoy: string,
+): VigenciaContrato {
+	if (hoy < contrato.fechaInicio) {
+		return "POR_INICIAR";
+	}
+	const dias = diasParaVencer(contrato, hoy);
+	if (dias < 0) {
+		return "VENCIDO";
+	}
+
+	return dias <= DIAS_AVISO_VENCIMIENTO ? "POR_VENCER" : "VIGENTE";
+}
+
+export function esVigente(
+	contrato: Pick<Contrato, "fechaInicio" | "fechaFin">,
+	hoy: string,
+): boolean {
+	const vigencia = vigenciaContrato(contrato, hoy);
+
+	return vigencia === "VIGENTE" || vigencia === "POR_VENCER";
+}
+
+// "Vence hoy", "Vence mañana", "Vence en 5 días".
+export function textoVencimiento(dias: number): string {
+	if (dias === 0) {
+		return "Vence hoy";
+	}
+
+	return dias === 1 ? "Vence mañana" : `Vence en ${dias} días`;
+}
+
+// El periodo "YYYY-MM" debe caer, al menos en parte, dentro de la vigencia del contrato.
+export function periodoEnVigencia(
+	contrato: Pick<Contrato, "fechaInicio" | "fechaFin">,
+	periodo: string,
+): boolean {
+	return periodo >= contrato.fechaInicio.slice(0, 7) && periodo <= contrato.fechaFin.slice(0, 7);
+}
+
+// "01/08/2026 al 31/12/2026".
+export function formatearRangoVigencia(
+	contrato: Pick<Contrato, "fechaInicio" | "fechaFin">,
+): string {
+	return `${formatearFechaNumerica(contrato.fechaInicio)} al ${formatearFechaNumerica(contrato.fechaFin)}`;
 }
 
 export function hoyIso(): string {

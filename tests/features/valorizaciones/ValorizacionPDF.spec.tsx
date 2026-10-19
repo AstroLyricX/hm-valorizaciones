@@ -12,7 +12,7 @@ import { calcularPlanilla } from "../../../src/features/valorizaciones/applicati
 import { valorizacionService } from "../../../src/features/valorizaciones/application/valorizacionService.instance";
 import { nombreArchivoPdf } from "../../../src/features/valorizaciones/pdf/datosPdf";
 import { ValorizacionPDF } from "../../../src/features/valorizaciones/pdf/ValorizacionPDF";
-import { CLIENTE, excavadora, HUISE } from "../../support/fixtures";
+import { CLIENTE, excavadora, HOY, HUISE } from "../../support/fixtures";
 import { contratoDatos } from "../contratos/fixtures";
 
 // El PDF real se genera en el navegador (Cypress lo descarga). Aquí las primitivas de
@@ -55,6 +55,7 @@ async function planillaEmitida() {
 	const borrador = await valorizacionService.crearBorrador(
 		{ contratoId, periodo: "2026-08" },
 		"ana@hm.pe",
+		HOY,
 	);
 	const [fila] = (await valorizacionService.obtenerPlanilla(borrador.id))?.filas ?? [];
 	await valorizacionService.actualizarCantidad(
@@ -108,6 +109,7 @@ test("un borrador lleva marca de agua y su periodo en el nombre del archivo", as
 	const borrador = await valorizacionService.crearBorrador(
 		{ contratoId, periodo: "2026-08" },
 		"ana@hm.pe",
+		HOY,
 	);
 	const planilla = await valorizacionService.obtenerPlanilla(borrador.id);
 	if (!planilla) {
@@ -141,6 +143,7 @@ test("en una valorización de recepción H&M es el contratante y el proveedor co
 	const borrador = await valorizacionService.crearBorrador(
 		{ contratoId: contrato.id, periodo: "2026-08" },
 		"ana@hm.pe",
+		HOY,
 	);
 	const [fila] = (await valorizacionService.obtenerPlanilla(borrador.id))?.filas ?? [];
 	await valorizacionService.actualizarCantidad(
