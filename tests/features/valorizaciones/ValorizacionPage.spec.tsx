@@ -81,7 +81,7 @@ test("pide el contrato antes de continuar", async () => {
 	expect(await db.valorizaciones.count()).toBe(0);
 });
 
-test("calcula la planilla del xlsm al escribir las horas, avisa el exceso y lo guarda solo", async () => {
+test("calcula la planilla del xlsm al escribir las horas, avisa si no llega al mínimo y lo guarda solo", async () => {
 	const user = userEvent.setup();
 	await julioEmitido();
 	const agosto = await valorizacionService.crearBorrador(
@@ -98,7 +98,9 @@ test("calcula la planilla del xlsm al escribir las horas, avisa el exceso y lo g
 	const planilla = screen.getByRole("region", { name: "Planilla de medición" });
 	expect(within(planilla).getAllByText("USD 2,501.81").length).toBeGreaterThan(0);
 	expect(within(planilla).getAllByText("USD 2,952.14").length).toBeGreaterThan(0);
-	expect(screen.getByRole("alert")).toHaveTextContent("167.63 h de 150.00 h");
+	expect(screen.getByRole("alert")).toHaveTextContent("Menos horas que las horas mínimas");
+	expect(screen.getByRole("alert")).toHaveTextContent("53.23 h de 150.00 h (faltan 96.77 h)");
+	expect(screen.getAllByText("Faltan 96.77 h para el mínimo").length).toBeGreaterThan(0);
 	const resumen = screen.getByRole("region", { name: "Resumen de la valorización" });
 	expect(resumen).toHaveTextContent("USD -828.61");
 	expect(resumen).toHaveTextContent("111.75 %");
@@ -169,6 +171,25 @@ test("no emite con un ítem adicional incompleto", async () => {
 	expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
 });
 
+test("al llegar o pasar las horas mínimas no hay aviso", async () => {
+	const user = userEvent.setup();
+	const agosto = await valorizacionService.crearBorrador(
+		{ contratoId, periodo: "2026-08" },
+		"ana@hm.pe",
+		HOY,
+	);
+	renderRoute(`/valorizaciones/${agosto.id}`);
+
+	const [horas] = await screen.findAllByLabelText("Horas del periodo del ítem 1");
+	expect(screen.getByRole("alert")).toHaveTextContent("0.00 h de 150.00 h (faltan 150.00 h)");
+
+	await user.clear(horas);
+	await user.type(horas, "160");
+
+	expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+	expect(screen.queryByText(/para el mínimo/)).not.toBeInTheDocument();
+});
+
 test("marca las horas inválidas y no las guarda", async () => {
 	const user = userEvent.setup();
 	const borrador = await valorizacionService.crearBorrador(
@@ -224,7 +245,7 @@ async function agostoEmitido() {
 	return valorizacionService.emitir(agosto.id, "ana@hm.pe", "2026-09-17");
 }
 
-test("emite con confirmación, avisa el exceso y deja la planilla en solo lectura", async () => {
+test("emite con confirmación, avisa las horas bajo el mínimo y deja la planilla en solo lectura", async () => {
 	const user = userEvent.setup();
 	await julioEmitido();
 	const agosto = await valorizacionService.crearBorrador(
@@ -239,7 +260,7 @@ test("emite con confirmación, avisa el exceso y deja la planilla en solo lectur
 	await user.type(horas, "53.23");
 	await user.click(screen.getByRole("button", { name: "Emitir valorización" }));
 	const confirmacion = await screen.findByRole("alertdialog");
-	expect(confirmacion).toHaveTextContent("un equipo supera las horas contratadas");
+	expect(confirmacion).toHaveTextContent("un equipo tiene menos horas que las horas mínimas");
 	expect(confirmacion).toHaveTextContent("USD 2,952.14");
 	await user.click(within(confirmacion).getByRole("button", { name: "Emitir" }));
 

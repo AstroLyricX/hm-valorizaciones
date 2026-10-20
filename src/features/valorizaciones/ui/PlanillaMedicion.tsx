@@ -169,17 +169,18 @@ export function PlanillaMedicion(props: PropsPlanilla) {
 					<tbody>
 						{filas.map((fila, indice) => {
 							const item = calculo.items[indice];
-							const excede = item.exceso !== "0";
+							// Solo mientras se llenan las horas: en una emitida ya no hace falta.
+							const bajoMinimo = editable && item.faltante !== "0";
 
 							return (
 								<tr key={fila.contratoEquipoId} className="align-top">
 									<td className={cn(celda, "text-center")}>{indice + 1}</td>
 									<td className={cn(celda, "font-medium text-navy-900")}>
 										{fila.descripcion}
-										{excede && (
+										{bajoMinimo && (
 											<span className="mt-1 flex items-center gap-1 text-xs font-medium text-amber-700">
 												<TriangleAlert className="size-3.5" aria-hidden="true" />
-												Excede en {horas(item.exceso)} h
+												Faltan {horas(item.faltante)} h para el mínimo
 											</span>
 										)}
 									</td>
@@ -198,9 +199,7 @@ export function PlanillaMedicion(props: PropsPlanilla) {
 											editable={editable}
 										/>
 									</td>
-									<td className={cn(celda, numero, excede && "font-semibold text-amber-700")}>
-										{horas(item.cantidadAcumulada)}
-									</td>
+									<td className={cn(celda, numero)}>{horas(item.cantidadAcumulada)}</td>
 									<td className={cn(celda, numero)}>{formatearMonto(item.importeAnterior)}</td>
 									<td className={cn(celda, numero, "bg-brand-50/50 font-medium text-navy-900")}>
 										{formatearMonto(item.importeActual)}
@@ -230,7 +229,7 @@ export function PlanillaMedicion(props: PropsPlanilla) {
 				<ul className="divide-y divide-navy-100">
 					{filas.map((fila, indice) => {
 						const item = calculo.items[indice];
-						const excede = item.exceso !== "0";
+						const bajoMinimo = editable && item.faltante !== "0";
 
 						return (
 							<li key={fila.contratoEquipoId} className="flex flex-col gap-3 px-4 py-4">
@@ -239,7 +238,7 @@ export function PlanillaMedicion(props: PropsPlanilla) {
 										{indice + 1}. {fila.descripcion}
 									</span>
 									<span className="text-[13px] text-muted-foreground tabular-nums">
-										{horas(fila.cantidadContractual)} h ×{" "}
+										Mínimo {horas(fila.cantidadContractual)} h ×{" "}
 										{formatearMoneda(fila.precioUnitario, moneda)}
 									</span>
 								</div>
@@ -263,20 +262,13 @@ export function PlanillaMedicion(props: PropsPlanilla) {
 									</div>
 									<div className="flex flex-col gap-1">
 										<span className="text-muted-foreground">Acumulado</span>
-										<span
-											className={cn(
-												"flex h-9 items-center",
-												excede && "font-semibold text-amber-700",
-											)}
-										>
-											{horas(item.cantidadAcumulada)} h
-										</span>
+										<span className="flex h-9 items-center">{horas(item.cantidadAcumulada)} h</span>
 									</div>
 								</div>
-								{excede && (
+								{bajoMinimo && (
 									<span className="flex items-center gap-1 text-xs font-medium text-amber-700">
 										<TriangleAlert className="size-3.5" aria-hidden="true" />
-										Excede en {horas(item.exceso)} h
+										Faltan {horas(item.faltante)} h para el mínimo
 									</span>
 								)}
 								<span className="flex justify-between text-[13px]">

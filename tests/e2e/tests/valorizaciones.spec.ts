@@ -8,7 +8,7 @@ describe("Valorizaciones", () => {
 		registrarContratoDelXlsm();
 	});
 
-	it("crea un borrador, avisa el exceso, conserva lo escrito y lo emite", () => {
+	it("crea un borrador, avisa las horas bajo el mínimo, conserva lo escrito y lo emite", () => {
 		cy.visit("/valorizaciones/nueva");
 		cy.findByLabelText(/Contrato/).click();
 		cy.findByRole("option", { name: /CTR-001/ }).click();
@@ -20,20 +20,23 @@ describe("Valorizaciones", () => {
 
 		cy.findByRole("heading", { level: 1, name: "Valorización · Agosto 2026" }).should("exist");
 		cy.findAllByLabelText("Horas del periodo del ítem 1").filter(":visible").clear();
-		cy.findAllByLabelText("Horas del periodo del ítem 1").filter(":visible").type("160");
-		cy.findByRole("alert").should("contain.text", "160.00 h de 150.00 h");
+		cy.findAllByLabelText("Horas del periodo del ítem 1").filter(":visible").type("120");
+		cy.findByRole("alert").should("contain.text", "120.00 h de 150.00 h (faltan 30.00 h)");
 		cy.findByRole("region", { name: "Planilla de medición" }).should(
 			"contain.text",
-			"USD 7,520.00",
+			"USD 5,640.00",
 		);
 		cy.findByText("Guardado en este equipo").should("exist");
 
 		cy.reload();
 		cy.findAllByLabelText("Horas del periodo del ítem 1")
 			.filter(":visible")
-			.should("have.value", "160");
+			.should("have.value", "120");
 		cy.findByRole("button", { name: "Emitir valorización" }).click();
-		cy.findByRole("alertdialog").should("contain.text", "un equipo supera las horas contratadas");
+		cy.findByRole("alertdialog").should(
+			"contain.text",
+			"un equipo tiene menos horas que las horas mínimas",
+		);
 		cy.findByRole("alertdialog").findByRole("button", { name: "Emitir" }).click();
 		cy.findByText(`Valorización 0001-${new Date().getFullYear()} emitida.`).should("exist");
 		cy.findAllByLabelText("Horas del periodo del ítem 1").filter(":visible").should("be.disabled");
@@ -47,6 +50,6 @@ describe("Valorizaciones", () => {
 
 		cy.get("[data-sidebar=sidebar]").findByRole("link", { name: "Valorizaciones" }).click();
 		cy.findByRole("table").findByText("Agosto 2026").should("exist");
-		cy.findByRole("table").findByText("USD 8,873.60").should("exist");
+		cy.findByRole("table").findByText("USD 6,655.20").should("exist");
 	});
 });

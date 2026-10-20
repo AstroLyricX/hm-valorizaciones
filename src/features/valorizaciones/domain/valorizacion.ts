@@ -206,8 +206,8 @@ export interface ItemCalculado {
 	importeAnterior: number;
 	importeActual: number;
 	importeAcumulado: number;
-	// Horas por encima de lo contratado ("0" si no excede).
-	exceso: string;
+	// Horas que faltan en el periodo para llegar a las horas mínimas del contrato ("0" si llega).
+	faltante: string;
 }
 
 export interface ColumnaResumen {
@@ -235,7 +235,8 @@ export interface ValorizacionCalculada {
 	saldoContractual: number;
 	// Acumulado sobre el monto contractual, en %, con 2 decimales.
 	avancePct: number;
-	excede: boolean;
+	// Algún equipo tiene en el periodo menos horas que sus horas mínimas.
+	bajoMinimo: boolean;
 }
 
 export interface ParametrosCalculo {
@@ -295,7 +296,7 @@ export function calcularValorizacion(
 			importeAnterior,
 			importeActual,
 			importeAcumulado: importeAnterior + importeActual,
-			exceso: acumulada.gt(contractual) ? acumulada.minus(contractual).toString() : "0",
+			faltante: actual.lt(contractual) ? contractual.minus(actual).toString() : "0",
 		};
 	});
 
@@ -332,7 +333,7 @@ export function calcularValorizacion(
 						.div(contractual.subtotal1)
 						.round(2, Big.roundHalfUp)
 						.toNumber(),
-		excede: calculados.some((item) => item.exceso !== "0"),
+		bajoMinimo: calculados.some((item) => item.faltante !== "0"),
 	};
 }
 

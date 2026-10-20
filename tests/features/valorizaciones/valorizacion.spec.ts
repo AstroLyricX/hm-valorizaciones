@@ -25,7 +25,8 @@ describe("calcularValorizacion", () => {
 			importeAnterior: 537680,
 			importeActual: 250181,
 			importeAcumulado: 787861,
-			exceso: "17.63",
+			// 53.23 h en el periodo de 150 h mínimas.
+			faltante: "96.77",
 		});
 		expect(calculo.actual).toEqual({
 			subtotal1: 250181,
@@ -44,7 +45,19 @@ describe("calcularValorizacion", () => {
 		// El xlsm mostraba 2,501.81 (lo del periodo); el saldo real es contrato - acumulado.
 		expect(calculo.saldoContractual).toBe(-82861);
 		expect(calculo.avancePct).toBe(111.75);
-		expect(calculo.excede).toBe(true);
+		expect(calculo.bajoMinimo).toBe(true);
+	});
+
+	it("avisa solo si las horas del periodo no llegan a las horas mínimas", () => {
+		const llega = calcularValorizacion([{ ...EXCAVADORA, cantidadActual: "150" }], SIN_RECARGOS);
+		const supera = calcularValorizacion([{ ...EXCAVADORA, cantidadActual: "160" }], SIN_RECARGOS);
+		const sinHoras = calcularValorizacion([{ ...EXCAVADORA, cantidadActual: "0" }], SIN_RECARGOS);
+
+		expect(llega.items[0].faltante).toBe("0");
+		expect(llega.bajoMinimo).toBe(false);
+		// Pasar las horas mínimas ya no es una alerta.
+		expect(supera.bajoMinimo).toBe(false);
+		expect(sinHoras.items[0].faltante).toBe("150");
 	});
 
 	it("aplica gastos generales y utilidad antes del IGV, y retiene el fondo de garantía", () => {
@@ -63,7 +76,7 @@ describe("calcularValorizacion", () => {
 		});
 		expect(calculo.fondoGarantia).toBe(27025);
 		expect(calculo.netoPagable).toBe(637790 - 27025);
-		expect(calculo.excede).toBe(false);
+		expect(calculo.items[0].faltante).toBe("50");
 	});
 
 	it("suma varios equipos y toma como 0 una cantidad que aún se está escribiendo", () => {
@@ -89,7 +102,7 @@ describe("calcularValorizacion", () => {
 		expect(calcularValorizacion([], SIN_RECARGOS)).toMatchObject({
 			avancePct: 0,
 			saldoContractual: 0,
-			excede: false,
+			bajoMinimo: false,
 		});
 	});
 });
@@ -122,7 +135,7 @@ describe("ítems adicionales", () => {
 		});
 
 		expect(calculo.adicionales).toEqual([0]);
-		expect(calculo.excede).toBe(false);
+		expect(calculo.bajoMinimo).toBe(false);
 	});
 });
 

@@ -233,7 +233,8 @@ function Editor({ planilla }: { planilla: Planilla }) {
 		},
 		calculo,
 	};
-	const excedidos = filas.filter((_, indice) => calculo.items[indice].exceso !== "0");
+	// Equipos con menos horas en el periodo que sus horas mínimas del contrato.
+	const bajoMinimo = filas.filter((_, indice) => calculo.items[indice].faltante !== "0");
 
 	const cambiarAdicionales = (lista: ItemAdicional[]) => {
 		setAdicionales(lista);
@@ -259,7 +260,7 @@ function Editor({ planilla }: { planilla: Planilla }) {
 		{
 			label: "Avance",
 			value: `${calculo.avancePct.toLocaleString("es-PE")} %`,
-			alerta: calculo.excede,
+			alerta: calculo.avancePct > 100,
 		},
 	];
 
@@ -404,23 +405,22 @@ function Editor({ planilla }: { planilla: Planilla }) {
 
 			{editable && <AvisoVencimiento contrato={contrato} hoy={hoyIso()} />}
 
-			{excedidos.length > 0 && (
+			{editable && bajoMinimo.length > 0 && (
 				<div
 					role="alert"
 					className="flex gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
 				>
 					<TriangleAlert className="mt-0.5 size-5 shrink-0 text-amber-600" aria-hidden="true" />
 					<div className="flex flex-col gap-0.5">
-						<span className="font-semibold">Lo valorizado supera las horas contratadas</span>
+						<span className="font-semibold">Menos horas que las horas mínimas</span>
 						<span>
-							{excedidos
+							{bajoMinimo
 								.map((fila) => {
 									const indice = filas.indexOf(fila);
 
-									return `${fila.descripcion}: ${horas(calculo.items[indice].cantidadAcumulada)} h de ${horas(fila.cantidadContractual)} h`;
+									return `${fila.descripcion}: ${horas(cantidades[fila.contratoEquipoId] ?? "0")} h de ${horas(fila.cantidadContractual)} h (faltan ${horas(calculo.items[indice].faltante)} h)`;
 								})
 								.join(" · ")}
-							. Revisa las horas antes de emitir.
 						</span>
 					</div>
 				</div>
@@ -558,14 +558,14 @@ function Editor({ planilla }: { planilla: Planilla }) {
 					})();
 				}}
 			>
-				{excedidos.length > 0 && (
+				{bajoMinimo.length > 0 && (
 					<p className="flex gap-2 rounded-lg bg-amber-50 px-3 py-2.5 text-sm text-amber-900">
 						<TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-600" aria-hidden="true" />
 						Atención:{" "}
-						{excedidos.length === 1
-							? "un equipo supera"
-							: `${excedidos.length} equipos superan`}{" "}
-						las horas contratadas.
+						{bajoMinimo.length === 1
+							? "un equipo tiene"
+							: `${bajoMinimo.length} equipos tienen`}{" "}
+						menos horas que las horas mínimas.
 					</p>
 				)}
 			</ConfirmDialog>
