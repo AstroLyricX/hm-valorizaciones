@@ -83,7 +83,8 @@ test("el PDF tiene la cabecera, la planilla, el total en letras y las firmas del
 		/>,
 	);
 
-	expect(screen.getByText("VALORIZACIÓN DE EQUIPOS Y CANTERAS")).toBeInTheDocument();
+	expect(screen.getByText("VALORIZACIÓN DE EQUIPOS N.° 0001-2026")).toBeInTheDocument();
+	expect(screen.queryByText(/CANTERAS/)).not.toBeInTheDocument();
 	expect(screen.getByText("0001-2026")).toBeInTheDocument();
 	expect(screen.getByText("17/09/2026")).toBeInTheDocument();
 	expect(screen.getByText("AGOSTO 2026")).toBeInTheDocument();
@@ -124,6 +125,7 @@ test("un borrador lleva marca de agua y su periodo en el nombre del archivo", as
 	);
 
 	expect(screen.getAllByText("BORRADOR")).toHaveLength(2);
+	expect(screen.getByText("VALORIZACIÓN DE EQUIPOS")).toBeInTheDocument();
 	expect(nombreArchivoPdf(planilla)).toBe("VAL-BORRADOR-2026-08-CTR-001.pdf");
 });
 

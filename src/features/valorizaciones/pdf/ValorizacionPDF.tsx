@@ -183,7 +183,11 @@ export function ValorizacionPDF(datos: DatosPdf) {
 
 				<View fixed style={estilos.cabecera}>
 					<Image src={logo} style={estilos.logo} />
-					<Text style={estilos.titulo}>VALORIZACIÓN DE EQUIPOS Y CANTERAS</Text>
+					<Text style={estilos.titulo}>
+						{valorizacion.numero
+							? `VALORIZACIÓN DE EQUIPOS N.° ${valorizacion.numero}`
+							: "VALORIZACIÓN DE EQUIPOS"}
+					</Text>
 					<View style={estilos.cajaNumero}>
 						<View style={estilos.cajaFila}>
 							<Text style={estilos.cajaEtiqueta}>N.° VAL.</Text>
