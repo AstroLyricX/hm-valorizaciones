@@ -9,7 +9,7 @@ const EXCAVADORA = excavadora("cliente-1", { fabricante: "cat", placa: "exc-340"
 
 describe("EquipoDatosSchema", () => {
 	it("pasa a mayúsculas descripción, fabricante, modelo y placa", () => {
-		const datos = EquipoDatosSchema.parse(EXCAVADORA);
+		const datos = EquipoDatosSchema.parse({ ...EXCAVADORA, categoria: "LIVIANO" });
 
 		expect(datos).toMatchObject({
 			descripcion: "EXCAVADORA",
@@ -24,8 +24,15 @@ describe("EquipoDatosSchema", () => {
 		expect(EquipoDatosSchema.safeParse(EXCAVADORA).success).toBe(true);
 	});
 
-	it("exige placa, año, dueño y un estado conocido", () => {
-		expect(EquipoDatosSchema.safeParse({ ...EXCAVADORA, placa: "" }).success).toBe(false);
+	it("la placa solo aplica a los livianos: un pesado no la lleva", () => {
+		const liviano = { ...EXCAVADORA, categoria: "LIVIANO" as const };
+
+		expect(EquipoDatosSchema.safeParse({ ...liviano, placa: "" }).success).toBe(false);
+		expect(EquipoDatosSchema.safeParse({ ...EXCAVADORA, placa: "" }).success).toBe(true);
+		expect(EquipoDatosSchema.parse(EXCAVADORA).placa).toBe("");
+	});
+
+	it("exige año, dueño y un estado conocido", () => {
 		expect(EquipoDatosSchema.safeParse({ ...EXCAVADORA, anio: "1900" }).success).toBe(false);
 		expect(EquipoDatosSchema.safeParse({ ...EXCAVADORA, duenoId: "" }).success).toBe(false);
 		expect(EquipoDatosSchema.safeParse({ ...EXCAVADORA, estado: "OPERATIVO" }).success).toBe(false);

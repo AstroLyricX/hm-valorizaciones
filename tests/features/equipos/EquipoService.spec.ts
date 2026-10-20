@@ -77,13 +77,16 @@ describe("EquipoService", () => {
 		expect(propio.activoFijo).toBe("HM001");
 	});
 
-	it("no permite repetir la placa", async () => {
-		await service.crear(EXCAVADORA, "ana@hm.pe");
+	it("no permite repetir la placa de un liviano; los pesados no llevan placa", async () => {
+		await service.crear(VOLQUETE, "ana@hm.pe");
 
 		await expect(
-			service.crear({ ...VOLQUETE, placa: "EXC-340" }, "ana@hm.pe"),
+			service.crear({ ...VOLQUETE, modelo: "FH", placa: "abc-123" }, "ana@hm.pe"),
 		).rejects.toBeInstanceOf(PlacaDuplicadaError);
-		expect(await database.equipos.count()).toBe(1);
+		// Dos pesados sin placa no chocan.
+		await service.crear(EXCAVADORA, "ana@hm.pe");
+		await service.crear({ ...EXCAVADORA, modelo: "320" }, "ana@hm.pe");
+		expect(await database.equipos.count()).toBe(3);
 	});
 
 	it("cambia el estado conservando el activo fijo", async () => {

@@ -33,7 +33,7 @@ async function datosBasicos(user: ReturnType<typeof userEvent.setup>, formulario
 	await user.type(within(formulario).getByLabelText(/Descripción del equipo/), "Excavadora");
 	await user.type(within(formulario).getByLabelText(/Fabricante/), "Cat");
 	await user.type(within(formulario).getByLabelText(/^Modelo/), "340");
-	await user.type(within(formulario).getByLabelText(/Placa/), "exc-340");
+	// Pesado (por defecto): no lleva placa.
 	await user.type(within(formulario).getByLabelText(/Año/), "2019");
 	await user.type(within(formulario).getByLabelText(/Marca del motor/), "Cat");
 }
@@ -95,8 +95,8 @@ test("registra un equipo de un proveedor y lo muestra en la lista", async () => 
 	expect(await screen.findByText("Equipo HQA001 registrado.")).toBeInTheDocument();
 	const filas = (await screen.findAllByRole("rowgroup"))[1];
 	expect(within(filas).getByText("EXCAVADORA CAT 340")).toBeInTheDocument();
-	expect(within(filas).getByText("EXC-340")).toBeInTheDocument();
 	expect(within(filas).getByText("Por recibir")).toBeInTheDocument();
+	expect((await db.equipos.toArray())[0]).toMatchObject({ categoria: "PESADO", placa: "" });
 });
 
 test("marca los obligatorios y muestra sus errores a la vez", async () => {
@@ -106,11 +106,32 @@ test("marca los obligatorios y muestra sus errores a la vez", async () => {
 	const formulario = await abrirNuevo(user);
 	await user.click(within(formulario).getByRole("button", { name: "Guardar" }));
 
-	expect(await within(formulario).findByText("Ingresa la placa.")).toBeInTheDocument();
-	expect(within(formulario).getByText("Ingresa el fabricante.")).toBeInTheDocument();
-	expect(within(formulario).getByLabelText(/Placa/)).toBeRequired();
+	expect(await within(formulario).findByText("Ingresa el fabricante.")).toBeInTheDocument();
 	expect(within(formulario).getByLabelText(/Serie del equipo/)).not.toBeRequired();
 	expect(await db.equipos.count()).toBe(0);
+});
+
+test("la placa solo se pide en los equipos livianos", async () => {
+	const user = userEvent.setup();
+	renderRoute("/equipos");
+
+	const formulario = await abrirNuevo(user);
+	expect(within(formulario).queryByLabelText(/Placa/)).not.toBeInTheDocument();
+
+	await seleccionar(user, within(formulario).getByLabelText(/Categoría/), "Liviano");
+	expect(within(formulario).getByLabelText(/Placa/)).toBeRequired();
+	await user.click(within(formulario).getByRole("button", { name: "Guardar" }));
+	expect(await within(formulario).findByText("Ingresa la placa.")).toBeInTheDocument();
+
+	// Si vuelve a pesado, lo escrito en la placa no se guarda.
+	await user.type(within(formulario).getByLabelText(/Placa/), "abc-123");
+	await seleccionar(user, within(formulario).getByLabelText(/Categoría/), "Pesado");
+	expect(within(formulario).queryByLabelText(/Placa/)).not.toBeInTheDocument();
+	await datosBasicos(user, formulario);
+	await user.click(within(formulario).getByRole("button", { name: "Guardar" }));
+
+	expect(await screen.findByText("Equipo HM001 registrado.")).toBeInTheDocument();
+	expect((await db.equipos.toArray())[0]).toMatchObject({ categoria: "PESADO", placa: "" });
 });
 
 test("cambia el estado a falla mecánica y lo refleja en la lista", async () => {
@@ -178,11 +199,11 @@ test("un clic fuera del formulario no lo cierra ni pierde lo escrito", async () 
 	renderRoute("/equipos");
 
 	const formulario = await abrirNuevo(user);
-	await user.type(within(formulario).getByLabelText(/Placa/), "exc-340");
+	await user.type(within(formulario).getByLabelText(/^Modelo/), "340");
 	await user.click(document.body);
 
 	expect(screen.getByRole("dialog", { name: "Nuevo equipo" })).toBeInTheDocument();
-	expect(within(formulario).getByLabelText(/Placa/)).toHaveValue("exc-340");
+	expect(within(formulario).getByLabelText(/^Modelo/)).toHaveValue("340");
 });
 
 test("el activo fijo sigue la numeración de cada dueño", async () => {

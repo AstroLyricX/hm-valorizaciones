@@ -25,6 +25,7 @@ import {
 	ESTADOS_POR_PROPIEDAD,
 	ETIQUETA_CATEGORIA,
 	ETIQUETA_ESTADO_EQUIPO,
+	llevaPlaca,
 	PlacaDuplicadaError,
 	type PropiedadEquipo,
 } from "../domain/equipo";
@@ -151,6 +152,7 @@ function Formulario({
 	];
 	const propiedad = useWatch({ control, name: "propiedad" });
 	const duenoId = useWatch({ control, name: "duenoId" });
+	const categoria = useWatch({ control, name: "categoria" });
 	const activoFijo = vistaActivoFijo({ equipo, duenos, activosFijos, propiedad, duenoId });
 
 	const guardar = async (datos: EquipoDatos) => {
@@ -257,16 +259,19 @@ function Formulario({
 						/>
 					)}
 				</FormField>
-				<FormField label="Placa" required error={errors.placa?.message}>
-					{(campo) => (
-						<Input
-							{...campo}
-							{...register("placa")}
-							placeholder="Ingresar placa"
-							className={mayus}
-						/>
-					)}
-				</FormField>
+				{/* La maquinaria pesada no tiene placa: el campo solo aparece en los livianos. */}
+				{llevaPlaca(categoria) && (
+					<FormField label="Placa" required error={errors.placa?.message}>
+						{(campo) => (
+							<Input
+								{...campo}
+								{...register("placa")}
+								placeholder="Ingresar placa"
+								className={mayus}
+							/>
+						)}
+					</FormField>
+				)}
 				<FormField label="Año" required error={errors.anio?.message}>
 					{(campo) => (
 						<Input

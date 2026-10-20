@@ -58,16 +58,20 @@ interface DatosEquipo {
 	descripcion: string;
 	fabricante: string;
 	modelo: string;
-	placa: string;
+	// Solo los livianos llevan placa; sin placa se registra como pesado (por defecto).
+	placa?: string;
 	dueno: string;
 }
 
 export function datosDelEquipo(equipo: DatosEquipo): void {
+	if (equipo.placa !== undefined) {
+		seleccionar(/Categoría/, "Liviano");
+		cy.findByRole("dialog").findByLabelText(/Placa/).type(equipo.placa);
+	}
 	cy.findByRole("dialog").within(() => {
 		cy.findByLabelText(/Descripción del equipo/).type(equipo.descripcion);
 		cy.findByLabelText(/Fabricante/).type(equipo.fabricante);
 		cy.findByLabelText(/^Modelo/).type(equipo.modelo);
-		cy.findByLabelText(/Placa/).type(equipo.placa);
 		cy.findByLabelText(/Año/).type("2019");
 		cy.findByLabelText(/Marca del motor/).type(equipo.fabricante);
 	});

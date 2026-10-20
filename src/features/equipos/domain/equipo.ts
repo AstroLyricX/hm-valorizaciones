@@ -75,7 +75,8 @@ const EquipoCamposSchema = z.object({
 	marcaMotor: mayusculas(1, 60, "Ingresa la marca del motor."),
 	tipoMotor: opcionalMayusculas(60),
 	serieMotor: opcionalMayusculas(60),
-	placa: mayusculas(3, 15, "Ingresa la placa."),
+	// Solo los livianos llevan placa; en los pesados no aplica y queda vacía.
+	placa: opcionalMayusculas(15),
 	anio: z
 		.string()
 		.trim()
@@ -94,9 +95,26 @@ const EquipoCamposSchema = z.object({
 	observaciones: z.string().trim().max(500, "Máximo 500 caracteres."),
 });
 
-// Un equipo de proveedor necesita su dueño; uno propio no lleva proveedor.
-function conDueno<T extends { propiedad: PropiedadEquipo; duenoId: string }>(equipo: T): T {
-	return equipo.propiedad === "PROPIO" ? { ...equipo, duenoId: "" } : equipo;
+// La maquinaria pesada no tiene placa.
+export function llevaPlaca(categoria: CategoriaEquipo): boolean {
+	return categoria === "LIVIANO";
+}
+
+// Un equipo de proveedor necesita su dueño; uno propio no lleva proveedor. Un pesado no
+// conserva una placa escrita antes de cambiar la categoría.
+function normalizar<
+	T extends {
+		propiedad: PropiedadEquipo;
+		duenoId: string;
+		categoria: CategoriaEquipo;
+		placa: string;
+	},
+>(equipo: T): T {
+	return {
+		...equipo,
+		duenoId: equipo.propiedad === "PROPIO" ? "" : equipo.duenoId,
+		placa: llevaPlaca(equipo.categoria) ? equipo.placa : "",
+	};
 }
 
 export const EquipoDatosSchema = EquipoCamposSchema.refine(
@@ -108,7 +126,11 @@ export const EquipoDatosSchema = EquipoCamposSchema.refine(
 		message: "Selecciona el estado.",
 		path: ["estado"],
 	})
-	.transform(conDueno);
+	.refine((equipo) => !llevaPlaca(equipo.categoria) || equipo.placa.length >= 3, {
+		message: "Ingresa la placa.",
+		path: ["placa"],
+	})
+	.transform(normalizar);
 
 // Estado equivalente de un equipo de proveedor registrado con la lista de equipos propios.
 export function estadoDeProveedor(estado: string): EstadoEquipo {

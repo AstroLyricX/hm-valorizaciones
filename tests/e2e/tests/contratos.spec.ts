@@ -20,7 +20,6 @@ describe("Contratos", () => {
 			descripcion: "Excavadora",
 			fabricante: "CAT",
 			modelo: "340",
-			placa: "EXC-340",
 			dueno: DUENO,
 		});
 		registrarEquipo({

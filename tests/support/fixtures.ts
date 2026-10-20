@@ -63,6 +63,8 @@ export function volquete(
 		modelo: "FMX",
 		marcaMotor: "Volvo",
 		placa: "V3K-882",
+		// Lleva placa: es liviano (los pesados no tienen placa).
+		categoria: "LIVIANO",
 		...cambios,
 	});
 }

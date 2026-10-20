@@ -103,8 +103,11 @@ export class EquipoService {
 		return activoFijo;
 	}
 
-	// La placa identifica al equipo: no puede repetirse.
+	// La placa identifica al equipo liviano: no puede repetirse. Los pesados no llevan placa.
 	private async asegurarUnicos(datos: EquipoDatos, idPropio?: string): Promise<void> {
+		if (datos.placa === "") {
+			return;
+		}
 		const otros = (await this.repository.listar()).filter((equipo) => equipo.id !== idPropio);
 		const conPlaca = otros.find((equipo) => equipo.placa === datos.placa);
 		if (conPlaca) {

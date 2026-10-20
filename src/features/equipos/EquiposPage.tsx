@@ -97,6 +97,8 @@ export function EquiposPage() {
 					header: "Placa",
 					filterFn: "contiene",
 					meta: { filtro: { tipo: "texto" }, celda: "whitespace-nowrap" },
+					// Los pesados no tienen placa.
+					cell: ({ getValue }) => getValue() || <span className="text-navy-300">—</span>,
 				}),
 				columnHelper.accessor("anio", {
 					header: "Año",
@@ -243,7 +245,8 @@ export function EquiposPage() {
 												<EstadoPill estado={equipo.estado} />
 											</span>
 											<span className="text-[13px] text-muted-foreground">
-												{equipo.activoFijo} · Placa {equipo.placa} · {equipo.anio}
+												{equipo.activoFijo}
+												{equipo.placa ? ` · Placa ${equipo.placa}` : ""} · {equipo.anio}
 											</span>
 											<span className="text-[13px] text-navy-600">{equipo.dueno}</span>
 										</button>

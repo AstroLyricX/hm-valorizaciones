@@ -15,7 +15,6 @@ describe("Equipos", () => {
 			descripcion: "Excavadora",
 			fabricante: "CAT",
 			modelo: "340",
-			placa: "EXC-340",
 			dueno: "HUISE QUEA ANTOLIN",
 		});
 		// Activo fijo automático: el código del proveedor (iniciales) + número.
