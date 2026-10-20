@@ -6,7 +6,12 @@ import { formatearFechaNumerica } from "@/lib/fechas";
 
 import { partesDe } from "../application/ValorizacionService";
 import type { ColumnaResumen } from "../domain/valorizacion";
-import { ETIQUETA_TIPO_VALORIZACION, formatearPeriodo } from "../domain/valorizacion";
+import {
+	ABREVIATURA_UNIDAD,
+	ETIQUETA_TIPO_VALORIZACION,
+	formatearPeriodo,
+	precioAdicional,
+} from "../domain/valorizacion";
 import { horas } from "../ui/formato";
 import { type DatosPdf, fechaDelPdf, letrasDelPdf } from "./datosPdf";
 
@@ -273,7 +278,7 @@ export function ValorizacionPDF(datos: DatosPdf) {
 								{`CONTRACTUAL (${moneda})`}
 							</Celda>
 							<Celda ancho={anchoCantidades} estilo={[estilos.encabezado]}>
-								CANTIDADES (HORAS)
+								CANTIDADES
 							</Celda>
 							<Celda ancho={anchoImportes} estilo={[estilos.encabezado]}>
 								{`IMPORTES (${moneda})`}
@@ -342,6 +347,52 @@ export function ValorizacionPDF(datos: DatosPdf) {
 									</Celda>
 									<Celda ancho={ANCHO.importe} estilo={[estilos.numero]}>
 										{formatearMonto(item.importeAcumulado)}
+									</Celda>
+								</View>
+							);
+						})}
+
+						{valorizacion.adicionales.map((adicional, indice) => {
+							const importeAdicional = calculo.adicionales[indice] ?? 0;
+							const cantidad = /^\d{1,7}(\.\d{1,2})?$/.test(adicional.cantidad.trim())
+								? adicional.cantidad.trim()
+								: "0";
+
+							return (
+								<View key={adicional.id} wrap={false} style={estilos.fila}>
+									<Celda ancho={ANCHO.item} estilo={[{ textAlign: "center" }]}>
+										{String(filas.length + indice + 1)}
+									</Celda>
+									<Celda>{adicional.descripcion}</Celda>
+									<Celda ancho={ANCHO.um} estilo={[{ textAlign: "center" }]}>
+										{ABREVIATURA_UNIDAD[adicional.unidad]}
+									</Celda>
+									<Celda ancho={ANCHO.cantidad} estilo={[estilos.numero]}>
+										-
+									</Celda>
+									<Celda ancho={ANCHO.precio} estilo={[estilos.numero]}>
+										{formatearMonto(precioAdicional(adicional))}
+									</Celda>
+									<Celda ancho={ANCHO.importe} estilo={[estilos.numero]}>
+										-
+									</Celda>
+									<Celda ancho={ANCHO.cantidad} estilo={[estilos.numero]}>
+										-
+									</Celda>
+									<Celda ancho={ANCHO.cantidad} estilo={[estilos.numero, estilos.negrita]}>
+										{horas(cantidad)}
+									</Celda>
+									<Celda ancho={ANCHO.cantidad} estilo={[estilos.numero]}>
+										{horas(cantidad)}
+									</Celda>
+									<Celda ancho={ANCHO.importe} estilo={[estilos.numero]}>
+										-
+									</Celda>
+									<Celda ancho={ANCHO.importe} estilo={[estilos.numero, estilos.negrita]}>
+										{formatearMonto(importeAdicional)}
+									</Celda>
+									<Celda ancho={ANCHO.importe} estilo={[estilos.numero]}>
+										{formatearMonto(importeAdicional)}
 									</Celda>
 								</View>
 							);

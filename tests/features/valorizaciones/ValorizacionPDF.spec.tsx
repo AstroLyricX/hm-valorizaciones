@@ -127,6 +127,42 @@ test("un borrador lleva marca de agua y su periodo en el nombre del archivo", as
 	expect(nombreArchivoPdf(planilla)).toBe("VAL-BORRADOR-2026-08-CTR-001.pdf");
 });
 
+test("el PDF lista los ítems adicionales con su unidad de medida", async () => {
+	const borrador = await valorizacionService.crearBorrador(
+		{ contratoId, periodo: "2026-08" },
+		"ana@hm.pe",
+		HOY,
+	);
+	await valorizacionService.actualizarAdicionales(
+		borrador.id,
+		[
+			{
+				id: "ad-1",
+				descripcion: "Transporte de cisterna",
+				unidad: "VIAJES",
+				cantidad: "2",
+				precioUnitario: "350",
+			},
+		],
+		"ana@hm.pe",
+	);
+	const planilla = await valorizacionService.obtenerPlanilla(borrador.id);
+	if (!planilla) {
+		throw new Error("Sin planilla");
+	}
+	render(
+		<ValorizacionPDF
+			planilla={planilla}
+			calculo={calcularPlanilla(planilla)}
+			logo="/logo-hm.png"
+		/>,
+	);
+
+	expect(screen.getByText("TRANSPORTE DE CISTERNA")).toBeInTheDocument();
+	expect(screen.getByText("VJE")).toBeInTheDocument();
+	expect(screen.getAllByText("700.00").length).toBeGreaterThan(0);
+});
+
 test("el archivo de una emitida se llama VAL-número-contrato.pdf", async () => {
 	expect(nombreArchivoPdf(await planillaEmitida())).toBe("VAL-0001-2026-CTR-001.pdf");
 });

@@ -10,7 +10,10 @@ import { useIgvPorcentaje } from "@/features/configuracion/useIgv";
 import { equipoRepository } from "@/features/equipos/application/equipoService.instance";
 import { type Equipo, nombreEquipo } from "@/features/equipos/domain/equipo";
 import { valorizacionRepository } from "@/features/valorizaciones/application/valorizacionService.instance";
-import { formatearPeriodo } from "@/features/valorizaciones/domain/valorizacion";
+import {
+	formatearPeriodo,
+	valorizadoDelContrato,
+} from "@/features/valorizaciones/domain/valorizacion";
 import { EstadoValorizacionPill } from "@/features/valorizaciones/ui/EstadoValorizacionPill";
 import { formatearMoneda } from "@/lib/dinero";
 import { cn } from "@/lib/utils";
@@ -310,7 +313,7 @@ export function ContratoDetallePage() {
 				contrato={contrato}
 				valorizado={datos.valorizaciones
 					.filter((valorizacion) => valorizacion.estado === "EMITIDA")
-					.reduce((suma, valorizacion) => suma + (valorizacion.totales?.subtotal1 ?? 0), 0)}
+					.reduce((suma, valorizacion) => suma + valorizadoDelContrato(valorizacion.totales), 0)}
 			/>
 
 			<section aria-labelledby="datos-contrato" className={tarjeta}>

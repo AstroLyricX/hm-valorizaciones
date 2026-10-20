@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { BaseSchema } from "@/data/base";
 import { MONEDAS } from "@/features/contratos/domain/contrato";
-import { formatearMoneda } from "@/lib/dinero";
+import { aCentavos, formatearMoneda } from "@/lib/dinero";
 
 // Valorización según la hoja VALORIZACION del xlsm y VALORIZACIONES.txt: por cada equipo del
 // contrato se ingresan las horas del periodo; lo anterior, lo acumulado y los importes se calculan.
@@ -51,6 +51,74 @@ export const NuevaValorizacionSchema = z.object({
 	periodo: z.string().regex(PERIODO, "Selecciona el periodo."),
 });
 
+// Ítems que se agregan en la misma valorización, fuera de los equipos del contrato (por ejemplo,
+// viajes de transporte). Se cobran solo en su periodo: no tienen cantidad contractual.
+export const UNIDADES_MEDIDA = ["HORAS", "VIAJES", "UNIDADES"] as const;
+
+export type UnidadMedida = (typeof UNIDADES_MEDIDA)[number];
+
+export const ETIQUETA_UNIDAD: Record<UnidadMedida, string> = {
+	HORAS: "Horas",
+	VIAJES: "Viajes",
+	UNIDADES: "Unidades",
+};
+
+// Columna UM de la planilla y del PDF.
+export const ABREVIATURA_UNIDAD: Record<UnidadMedida, string> = {
+	HORAS: "H",
+	VIAJES: "VJE",
+	UNIDADES: "UND",
+};
+
+export const MAX_ADICIONALES = 20;
+const MONTO = /^\d{1,9}(\.\d{1,2})?$/;
+
+// Se guarda tal como se escribe (el borrador se guarda solo); se valida completo al emitir.
+export const ItemAdicionalSchema = z.object({
+	id: z.string().min(1).max(64),
+	descripcion: z.string().max(120),
+	unidad: z.enum(UNIDADES_MEDIDA),
+	cantidad: z.string().max(12),
+	// Precio unitario como texto decimal: "47.00".
+	precioUnitario: z.string().max(15),
+});
+
+// Zod 4 ejecuta todas las validaciones aunque falle el formato: se comprueba el formato antes de
+// usar big.js para no lanzar con textos incompletos.
+export const ItemAdicionalCompletoSchema = ItemAdicionalSchema.extend({
+	descripcion: z.string().trim().min(3, "Ingresa la descripción.").max(120),
+	cantidad: z
+		.string()
+		.trim()
+		.regex(CANTIDAD, "Ingresa la cantidad, por ejemplo 2.")
+		.refine(
+			(valor) => !CANTIDAD.test(valor) || new Big(valor).gt(0),
+			"La cantidad debe ser mayor a 0.",
+		),
+	precioUnitario: z
+		.string()
+		.trim()
+		.regex(MONTO, "Ingresa el precio, por ejemplo 350.00.")
+		.refine((valor) => !MONTO.test(valor) || new Big(valor).gt(0), "El precio debe ser mayor a 0."),
+});
+
+export type ItemAdicional = z.infer<typeof ItemAdicionalSchema>;
+
+export function adicionalVacio(item: ItemAdicional): boolean {
+	return (
+		item.descripcion.trim() === "" &&
+		["", "0"].includes(item.cantidad.trim()) &&
+		["", "0"].includes(item.precioUnitario.trim())
+	);
+}
+
+// Precio en centavos; uno inválido (aún se escribe) cuenta como 0.
+export function precioAdicional(item: Pick<ItemAdicional, "precioUnitario">): number {
+	const valor = item.precioUnitario.trim();
+
+	return MONTO.test(valor) ? aCentavos(valor) : 0;
+}
+
 const centavos = z.int();
 
 export const TotalesSchema = z.object({
@@ -62,6 +130,8 @@ export const TotalesSchema = z.object({
 	total: centavos,
 	fondoGarantia: centavos,
 	netoPagable: centavos,
+	// Parte del subtotal 1 que corresponde a ítems adicionales (no suma al avance del contrato).
+	adicionales: centavos.default(0),
 });
 
 export type Totales = z.infer<typeof TotalesSchema>;
@@ -85,6 +155,7 @@ export const ValorizacionSchema = BaseSchema.extend({
 	anuladaEn: z.iso.datetime().nullable(),
 	// Ruta del PDF emitido en SharePoint (P9), cuando ya se subió.
 	pdfPath: z.string().nullable(),
+	adicionales: z.array(ItemAdicionalSchema).max(MAX_ADICIONALES).default([]),
 });
 
 // Horas del periodo por equipo del contrato. Al emitir se copian los datos del contrato y
@@ -150,6 +221,9 @@ export interface ColumnaResumen {
 
 export interface ValorizacionCalculada {
 	items: ItemCalculado[];
+	// Importe de cada ítem adicional del periodo y su suma.
+	adicionales: number[];
+	totalAdicionales: number;
 	contractual: ColumnaResumen;
 	anterior: ColumnaResumen;
 	actual: ColumnaResumen;
@@ -201,6 +275,11 @@ function columna(subtotal1: number, parametros: ParametrosCalculo): ColumnaResum
 export function calcularValorizacion(
 	items: readonly ItemACalcular[],
 	parametros: ParametrosCalculo,
+	extras: {
+		adicionales?: readonly Pick<ItemAdicional, "cantidad" | "precioUnitario">[];
+		// Suma de los adicionales de las valorizaciones emitidas antes (columna Anterior).
+		adicionalesAnteriores?: number;
+	} = {},
 ): ValorizacionCalculada {
 	const calculados = items.map((item): ItemCalculado => {
 		const contractual = cantidadValida(item.cantidadContractual);
@@ -222,24 +301,33 @@ export function calcularValorizacion(
 
 	const suma = (campo: "parcial" | "importeAnterior" | "importeActual" | "importeAcumulado") =>
 		calculados.reduce((total, item) => total + item[campo], 0);
+	const adicionales = (extras.adicionales ?? []).map((item) =>
+		importe(cantidadValida(item.cantidad), precioAdicional(item)),
+	);
+	const totalAdicionales = adicionales.reduce((total, monto) => total + monto, 0);
+	const anteriores = extras.adicionalesAnteriores ?? 0;
+	// El avance y el saldo son solo del contrato: los adicionales quedan fuera.
+	const acumuladoContrato = suma("importeAcumulado");
 	const contractual = columna(suma("parcial"), parametros);
-	const actual = columna(suma("importeActual"), parametros);
-	const acumulado = columna(suma("importeAcumulado"), parametros);
+	const actual = columna(suma("importeActual") + totalAdicionales, parametros);
+	const acumulado = columna(acumuladoContrato + anteriores + totalAdicionales, parametros);
 	const fondoGarantia = porcentajeDe(actual.subtotal2, parametros.fondoGarantiaPct);
 
 	return {
 		items: calculados,
+		adicionales,
+		totalAdicionales,
 		contractual,
-		anterior: columna(suma("importeAnterior"), parametros),
+		anterior: columna(suma("importeAnterior") + anteriores, parametros),
 		actual,
 		acumulado,
 		fondoGarantia,
 		netoPagable: actual.total - fondoGarantia,
-		saldoContractual: contractual.subtotal1 - acumulado.subtotal1,
+		saldoContractual: contractual.subtotal1 - acumuladoContrato,
 		avancePct:
 			contractual.subtotal1 === 0
 				? 0
-				: new Big(acumulado.subtotal1)
+				: new Big(acumuladoContrato)
 						.times(100)
 						.div(contractual.subtotal1)
 						.round(2, Big.roundHalfUp)
@@ -343,4 +431,9 @@ export function mensajeValorizacion(
 	}
 
 	return lineas.join("\n");
+}
+
+// Lo valorizado del contrato en una emitida (subtotal 1 sin los ítems adicionales).
+export function valorizadoDelContrato(totales: Totales | null): number {
+	return (totales?.subtotal1 ?? 0) - (totales?.adicionales ?? 0);
 }

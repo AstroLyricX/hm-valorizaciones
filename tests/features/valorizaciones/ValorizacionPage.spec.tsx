@@ -110,6 +110,65 @@ test("calcula la planilla del xlsm al escribir las horas, avisa el exceso y lo g
 	expect(await screen.findByText("Guardado en este equipo")).toBeInTheDocument();
 });
 
+test("agrega un ítem con su unidad de medida y lo suma al total", async () => {
+	const user = userEvent.setup();
+	const agosto = await valorizacionService.crearBorrador(
+		{ contratoId, periodo: "2026-08" },
+		"ana@hm.pe",
+		HOY,
+	);
+	renderRoute(`/valorizaciones/${agosto.id}`);
+
+	await user.click((await screen.findAllByRole("button", { name: "Agregar ítem" }))[0]);
+	await user.type(screen.getAllByLabelText("Descripción del ítem 2")[0], "Transporte de cisterna");
+	await seleccionar(user, screen.getAllByLabelText("Unidad de medida del ítem 2")[0], "Viajes");
+	await user.type(screen.getAllByLabelText("Cantidad del ítem 2")[0], "2");
+	await user.type(screen.getAllByLabelText("Precio unitario del ítem 2")[0], "350");
+
+	const planilla = screen.getByRole("region", { name: "Planilla de medición" });
+	// 2 × 350.00 = 700.00 + 18 % de IGV = 826.00.
+	expect(within(planilla).getAllByText("USD 826.00").length).toBeGreaterThan(0);
+	await waitFor(async () => {
+		expect((await valorizacionRepository.obtener(agosto.id))?.adicionales).toEqual([
+			expect.objectContaining({
+				descripcion: "TRANSPORTE DE CISTERNA",
+				unidad: "VIAJES",
+				cantidad: "2",
+				precioUnitario: "350",
+			}),
+		]);
+	});
+
+	await user.click(screen.getAllByRole("button", { name: "Quitar el ítem 2" })[0]);
+	await waitFor(async () => {
+		expect((await valorizacionRepository.obtener(agosto.id))?.adicionales).toEqual([]);
+	});
+});
+
+test("no emite con un ítem adicional incompleto", async () => {
+	const user = userEvent.setup();
+	const agosto = await valorizacionService.crearBorrador(
+		{ contratoId, periodo: "2026-08" },
+		"ana@hm.pe",
+		HOY,
+	);
+	renderRoute(`/valorizaciones/${agosto.id}`);
+
+	await user.click((await screen.findAllByRole("button", { name: "Agregar ítem" }))[0]);
+	await user.type(screen.getAllByLabelText("Descripción del ítem 2")[0], "Flete");
+	await user.click(screen.getByRole("button", { name: "Emitir valorización" }));
+
+	expect(
+		await screen.findByText("Completa los ítems adicionales antes de emitir."),
+	).toBeInTheDocument();
+	expect(screen.getAllByText("Ingresa la cantidad, por ejemplo 2.").length).toBeGreaterThan(0);
+	expect(screen.getAllByLabelText("Precio unitario del ítem 2")[0]).toHaveAttribute(
+		"aria-invalid",
+		"true",
+	);
+	expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+});
+
 test("marca las horas inválidas y no las guarda", async () => {
 	const user = userEvent.setup();
 	const borrador = await valorizacionService.crearBorrador(

@@ -20,9 +20,14 @@ import { ahoraIso } from "@/lib/fechas";
 
 import { montoEnLetras } from "../domain/montoEnLetras";
 import {
+	adicionalVacio,
 	CABECERA_INICIAL,
 	calcularValorizacion,
 	CantidadSchema,
+	type ItemAdicional,
+	ItemAdicionalCompletoSchema,
+	ItemAdicionalSchema,
+	MAX_ADICIONALES,
 	MotivoAnulacionSchema,
 	type NuevaValorizacion,
 	NuevaValorizacionSchema,
@@ -57,6 +62,8 @@ export interface Planilla {
 	proveedor: Tercero | undefined;
 	empresa: Empresa;
 	filas: FilaPlanilla[];
+	// Suma de los ítems adicionales de las valorizaciones emitidas antes (columna Anterior).
+	adicionalesAnteriores: number;
 }
 
 export class ContratoNoEncontradoError extends Error {
@@ -92,6 +99,27 @@ export class SinPermisoError extends Error {
 	}
 }
 
+export class AdicionalesIncompletosError extends Error {
+	constructor() {
+		super("Completa la descripción, la cantidad y el precio de los ítems adicionales.");
+		this.name = "AdicionalesIncompletosError";
+	}
+}
+
+// Quita las filas vacías; las demás deben estar completas para emitir.
+export function adicionalesParaEmitir(adicionales: readonly ItemAdicional[]): ItemAdicional[] {
+	const conDatos = adicionales.filter((item) => !adicionalVacio(item));
+	if (conDatos.some((item) => !ItemAdicionalCompletoSchema.safeParse(item).success)) {
+		throw new AdicionalesIncompletosError();
+	}
+
+	return conDatos.map((item) => {
+		const completo = ItemAdicionalCompletoSchema.parse(item);
+
+		return { ...completo, descripcion: completo.descripcion.toUpperCase() };
+	});
+}
+
 export class SinHorasError extends Error {
 	constructor() {
 		super("Ingresa las horas de al menos un equipo antes de emitir.");
@@ -105,14 +133,18 @@ export function descripcionServicio(equipo: Equipo | undefined): string {
 }
 
 export function calcularPlanilla(planilla: Planilla): ValorizacionCalculada {
-	const { valorizacion, filas } = planilla;
+	const { valorizacion, filas, adicionalesAnteriores } = planilla;
 
-	return calcularValorizacion(filas, {
-		gastosGeneralesPct: valorizacion.gastosGeneralesPct,
-		utilidadPct: valorizacion.utilidadPct,
-		igvPct: valorizacion.igvPct,
-		fondoGarantiaPct: valorizacion.fondoGarantiaPct,
-	});
+	return calcularValorizacion(
+		filas,
+		{
+			gastosGeneralesPct: valorizacion.gastosGeneralesPct,
+			utilidadPct: valorizacion.utilidadPct,
+			igvPct: valorizacion.igvPct,
+			fondoGarantiaPct: valorizacion.fondoGarantiaPct,
+		},
+		{ adicionales: valorizacion.adicionales, adicionalesAnteriores },
+	);
 }
 
 function totalesDe(calculo: ValorizacionCalculada): Totales {
@@ -120,6 +152,7 @@ function totalesDe(calculo: ValorizacionCalculada): Totales {
 		...calculo.actual,
 		fondoGarantia: calculo.fondoGarantia,
 		netoPagable: calculo.netoPagable,
+		adicionales: calculo.totalAdicionales,
 	};
 }
 
@@ -203,6 +236,7 @@ export class ValorizacionService {
 			moneda: contrato.moneda,
 			igvPct: empresa.igvPorcentaje,
 			fondoGarantiaPct: contrato.fondoGarantiaPct,
+			adicionales: [],
 			...base,
 		};
 		const items: ValorizacionItem[] = equiposDelContrato.map((contratoEquipo) => ({
@@ -241,7 +275,14 @@ export class ValorizacionService {
 				? await this.filasDelBorrador(valorizacion, contrato, items, porEquipo)
 				: await this.filasCongeladas(contrato, items, porEquipo);
 
-		return { valorizacion, contrato, proveedor, empresa, filas };
+		return {
+			valorizacion,
+			contrato,
+			proveedor,
+			empresa,
+			filas,
+			adicionalesAnteriores: await this.adicionalesAnteriores(valorizacion),
+		};
 	}
 
 	// Guarda las horas del periodo de un equipo (se llama mientras el usuario escribe).
@@ -282,6 +323,29 @@ export class ValorizacionService {
 		);
 	}
 
+	// Guarda los ítems adicionales del borrador tal como se escriben (se validan al emitir).
+	async actualizarAdicionales(
+		id: string,
+		adicionales: readonly ItemAdicional[],
+		usuario: string,
+	): Promise<Valorizacion> {
+		const lista = ItemAdicionalSchema.array()
+			.max(MAX_ADICIONALES)
+			.parse(adicionales)
+			.map((item) => ({ ...item, descripcion: item.descripcion.toUpperCase() }));
+		const actual = await this.borrador(id);
+		const actualizada: Valorizacion = {
+			...actual,
+			adicionales: lista,
+			updatedAt: ahoraIso(),
+			updatedBy: usuario,
+			version: actual.version + 1,
+		};
+		await this.repository.guardar(actualizada);
+
+		return actualizada;
+	}
+
 	async actualizarCabecera(
 		id: string,
 		datos: ValorizacionCabecera,
@@ -308,8 +372,10 @@ export class ValorizacionService {
 		if (!planilla || planilla.valorizacion.estado !== "BORRADOR") {
 			throw new ValorizacionNoEditableError();
 		}
-		const { valorizacion, filas } = planilla;
-		const calculo = calcularPlanilla(planilla);
+		const adicionales = adicionalesParaEmitir(planilla.valorizacion.adicionales);
+		const valorizacion = { ...planilla.valorizacion, adicionales };
+		const { filas } = planilla;
+		const calculo = calcularPlanilla({ ...planilla, valorizacion });
 		if (calculo.actual.subtotal1 === 0) {
 			throw new SinHorasError();
 		}
@@ -469,6 +535,13 @@ export class ValorizacionService {
 					cantidadActual: item.cantidadActual,
 				};
 			});
+	}
+
+	// Adicionales de las valorizaciones emitidas de periodos anteriores (las anuladas no cuentan).
+	private async adicionalesAnteriores(valorizacion: Valorizacion): Promise<number> {
+		return (await this.repository.delContrato(valorizacion.contratoId))
+			.filter((otra) => otra.estado === "EMITIDA" && otra.periodo < valorizacion.periodo)
+			.reduce((total, otra) => total + (otra.totales?.adicionales ?? 0), 0);
 	}
 
 	// Cantidad anterior (P5): suma de las horas de las valorizaciones EMITIDAS del contrato

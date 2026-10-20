@@ -8,6 +8,7 @@ import { ContratoRepository } from "../../../src/features/contratos/infrastructu
 import { EquipoService } from "../../../src/features/equipos/application/EquipoService";
 import { EquipoRepository } from "../../../src/features/equipos/infrastructure/EquipoRepository";
 import {
+	AdicionalesIncompletosError,
 	ContratoNoVigenteError,
 	PeriodoFueraDeVigenciaError,
 	SinHorasError,
@@ -57,6 +58,55 @@ afterEach(async () => {
 });
 
 describe("ValorizacionService", () => {
+	it("guarda los ítems adicionales, los valida al emitir y los congela", async () => {
+		const agosto = await service.crearBorrador(
+			{ contratoId, periodo: "2026-08" },
+			"ana@hm.pe",
+			HOY,
+		);
+		const viaje = {
+			id: "ad-1",
+			descripcion: "transporte de cisterna",
+			unidad: "VIAJES" as const,
+			cantidad: "2",
+			precioUnitario: "350",
+		};
+		const vacio = {
+			id: "ad-2",
+			descripcion: "",
+			unidad: "HORAS" as const,
+			cantidad: "",
+			precioUnitario: "",
+		};
+
+		await service.actualizarAdicionales(
+			agosto.id,
+			[viaje, { ...vacio, cantidad: "1" }],
+			"ana@hm.pe",
+		);
+		await expect(service.emitir(agosto.id, "ana@hm.pe", "2026-09-02")).rejects.toBeInstanceOf(
+			AdicionalesIncompletosError,
+		);
+
+		await service.actualizarAdicionales(agosto.id, [viaje, vacio], "ana@hm.pe");
+		const emitida = await service.emitir(agosto.id, "ana@hm.pe", "2026-09-02");
+
+		// Solo el viaje (la fila vacía se descarta): 2 × 350.00, sin horas de equipos.
+		expect(emitida.adicionales).toEqual([
+			{ ...viaje, descripcion: "TRANSPORTE DE CISTERNA", precioUnitario: "350" },
+		]);
+		expect(emitida.totales).toMatchObject({ subtotal1: 70000, adicionales: 70000 });
+
+		const septiembre = await service.crearBorrador(
+			{ contratoId, periodo: "2026-09" },
+			"ana@hm.pe",
+			HOY,
+		);
+		const planilla = await service.obtenerPlanilla(septiembre.id);
+		expect(planilla?.adicionalesAnteriores).toBe(70000);
+		expect(planilla?.valorizacion.adicionales).toEqual([]);
+	});
+
 	it("no crea valorizaciones de contratos vencidos o que aún no empiezan", async () => {
 		await expect(
 			service.crearBorrador({ contratoId, periodo: "2026-12" }, "ana@hm.pe", "2027-01-01"),
@@ -220,6 +270,7 @@ describe("ValorizacionService", () => {
 			total: 295214,
 			fondoGarantia: 12509,
 			netoPagable: 282705,
+			adicionales: 0,
 		});
 	});
 

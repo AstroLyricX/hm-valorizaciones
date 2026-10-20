@@ -4,8 +4,10 @@ import { formatearMoneda, formatearMonto, type Moneda } from "@/lib/dinero";
 import { cn } from "@/lib/utils";
 
 import type { FilaPlanilla } from "../application/ValorizacionService";
-import type { ColumnaResumen, ValorizacionCalculada } from "../domain/valorizacion";
+import type { ColumnaResumen, ItemAdicional, ValorizacionCalculada } from "../domain/valorizacion";
+import type { ErroresAdicional } from "./adicionales";
 import { horas } from "./formato";
+import { AgregarAdicional, FilasAdicionales, TarjetasAdicionales } from "./ItemsAdicionales";
 
 const celda = "border border-navy-100 px-1.5 py-2";
 const numero = "text-right tabular-nums whitespace-nowrap";
@@ -19,6 +21,10 @@ interface PropsPlanilla {
 	moneda: Moneda;
 	parametros: { gastosGeneralesPct: number; utilidadPct: number; igvPct: number };
 	editable: boolean;
+	// Ítems agregados en esta valorización, fuera de los equipos del contrato.
+	adicionales: readonly ItemAdicional[];
+	erroresAdicionales: Readonly<Record<string, ErroresAdicional>>;
+	onAdicionales: (adicionales: ItemAdicional[]) => void;
 }
 
 function CampoHoras({
@@ -112,6 +118,14 @@ function etiquetasResumen(parametros: PropsPlanilla["parametros"]) {
 // Planilla de medición como en la hoja VALORIZACION: solo se escriben las horas del periodo.
 export function PlanillaMedicion(props: PropsPlanilla) {
 	const { filas, cantidades, errores, onCantidad, calculo, moneda, parametros, editable } = props;
+	const propsAdicionales = {
+		adicionales: props.adicionales,
+		importes: calculo.adicionales,
+		desde: filas.length + 1,
+		editable,
+		errores: props.erroresAdicionales,
+		onCambiar: props.onAdicionales,
+	};
 
 	return (
 		<>
@@ -132,7 +146,7 @@ export function PlanillaMedicion(props: PropsPlanilla) {
 								Contractual ({moneda})
 							</th>
 							<th colSpan={3} className={cn(celda, "text-center")}>
-								Cantidades (horas)
+								Cantidades
 							</th>
 							<th colSpan={3} className={cn(celda, "text-center")}>
 								Importes ({moneda})
@@ -195,6 +209,14 @@ export function PlanillaMedicion(props: PropsPlanilla) {
 								</tr>
 							);
 						})}
+						<FilasAdicionales {...propsAdicionales} />
+						{editable && (
+							<tr>
+								<td className={cn(celda, "py-1.5")} colSpan={12}>
+									<AgregarAdicional {...propsAdicionales} className="h-8" />
+								</td>
+							</tr>
+						)}
 					</tbody>
 					<tfoot>
 						{etiquetasResumen(parametros).map((fila) => (
@@ -266,7 +288,13 @@ export function PlanillaMedicion(props: PropsPlanilla) {
 							</li>
 						);
 					})}
+					<TarjetasAdicionales {...propsAdicionales} moneda={moneda} />
 				</ul>
+				{editable && (
+					<div className="border-t border-navy-100 px-4 py-3">
+						<AgregarAdicional {...propsAdicionales} />
+					</div>
+				)}
 				<dl className="flex flex-col gap-2 border-t border-navy-100 bg-navy-50/60 px-4 py-4 text-sm">
 					{etiquetasResumen(parametros).map((fila) => (
 						<div

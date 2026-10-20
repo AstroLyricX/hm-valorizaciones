@@ -94,6 +94,38 @@ describe("calcularValorizacion", () => {
 	});
 });
 
+describe("ítems adicionales", () => {
+	// 2 viajes de cisterna a USD 350.00 = USD 700.00.
+	const VIAJES = { cantidad: "2", precioUnitario: "350.00" };
+
+	it("suman al periodo pero no al avance ni al saldo del contrato", () => {
+		const sin = calcularValorizacion([EXCAVADORA], SIN_RECARGOS);
+		const con = calcularValorizacion([EXCAVADORA], SIN_RECARGOS, {
+			adicionales: [VIAJES, { cantidad: "abc", precioUnitario: "10" }],
+			adicionalesAnteriores: 50000,
+		});
+
+		expect(con.adicionales).toEqual([70000, 0]);
+		expect(con.totalAdicionales).toBe(70000);
+		expect(con.actual.subtotal1).toBe(250181 + 70000);
+		expect(con.actual.igv).toBe(Math.round((250181 + 70000) * 0.18));
+		expect(con.anterior.subtotal1).toBe(537680 + 50000);
+		expect(con.acumulado.subtotal1).toBe(787861 + 50000 + 70000);
+		expect(con.contractual).toEqual(sin.contractual);
+		expect(con.saldoContractual).toBe(sin.saldoContractual);
+		expect(con.avancePct).toBe(sin.avancePct);
+	});
+
+	it("un precio o cantidad incompletos cuentan como 0", () => {
+		const calculo = calcularValorizacion([], SIN_RECARGOS, {
+			adicionales: [{ cantidad: "3", precioUnitario: "12," }],
+		});
+
+		expect(calculo.adicionales).toEqual([0]);
+		expect(calculo.excede).toBe(false);
+	});
+});
+
 describe("sumarCantidades y formatearPeriodo", () => {
 	it("suma horas sin errores de punto flotante", () => {
 		expect(sumarCantidades(["0.1", "0.2", "114.1"])).toBe("114.4");

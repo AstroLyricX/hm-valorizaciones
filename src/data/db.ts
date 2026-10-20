@@ -209,6 +209,19 @@ export class HmDatabase extends Dexie {
 					usados.push(String(tercero.prefijoEquipos));
 				});
 		});
+		// Ítems adicionales de la valorización (viajes, unidades…) fuera de los equipos del contrato.
+		this.version(16).upgrade(async (tx) => {
+			await tx
+				.table("valorizaciones")
+				.toCollection()
+				.modify((valorizacion: Record<string, unknown>) => {
+					valorizacion.adicionales ??= [];
+					const totales = valorizacion.totales as Record<string, unknown> | null | undefined;
+					if (totales) {
+						totales.adicionales ??= 0;
+					}
+				});
+		});
 	}
 }
 

@@ -29,7 +29,7 @@ import { ConfirmDialog } from "@/shared/components/ConfirmDialog";
 import { EmptyState } from "@/shared/components/EmptyState";
 import { Pill } from "@/shared/components/Pill";
 
-import { partesDe, type Planilla } from "./application/ValorizacionService";
+import { adicionalesParaEmitir, partesDe, type Planilla } from "./application/ValorizacionService";
 import { valorizacionService } from "./application/valorizacionService.instance";
 import { montoEnLetras } from "./domain/montoEnLetras";
 import {
@@ -37,11 +37,13 @@ import {
 	CantidadSchema,
 	ETIQUETA_TIPO_VALORIZACION,
 	formatearPeriodo,
+	type ItemAdicional,
 	mensajeValorizacion,
 	type ValorizacionCabecera,
 } from "./domain/valorizacion";
 import { encolarPdf } from "./pdf/encolarPdf";
 import { AccionesPdf } from "./ui/AccionesPdf";
+import { erroresAdicionales } from "./ui/adicionales";
 import { AnularDialog } from "./ui/AnularDialog";
 import { AvisoVencimiento } from "./ui/AvisoVencimiento";
 import { DatosServicio } from "./ui/DatosServicio";
@@ -144,6 +146,12 @@ function Editor({ planilla }: { planilla: Planilla }) {
 	const [cantidades, setCantidades] = useState<Record<string, string>>(() =>
 		Object.fromEntries(filas.map((fila) => [fila.contratoEquipoId, fila.cantidadActual])),
 	);
+	// Ítems adicionales del periodo: se guardan solos como las horas y se validan al emitir.
+	const [adicionalesEditados, setAdicionales] = useState<ItemAdicional[]>(
+		() => valorizacion.adicionales,
+	);
+	const adicionales = editable ? adicionalesEditados : valorizacion.adicionales;
+	const [mostrarErroresAdicionales, setMostrarErroresAdicionales] = useState(false);
 	const hayErrores = Object.values(cantidades).some(
 		(valor) => !CantidadSchema.safeParse(valor).success,
 	);
@@ -180,6 +188,19 @@ function Editor({ planilla }: { planilla: Planilla }) {
 		),
 	);
 
+	const adicionalesGuardado = useAutoguardado(
+		useCallback(
+			async (_clave: string, valor: string) => {
+				await valorizacionService.actualizarAdicionales(
+					valorizacion.id,
+					JSON.parse(valor) as ItemAdicional[],
+					usuario,
+				);
+			},
+			[valorizacion.id, usuario],
+		),
+	);
+
 	const calculo = calcularValorizacion(
 		filas.map((fila) => ({
 			cantidadContractual: fila.cantidadContractual,
@@ -193,6 +214,7 @@ function Editor({ planilla }: { planilla: Planilla }) {
 			igvPct: valorizacion.igvPct,
 			fondoGarantiaPct: valorizacion.fondoGarantiaPct,
 		},
+		{ adicionales, adicionalesAnteriores: planilla.adicionalesAnteriores },
 	);
 	const moneda = valorizacion.moneda;
 	// Quién es contratante y quién proveedor depende del tipo de contrato.
@@ -201,7 +223,7 @@ function Editor({ planilla }: { planilla: Planilla }) {
 	const datosPdf = {
 		planilla: {
 			...planilla,
-			valorizacion: { ...valorizacion, ...cabecera },
+			valorizacion: { ...valorizacion, ...cabecera, adicionales },
 			filas: filas.map((fila) => ({
 				...fila,
 				cantidadActual: CantidadSchema.safeParse(cantidades[fila.contratoEquipoId]).success
@@ -212,6 +234,11 @@ function Editor({ planilla }: { planilla: Planilla }) {
 		calculo,
 	};
 	const excedidos = filas.filter((_, indice) => calculo.items[indice].exceso !== "0");
+
+	const cambiarAdicionales = (lista: ItemAdicional[]) => {
+		setAdicionales(lista);
+		adicionalesGuardado.programar("adicionales", JSON.stringify(lista));
+	};
 
 	const cambiarCantidad = (contratoEquipoId: string, valor: string) => {
 		setCantidades((actual) => ({ ...actual, [contratoEquipoId]: valor }));
@@ -267,7 +294,13 @@ function Editor({ planilla }: { planilla: Planilla }) {
 					</div>
 					<div className="flex flex-wrap items-center gap-3">
 						{editable && (
-							<IndicadorGuardado estado={combinar(horasGuardado.estado, cabeceraGuardado.estado)} />
+							<IndicadorGuardado
+								estado={combinar(
+									horasGuardado.estado,
+									cabeceraGuardado.estado,
+									adicionalesGuardado.estado,
+								)}
+							/>
 						)}
 						<AccionesPdf datos={datosPdf} />
 						{valorizacion.estado === "EMITIDA" && (
@@ -290,6 +323,14 @@ function Editor({ planilla }: { planilla: Planilla }) {
 									className="h-9 bg-brand-600 px-3.5 hover:bg-brand-700"
 									disabled={hayErrores}
 									onClick={() => {
+										try {
+											adicionalesParaEmitir(adicionales);
+										} catch {
+											setMostrarErroresAdicionales(true);
+											toast.warning("Completa los ítems adicionales antes de emitir.");
+
+											return;
+										}
 										if (calculo.actual.subtotal1 === 0) {
 											toast.warning("Ingresa las horas de al menos un equipo antes de emitir.");
 
@@ -399,6 +440,9 @@ function Editor({ planilla }: { planilla: Planilla }) {
 						igvPct: valorizacion.igvPct,
 					}}
 					editable={editable}
+					adicionales={adicionales}
+					erroresAdicionales={mostrarErroresAdicionales ? erroresAdicionales(adicionales) : {}}
+					onAdicionales={cambiarAdicionales}
 				/>
 			</Tarjeta>
 
@@ -495,7 +539,11 @@ function Editor({ planilla }: { planilla: Planilla }) {
 				onConfirm={() => {
 					void (async () => {
 						try {
-							await Promise.all([horasGuardado.vaciar(), cabeceraGuardado.vaciar()]);
+							await Promise.all([
+								horasGuardado.vaciar(),
+								cabeceraGuardado.vaciar(),
+								adicionalesGuardado.vaciar(),
+							]);
 							const emitida = await valorizacionService.emitir(valorizacion.id, usuario);
 							toast.success(`Valorización ${emitida.numero ?? ""} emitida.`);
 							// Con sincronización, el PDF también se guarda en SharePoint (P9).

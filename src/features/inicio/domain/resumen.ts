@@ -4,7 +4,10 @@ import {
 	type ContratoEquipo,
 	estadoContrato,
 } from "@/features/contratos/domain/contrato";
-import type { Valorizacion } from "@/features/valorizaciones/domain/valorizacion";
+import {
+	type Valorizacion,
+	valorizadoDelContrato,
+} from "@/features/valorizaciones/domain/valorizacion";
 import type { Moneda } from "@/lib/dinero";
 
 // Desde qué avance (lo valorizado sobre el monto contractual) un contrato pide atención.
@@ -58,7 +61,7 @@ export function contratosEnAlerta(
 		valorizadoPorContrato.set(
 			valorizacion.contratoId,
 			(valorizadoPorContrato.get(valorizacion.contratoId) ?? 0) +
-				(valorizacion.totales?.subtotal1 ?? 0),
+				valorizadoDelContrato(valorizacion.totales),
 		);
 	}
 
