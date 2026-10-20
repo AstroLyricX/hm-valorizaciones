@@ -356,7 +356,7 @@ async function telegram(entorno: Entorno, metodo: string, datos: unknown = {}): 
 export async function instalar(
 	entorno: Entorno,
 	webhook: string,
-): Promise<{ bot: string | null; invitacion: string | null }> {
+): Promise<{ bot: string | null; invitacion: string | null; error?: string }> {
 	await telegram(entorno, "setWebhook", {
 		url: webhook,
 		secret_token: entorno.TELEGRAM_WEBHOOK_SECRET,
@@ -368,8 +368,16 @@ export async function instalar(
 			{ command: "salir", description: "Dejar de recibir avisos" },
 		],
 	});
-	const yo = (await telegram(entorno, "getMe")) as { result?: { username?: string } };
+	const yo = (await telegram(entorno, "getMe")) as {
+		result?: { username?: string };
+		description?: string;
+	};
 	const bot = yo.result?.username ?? null;
 
-	return { bot, invitacion: bot ? `https://t.me/${bot}?start=${entorno.INVITACION}` : null };
+	if (!bot) {
+		// Por ejemplo "Unauthorized" si el token no es el vigente de @BotFather.
+		return { bot, invitacion: null, error: yo.description ?? "Telegram no respondió" };
+	}
+
+	return { bot, invitacion: `https://t.me/${bot}?start=${entorno.INVITACION}` };
 }

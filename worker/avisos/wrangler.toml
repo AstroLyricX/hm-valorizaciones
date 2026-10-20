@@ -15,7 +15,7 @@ crons = ["0 12 * * *"]
 # Contratos subidos por la app y suscriptores. Crear con: npx wrangler kv namespace create AVISOS
 [[kv_namespaces]]
 binding = "AVISOS"
-id = "PENDIENTE"
+id = "0c9958afb9e94108929e96c6465391ce"
 
 # Los secretos van con `npx wrangler secret put`, nunca en este archivo:
 #   TELEGRAM_TOKEN, TELEGRAM_WEBHOOK_SECRET, INVITACION
