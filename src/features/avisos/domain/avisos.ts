@@ -4,6 +4,7 @@ import {
 	diasEntre,
 	diasParaVencer,
 	estadoContrato,
+	esVigente,
 	textoVencimiento,
 	vigenciaContrato,
 } from "@/features/contratos/domain/contrato";
@@ -138,4 +139,46 @@ export function resumenNotificacion(nuevos: readonly Aviso[]): { titulo: string;
 			.map((aviso) => aviso.titulo)
 			.join("\n"),
 	};
+}
+
+// Lo que se sube al Worker de Telegram: los contratos vigentes y si ya tienen emitida la
+// valorización de su último mes. El Worker cuenta los días cada mañana sin abrir la app.
+export interface ContratoParaTelegram {
+	id: string;
+	codigo: string;
+	proyecto: string;
+	cliente: string;
+	fechaFin: string;
+	periodo: string;
+	pendiente: boolean;
+}
+
+export function contratosParaTelegram({
+	contratos,
+	valorizaciones,
+	terceros,
+	hoy,
+}: Datos): ContratoParaTelegram[] {
+	const nombres = new Map(terceros.map((tercero) => [tercero.id, tercero.razonSocial]));
+	const emitidas = new Set(
+		valorizaciones
+			.filter((valorizacion) => valorizacion.estado === "EMITIDA")
+			.map((valorizacion) => `${valorizacion.contratoId}:${valorizacion.periodo}`),
+	);
+
+	return contratos
+		.filter((contrato) => esVigente(contrato, hoy))
+		.map((contrato) => {
+			const ultimo = contrato.fechaFin.slice(0, 7);
+
+			return {
+				id: contrato.id,
+				codigo: contrato.codigo,
+				proyecto: contrato.proyecto,
+				cliente: nombres.get(contrato.terceroId) ?? "—",
+				fechaFin: contrato.fechaFin,
+				periodo: formatearPeriodo(ultimo),
+				pendiente: !emitidas.has(`${contrato.id}:${ultimo}`),
+			};
+		});
 }

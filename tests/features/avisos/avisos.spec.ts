@@ -1,5 +1,9 @@
 import { db } from "../../../src/data/db";
-import { calcularAvisos, resumenNotificacion } from "../../../src/features/avisos/domain/avisos";
+import {
+	calcularAvisos,
+	contratosParaTelegram,
+	resumenNotificacion,
+} from "../../../src/features/avisos/domain/avisos";
 import { clienteService } from "../../../src/features/clientes/application/terceroService.instance";
 import {
 	contratoRepository,
@@ -134,6 +138,34 @@ describe("calcularAvisos", () => {
 			titulo: "2 avisos nuevos",
 			cuerpo: "Vence en 3 días: CTR-001\nCTR-001 está por agotarse",
 		});
+	});
+});
+
+describe("contratosParaTelegram", () => {
+	it("sube los vigentes e indica si falta la valorización de su último mes", async () => {
+		const datos = async () =>
+			contratosParaTelegram({
+				contratos: await contratoRepository.listar(),
+				valorizaciones: await valorizacionService.listar(),
+				terceros: await clienteService.listar(),
+				hoy: "2026-12-20",
+			});
+
+		expect(await datos()).toEqual([
+			{
+				id: osur,
+				codigo: "CTR-001",
+				proyecto: "GESTIÓN GENERAL DE SUBCONTRATOS - OSUR",
+				cliente: "CONSTRUCTORA ANDINA SAC",
+				fechaFin: "2026-12-31",
+				periodo: "Diciembre 2026",
+				pendiente: true,
+			},
+		]);
+
+		await emitir("2026-12", "10", "2026-12-20");
+
+		expect((await datos())[0].pendiente).toBe(false);
 	});
 });
 

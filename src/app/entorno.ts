@@ -11,6 +11,9 @@ export const entorno = {
 	sharepointSitio: (import.meta.env.VITE_SHAREPOINT_SITIO as string | undefined) ?? "",
 	// Worker de consulta de RUC (worker/ruc): "https://hm-ruc.<cuenta>.workers.dev". Vacío: carga manual.
 	rucApiUrl: (import.meta.env.VITE_RUC_API_URL as string | undefined) ?? "",
+	// Worker de avisos por Telegram (worker/avisos): "https://hm-avisos.<cuenta>.workers.dev".
+	// Vacío: no se suben los contratos y no hay avisos por Telegram.
+	avisosApiUrl: (import.meta.env.VITE_AVISOS_API_URL as string | undefined) ?? "",
 };
 
 // Ruta base de la app ("/" en local, "/hm-valorizaciones/" en GitHub Pages), siempre con "/" final.

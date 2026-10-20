@@ -3,6 +3,7 @@ import { Outlet, ScrollRestoration, useLocation } from "react-router";
 import { ruta } from "@/app/entorno";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AvisosButton } from "@/features/avisos/ui/AvisosButton";
+import { usePublicarAvisos } from "@/features/avisos/ui/usePublicarAvisos";
 import { SyncStatus } from "@/features/sincronizacion/SyncStatus";
 import { OfflineBanner } from "@/shared/components/OfflineBanner";
 
@@ -15,6 +16,7 @@ export function AppLayout() {
 	const isNuevaValorizacion = pathname === NUEVA_VALORIZACION_PATH;
 	const seccion = findNavItem(pathname);
 	const titulo = isNuevaValorizacion ? "Nueva valorización" : (seccion?.label ?? "");
+	usePublicarAvisos();
 
 	return (
 		<SidebarProvider>

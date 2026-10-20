@@ -4,6 +4,7 @@ export const entorno = {
 	msalAuthority: "https://login.microsoftonline.com/common",
 	sharepointSitio: "",
 	rucApiUrl: "",
+	avisosApiUrl: "",
 };
 
 export const base = "/";
