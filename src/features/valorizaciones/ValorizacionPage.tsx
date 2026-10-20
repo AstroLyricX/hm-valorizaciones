@@ -162,7 +162,7 @@ function Editor({ planilla }: { planilla: Planilla }) {
 					id,
 					CantidadSchema.safeParse(valor).success
 						? undefined
-						: "Ingresa las horas, por ejemplo 53.23.",
+						: "Escribe las horas con números, como 120 o 53.5.",
 				]),
 			),
 		[cantidades],

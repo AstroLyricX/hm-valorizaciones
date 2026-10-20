@@ -52,7 +52,7 @@ const HORAS = /^\d{1,7}(\.\d{1,2})?$/;
 // antes de usar big.js para no lanzar con textos inválidos.
 const horasPositivas = z
 	.string()
-	.regex(HORAS, "Ingresa las horas, por ejemplo 150.")
+	.regex(HORAS, "Escribe las horas con números, como 150.")
 	.refine(
 		(valor) => !HORAS.test(valor) || new Big(valor).gt(0),
 		"Las horas deben ser mayores a 0.",

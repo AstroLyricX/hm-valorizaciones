@@ -163,7 +163,7 @@ test("no emite con un ítem adicional incompleto", async () => {
 	expect(
 		await screen.findByText("Completa los ítems adicionales antes de emitir."),
 	).toBeInTheDocument();
-	expect(screen.getAllByText("Ingresa la cantidad, por ejemplo 2.").length).toBeGreaterThan(0);
+	expect(screen.getAllByText("Escribe la cantidad con números, como 2.").length).toBeGreaterThan(0);
 	expect(screen.getAllByLabelText("Precio unitario del ítem 2")[0]).toHaveAttribute(
 		"aria-invalid",
 		"true",
@@ -203,7 +203,9 @@ test("marca las horas inválidas y no las guarda", async () => {
 	await user.clear(horas);
 	await user.type(horas, "abc");
 
-	expect(screen.getAllByText("Ingresa las horas, por ejemplo 53.23.").length).toBeGreaterThan(0);
+	expect(
+		screen.getAllByText("Escribe las horas con números, como 120 o 53.5.").length,
+	).toBeGreaterThan(0);
 	expect(horas).toHaveAttribute("aria-invalid", "true");
 	expect((await valorizacionRepository.items(borrador.id))[0]?.cantidadActual).toBe("0");
 });
@@ -298,15 +300,38 @@ test("un administrador anula con motivo y la valorización muestra el motivo", a
 	await user.click(await screen.findByRole("button", { name: "Anular" }));
 	const dialogo = await screen.findByRole("dialog", { name: "Anular valorización 0002-2026" });
 	await user.click(within(dialogo).getByRole("button", { name: "Anular" }));
-	expect(
-		await within(dialogo).findByText("Escribe el motivo de la anulación."),
-	).toBeInTheDocument();
-	await user.type(within(dialogo).getByLabelText(/Motivo/), "Horas mal cargadas");
+	expect(await within(dialogo).findByText("Elige el motivo de la anulación.")).toBeInTheDocument();
+	await user.click(within(dialogo).getByRole("radio", { name: /Error de cantidad/ }));
+	expect(within(dialogo).queryByRole("textbox")).not.toBeInTheDocument();
 	await user.click(within(dialogo).getByRole("button", { name: "Anular" }));
 
 	expect(await screen.findByText("Valorización 0002-2026 anulada.")).toBeInTheDocument();
-	expect(await screen.findByText("Motivo: Horas mal cargadas")).toBeInTheDocument();
+	expect(await screen.findByText("Motivo: Error de cantidad")).toBeInTheDocument();
 	expect((await db.valorizaciones.get(emitida.id))?.estado).toBe("ANULADA");
+});
+
+test("al anular con «Otro motivo» hay que escribirlo", async () => {
+	const user = userEvent.setup();
+	const emitida = await agostoEmitido();
+	renderRoute(`/valorizaciones/${emitida.id}`);
+
+	await user.click(await screen.findByRole("button", { name: "Anular" }));
+	const dialogo = await screen.findByRole("dialog", { name: "Anular valorización 0002-2026" });
+	await user.click(within(dialogo).getByRole("radio", { name: /Otro motivo/ }));
+	await user.click(within(dialogo).getByRole("button", { name: "Anular" }));
+	expect(
+		await within(dialogo).findByText("Escribe el motivo de la anulación."),
+	).toBeInTheDocument();
+
+	await user.type(
+		within(dialogo).getByLabelText(/Describe el motivo/),
+		"El cliente pidió reemitir con otra razón social",
+	);
+	await user.click(within(dialogo).getByRole("button", { name: "Anular" }));
+
+	expect(
+		await screen.findByText("Motivo: El cliente pidió reemitir con otra razón social"),
+	).toBeInTheDocument();
 });
 
 test("un operador no ve el botón para anular", async () => {

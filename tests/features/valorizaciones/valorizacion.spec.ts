@@ -1,8 +1,10 @@
 import {
+	AnulacionSchema,
 	calcularValorizacion,
 	formatearPeriodo,
 	siguienteNumero,
 	sumarCantidades,
+	textoAnulacion,
 } from "../../../src/features/valorizaciones/domain/valorizacion";
 
 // Caso real de la hoja VALORIZACION del xlsm: excavadora CAT 340, 150 h a USD 47.00,
@@ -167,5 +169,21 @@ describe("siguienteNumero con prefijo", () => {
 		expect(siguienteNumero(2026, numeros)).toBe("0003-2026");
 		expect(siguienteNumero(2026, numeros, "R-")).toBe("R-0002-2026");
 		expect(siguienteNumero(2026, ["0005-2026"], "R-")).toBe("R-0001-2026");
+	});
+});
+
+describe("motivo de anulación", () => {
+	it("guarda el motivo de la lista o lo escrito en «Otro»", () => {
+		expect(textoAnulacion({ motivo: "ERROR_PERIODO", detalle: "" })).toBe("Error de periodo");
+		expect(textoAnulacion({ motivo: "ERROR_CONTRATO", detalle: "" })).toBe("Error de contrato");
+		expect(textoAnulacion({ motivo: "OTRO", detalle: "Duplicada por error" })).toBe(
+			"Duplicada por error",
+		);
+	});
+
+	it("con «Otro» el detalle es obligatorio", () => {
+		expect(AnulacionSchema.safeParse({ motivo: "OTRO", detalle: "" }).success).toBe(false);
+		expect(AnulacionSchema.safeParse({ motivo: "ERROR_CANTIDAD", detalle: "" }).success).toBe(true);
+		expect(AnulacionSchema.safeParse({ motivo: "", detalle: "algo" }).success).toBe(false);
 	});
 });

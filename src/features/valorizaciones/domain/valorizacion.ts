@@ -30,7 +30,7 @@ const porcentaje = (mensaje: string) =>
 export const CantidadSchema = z
 	.string()
 	.trim()
-	.regex(CANTIDAD, "Ingresa las horas, por ejemplo 53.23.");
+	.regex(CANTIDAD, "Escribe las horas con números, como 120 o 53.5.");
 
 // Datos de la cabecera que el usuario puede cambiar mientras es borrador.
 export const ValorizacionCabeceraSchema = z.object({
@@ -90,7 +90,7 @@ export const ItemAdicionalCompletoSchema = ItemAdicionalSchema.extend({
 	cantidad: z
 		.string()
 		.trim()
-		.regex(CANTIDAD, "Ingresa la cantidad, por ejemplo 2.")
+		.regex(CANTIDAD, "Escribe la cantidad con números, como 2.")
 		.refine(
 			(valor) => !CANTIDAD.test(valor) || new Big(valor).gt(0),
 			"La cantidad debe ser mayor a 0.",
@@ -98,7 +98,7 @@ export const ItemAdicionalCompletoSchema = ItemAdicionalSchema.extend({
 	precioUnitario: z
 		.string()
 		.trim()
-		.regex(MONTO, "Ingresa el precio, por ejemplo 350.00.")
+		.regex(MONTO, "Escribe el precio con números, como 350.")
 		.refine((valor) => !MONTO.test(valor) || new Big(valor).gt(0), "El precio debe ser mayor a 0."),
 });
 
@@ -175,6 +175,46 @@ export const MotivoAnulacionSchema = z
 	.trim()
 	.min(5, "Escribe el motivo de la anulación.")
 	.max(300, "Máximo 300 caracteres.");
+
+// Motivos frecuentes para anular; con "Otro" se escribe el motivo completo.
+export const MOTIVOS_ANULACION = [
+	"ERROR_CONTRATO",
+	"ERROR_CANTIDAD",
+	"ERROR_PERIODO",
+	"OTRO",
+] as const;
+
+export type MotivoAnulacion = (typeof MOTIVOS_ANULACION)[number];
+
+export const ETIQUETA_MOTIVO_ANULACION: Record<MotivoAnulacion, string> = {
+	ERROR_CONTRATO: "Error de contrato",
+	ERROR_CANTIDAD: "Error de cantidad",
+	ERROR_PERIODO: "Error de periodo",
+	OTRO: "Otro motivo",
+};
+
+export const DESCRIPCION_MOTIVO_ANULACION: Record<MotivoAnulacion, string> = {
+	ERROR_CONTRATO: "Contrato, cliente o precios equivocados.",
+	ERROR_CANTIDAD: "Horas o cantidades mal registradas.",
+	ERROR_PERIODO: "Se valorizó un mes que no correspondía.",
+	OTRO: "Escribe el motivo.",
+};
+
+// Con "Otro" se escribe el motivo (detalle); con los de la lista no hace falta.
+export const AnulacionSchema = z
+	.object({
+		motivo: z.enum(MOTIVOS_ANULACION, { error: "Elige el motivo de la anulación." }),
+		detalle: z.string().trim().max(250, "Máximo 250 caracteres."),
+	})
+	.refine((datos) => datos.motivo !== "OTRO" || datos.detalle.length >= 5, {
+		message: "Escribe el motivo de la anulación.",
+		path: ["detalle"],
+	});
+
+// Texto que se guarda y se muestra: "Error de cantidad" o lo escrito en "Otro".
+export function textoAnulacion(datos: z.infer<typeof AnulacionSchema>): string {
+	return datos.motivo === "OTRO" ? datos.detalle : ETIQUETA_MOTIVO_ANULACION[datos.motivo];
+}
 
 export type ValorizacionCabecera = z.infer<typeof ValorizacionCabeceraSchema>;
 export type NuevaValorizacion = z.infer<typeof NuevaValorizacionSchema>;
