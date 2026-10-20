@@ -222,6 +222,15 @@ export class HmDatabase extends Dexie {
 					}
 				});
 		});
+		// Corrección de una valorización anulada: conserva su número al emitirse.
+		this.version(17).upgrade(async (tx) => {
+			await tx
+				.table("valorizaciones")
+				.toCollection()
+				.modify((valorizacion: Record<string, unknown>) => {
+					valorizacion.reemplazaA ??= null;
+				});
+		});
 	}
 }
 

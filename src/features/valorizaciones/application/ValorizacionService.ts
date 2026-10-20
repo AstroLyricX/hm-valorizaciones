@@ -31,6 +31,7 @@ import {
 	MotivoAnulacionSchema,
 	type NuevaValorizacion,
 	NuevaValorizacionSchema,
+	numeroDeReemision,
 	prefijoNumero,
 	siguienteNumero,
 	sumarCantidades,
@@ -64,6 +65,10 @@ export interface Planilla {
 	filas: FilaPlanilla[];
 	// Suma de los ítems adicionales de las valorizaciones emitidas antes (columna Anterior).
 	adicionalesAnteriores: number;
+	// En un borrador que corrige una anulada: el número que conservará al emitirse.
+	numeroReemision: string | null;
+	// En una anulada: la valorización que la corrige (borrador o ya emitida), si existe.
+	correccion: Pick<Valorizacion, "id" | "estado" | "numero"> | null;
 }
 
 export class ContratoNoEncontradoError extends Error {
@@ -89,6 +94,13 @@ export class PeriodoFueraDeVigenciaError extends Error {
 	constructor(vigencia: string) {
 		super(`El periodo está fuera de la vigencia del contrato (${vigencia}).`);
 		this.name = "PeriodoFueraDeVigenciaError";
+	}
+}
+
+export class NoAnuladaError extends Error {
+	constructor() {
+		super("Solo se puede reemitir una valorización anulada.");
+		this.name = "NoAnuladaError";
 	}
 }
 
@@ -214,42 +226,45 @@ export class ValorizacionService {
 			throw new PeriodoFueraDeVigenciaError(formatearRangoVigencia(contrato));
 		}
 
-		const [empresa, equiposDelContrato] = await Promise.all([
-			this.empresa.obtener(),
-			this.contratos.equipos(contratoId),
-		]);
-		const ahora = ahoraIso();
-		const base = {
-			createdAt: ahora,
-			updatedAt: ahora,
-			updatedBy: usuario,
-			deletedAt: null,
-			version: 1,
-		};
-		const valorizacion: Valorizacion = {
-			id: uuidv7(),
-			contratoId,
-			periodo,
-			...CABECERA_INICIAL,
-			...SIN_EMITIR,
-			estado: "BORRADOR",
-			moneda: contrato.moneda,
-			igvPct: empresa.igvPorcentaje,
-			fondoGarantiaPct: contrato.fondoGarantiaPct,
-			adicionales: [],
-			...base,
-		};
-		const items: ValorizacionItem[] = equiposDelContrato.map((contratoEquipo) => ({
-			id: uuidv7(),
-			valorizacionId: valorizacion.id,
-			contratoEquipoId: contratoEquipo.id,
-			cantidadActual: "0",
-			...SIN_COPIA,
-			...base,
-		}));
-		await this.repository.guardar(valorizacion, items);
+		return this.nuevoBorrador(contrato, periodo, usuario);
+	}
 
-		return valorizacion;
+	// Corrige una valorización anulada: crea un borrador del mismo contrato y periodo con sus
+	// horas, ítems adicionales y datos del servicio. Al emitirse conserva el número de la anulada.
+	// No exige que el contrato siga vigente: corrige un periodo que ya se valorizó.
+	async reemitir(id: string, usuario: string): Promise<Valorizacion> {
+		const anulada = await this.repository.obtener(id);
+		if (!anulada || anulada.deletedAt !== null || anulada.estado !== "ANULADA") {
+			throw new NoAnuladaError();
+		}
+		const contrato = await this.contratos.obtener(anulada.contratoId);
+		if (!contrato || contrato.deletedAt !== null) {
+			throw new ContratoNoEncontradoError();
+		}
+		const existente = (await this.repository.delContrato(anulada.contratoId)).find(
+			(valorizacion) =>
+				valorizacion.estado === "BORRADOR" &&
+				(valorizacion.reemplazaA === id || valorizacion.periodo === anulada.periodo),
+		);
+		if (existente) {
+			return existente;
+		}
+		const horas = new Map(
+			(await this.repository.items(id)).map((item) => [item.contratoEquipoId, item.cantidadActual]),
+		);
+
+		return this.nuevoBorrador(contrato, anulada.periodo, usuario, {
+			cabecera: {
+				nombreServicio: anulada.nombreServicio,
+				plazoPago: anulada.plazoPago,
+				gastosGeneralesPct: anulada.gastosGeneralesPct,
+				utilidadPct: anulada.utilidadPct,
+				observaciones: anulada.observaciones,
+			},
+			adicionales: anulada.adicionales.map((item) => ({ ...item, id: uuidv7() })),
+			horas,
+			reemplazaA: id,
+		});
 	}
 
 	async obtenerPlanilla(id: string): Promise<Planilla | undefined> {
@@ -282,6 +297,11 @@ export class ValorizacionService {
 			empresa,
 			filas,
 			adicionalesAnteriores: await this.adicionalesAnteriores(valorizacion),
+			numeroReemision:
+				valorizacion.estado === "BORRADOR"
+					? numeroDeReemision(valorizacion, await this.repository.todas())
+					: null,
+			correccion: valorizacion.estado === "ANULADA" ? await this.correccionDe(valorizacion) : null,
 		};
 	}
 
@@ -380,7 +400,7 @@ export class ValorizacionService {
 			throw new SinHorasError();
 		}
 
-		const numeros = (await this.repository.todas()).map((otra) => otra.numero);
+		const todas = await this.repository.todas();
 		const ahora = ahoraIso();
 		const auditoria = { updatedAt: ahora, updatedBy: usuario };
 		const existentes = new Map(
@@ -412,11 +432,14 @@ export class ValorizacionService {
 		const emitida: Valorizacion = {
 			...valorizacion,
 			estado: "EMITIDA",
-			numero: siguienteNumero(
-				Number(fechaEmision.slice(0, 4)),
-				numeros,
-				prefijoNumero(planilla.contrato.tipo),
-			),
+			// La corrección de una anulada conserva su número; las demás toman el siguiente del año.
+			numero:
+				numeroDeReemision(valorizacion, todas) ??
+				siguienteNumero(
+					Number(fechaEmision.slice(0, 4)),
+					todas.map((otra) => otra.numero),
+					prefijoNumero(planilla.contrato.tipo),
+				),
 			fechaEmision,
 			totales: totalesDe(calculo),
 			montoEnLetras: montoEnLetras(calculo.actual.total, valorizacion.moneda),
@@ -465,6 +488,56 @@ export class ValorizacionService {
 			updatedBy: usuario,
 			version: actual.version + 1,
 		});
+	}
+
+	private async nuevoBorrador(
+		contrato: Contrato,
+		periodo: string,
+		usuario: string,
+		copia?: {
+			cabecera: ValorizacionCabecera;
+			adicionales: ItemAdicional[];
+			horas: ReadonlyMap<string, string>;
+			reemplazaA: string;
+		},
+	): Promise<Valorizacion> {
+		const [empresa, equiposDelContrato] = await Promise.all([
+			this.empresa.obtener(),
+			this.contratos.equipos(contrato.id),
+		]);
+		const ahora = ahoraIso();
+		const base = {
+			createdAt: ahora,
+			updatedAt: ahora,
+			updatedBy: usuario,
+			deletedAt: null,
+			version: 1,
+		};
+		const valorizacion: Valorizacion = {
+			id: uuidv7(),
+			contratoId: contrato.id,
+			periodo,
+			...(copia?.cabecera ?? CABECERA_INICIAL),
+			...SIN_EMITIR,
+			estado: "BORRADOR",
+			moneda: contrato.moneda,
+			igvPct: empresa.igvPorcentaje,
+			fondoGarantiaPct: contrato.fondoGarantiaPct,
+			adicionales: copia?.adicionales ?? [],
+			reemplazaA: copia?.reemplazaA ?? null,
+			...base,
+		};
+		const items: ValorizacionItem[] = equiposDelContrato.map((contratoEquipo) => ({
+			id: uuidv7(),
+			valorizacionId: valorizacion.id,
+			contratoEquipoId: contratoEquipo.id,
+			cantidadActual: copia?.horas.get(contratoEquipo.id) ?? "0",
+			...SIN_COPIA,
+			...base,
+		}));
+		await this.repository.guardar(valorizacion, items);
+
+		return valorizacion;
 	}
 
 	private async borrador(id: string): Promise<Valorizacion> {
@@ -535,6 +608,21 @@ export class ValorizacionService {
 					cantidadActual: item.cantidadActual,
 				};
 			});
+	}
+
+	// La que corrige a una anulada: la que la reemplaza o otra del mismo periodo sin anular.
+	private async correccionDe(
+		anulada: Valorizacion,
+	): Promise<Pick<Valorizacion, "id" | "estado" | "numero"> | null> {
+		const correccion = (await this.repository.delContrato(anulada.contratoId)).find(
+			(otra) =>
+				otra.estado !== "ANULADA" &&
+				(otra.reemplazaA === anulada.id || otra.periodo === anulada.periodo),
+		);
+
+		return correccion
+			? { id: correccion.id, estado: correccion.estado, numero: correccion.numero }
+			: null;
 	}
 
 	// Adicionales de las valorizaciones emitidas de periodos anteriores (las anuladas no cuentan).

@@ -156,6 +156,8 @@ export const ValorizacionSchema = BaseSchema.extend({
 	// Ruta del PDF emitido en SharePoint (P9), cuando ya se subió.
 	pdfPath: z.string().nullable(),
 	adicionales: z.array(ItemAdicionalSchema).max(MAX_ADICIONALES).default([]),
+	// Valorización anulada que esta corrige: al emitir conserva su número.
+	reemplazaA: z.string().nullable().default(null),
 });
 
 // Horas del periodo por equipo del contrato. Al emitir se copian los datos del contrato y
@@ -477,4 +479,39 @@ export function mensajeValorizacion(
 // Lo valorizado del contrato en una emitida (subtotal 1 sin los ítems adicionales).
 export function valorizadoDelContrato(totales: Totales | null): number {
 	return (totales?.subtotal1 ?? 0) - (totales?.adicionales ?? 0);
+}
+
+// Número que conserva la corrección de una valorización anulada: el de la anulada que reemplaza
+// o, si no se indicó, el de la última anulada del mismo contrato y periodo. Solo si ninguna
+// emitida lo usa (no puede haber dos emitidas con el mismo número).
+export function numeroDeReemision(
+	valorizacion: Pick<Valorizacion, "id" | "contratoId" | "periodo" | "reemplazaA">,
+	todas: readonly Pick<
+		Valorizacion,
+		"id" | "contratoId" | "periodo" | "estado" | "numero" | "anuladaEn" | "deletedAt"
+	>[],
+): string | null {
+	const enUso = new Set(
+		todas
+			.filter(
+				(otra) =>
+					otra.estado === "EMITIDA" && otra.deletedAt === null && otra.id !== valorizacion.id,
+			)
+			.map((otra) => otra.numero),
+	);
+	const candidatas = todas
+		.filter(
+			(otra) =>
+				otra.estado === "ANULADA" &&
+				otra.numero !== null &&
+				(otra.id === valorizacion.reemplazaA ||
+					(otra.contratoId === valorizacion.contratoId && otra.periodo === valorizacion.periodo)),
+		)
+		.sort(
+			(a, b) =>
+				Number(b.id === valorizacion.reemplazaA) - Number(a.id === valorizacion.reemplazaA) ||
+				(b.anuladaEn ?? "").localeCompare(a.anuladaEn ?? ""),
+		);
+
+	return candidatas.find((anulada) => !enUso.has(anulada.numero))?.numero ?? null;
 }

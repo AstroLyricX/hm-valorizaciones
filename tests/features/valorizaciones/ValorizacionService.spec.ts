@@ -10,12 +10,16 @@ import { EquipoRepository } from "../../../src/features/equipos/infrastructure/E
 import {
 	AdicionalesIncompletosError,
 	ContratoNoVigenteError,
+	NoAnuladaError,
 	PeriodoFueraDeVigenciaError,
 	SinHorasError,
 	SinPermisoError,
 	ValorizacionService,
 } from "../../../src/features/valorizaciones/application/ValorizacionService";
-import { ValorizacionNoEditableError } from "../../../src/features/valorizaciones/domain/valorizacion";
+import {
+	CABECERA_INICIAL,
+	ValorizacionNoEditableError,
+} from "../../../src/features/valorizaciones/domain/valorizacion";
 import { ValorizacionRepository } from "../../../src/features/valorizaciones/infrastructure/ValorizacionRepository";
 import { CLIENTE, excavadora, HOY } from "../../support/fixtures";
 import { contratoDatos } from "../contratos/fixtures";
@@ -303,7 +307,7 @@ describe("ValorizacionService", () => {
 		await expect(service.emitir(borrador.id, "ana@hm.pe")).rejects.toBeInstanceOf(SinHorasError);
 	});
 
-	it("solo un administrador anula, con motivo; la anulada no suma horas ni libera su número", async () => {
+	it("solo un administrador anula, con motivo; la anulada no suma horas y otro periodo no toma su número", async () => {
 		const julio = await service.crearBorrador({ contratoId, periodo: "2026-07" }, "ana@hm.pe", HOY);
 		const [fila] = (await service.obtenerPlanilla(julio.id))?.filas ?? [];
 		await service.actualizarCantidad(julio.id, fila.contratoEquipoId, "114.4", "ana@hm.pe");
@@ -324,5 +328,117 @@ describe("ValorizacionService", () => {
 		expect((await service.obtenerPlanilla(agosto.id))?.filas[0].cantidadAnterior).toBe("0");
 		await service.actualizarCantidad(agosto.id, fila.contratoEquipoId, "10", "ana@hm.pe");
 		expect((await service.emitir(agosto.id, "ana@hm.pe", "2026-09-01")).numero).toBe("0002-2026");
+	});
+
+	it("la corrección de una anulada copia sus datos y se emite con el mismo número", async () => {
+		const agosto = await service.crearBorrador(
+			{ contratoId, periodo: "2026-08" },
+			"ana@hm.pe",
+			HOY,
+		);
+		const [fila] = (await service.obtenerPlanilla(agosto.id))?.filas ?? [];
+		await service.actualizarCantidad(agosto.id, fila.contratoEquipoId, "120", "ana@hm.pe");
+		await service.actualizarCabecera(
+			agosto.id,
+			{ ...CABECERA_INICIAL, observaciones: "Frente 2" },
+			"ana@hm.pe",
+		);
+		await service.actualizarAdicionales(
+			agosto.id,
+			[
+				{
+					id: "ad-1",
+					descripcion: "FLETE",
+					unidad: "VIAJES",
+					cantidad: "1",
+					precioUnitario: "300",
+				},
+			],
+			"ana@hm.pe",
+		);
+		expect((await service.emitir(agosto.id, "ana@hm.pe", "2026-09-02")).numero).toBe("0001-2026");
+		const septiembre = await service.crearBorrador(
+			{ contratoId, periodo: "2026-09" },
+			"ana@hm.pe",
+			HOY,
+		);
+		await service.actualizarCantidad(septiembre.id, fila.contratoEquipoId, "10", "ana@hm.pe");
+		expect((await service.emitir(septiembre.id, "ana@hm.pe", "2026-10-01")).numero).toBe(
+			"0002-2026",
+		);
+		await service.anular(agosto.id, "Error de cantidad", "ana@hm.pe", "ADMIN");
+
+		const correccion = await service.reemitir(agosto.id, "luis@hm.pe");
+		// Volver a pedirla abre la misma corrección.
+		expect((await service.reemitir(agosto.id, "luis@hm.pe")).id).toBe(correccion.id);
+		const planilla = await service.obtenerPlanilla(correccion.id);
+		expect(planilla).toMatchObject({
+			numeroReemision: "0001-2026",
+			valorizacion: {
+				estado: "BORRADOR",
+				periodo: "2026-08",
+				reemplazaA: agosto.id,
+				observaciones: "Frente 2",
+				adicionales: [expect.objectContaining({ descripcion: "FLETE", precioUnitario: "300" })],
+			},
+		});
+		expect(planilla?.filas[0].cantidadActual).toBe("120");
+		expect((await service.obtenerPlanilla(agosto.id))?.correccion).toMatchObject({
+			id: correccion.id,
+			estado: "BORRADOR",
+		});
+
+		await service.actualizarCantidad(correccion.id, fila.contratoEquipoId, "100", "luis@hm.pe");
+		const reemitida = await service.emitir(correccion.id, "luis@hm.pe", "2026-10-15");
+		expect(reemitida.numero).toBe("0001-2026");
+		// La numeración sigue sin saltos ni repetidos.
+		const octubre = await service.crearBorrador(
+			{ contratoId, periodo: "2026-10" },
+			"ana@hm.pe",
+			HOY,
+		);
+		await service.actualizarCantidad(octubre.id, fila.contratoEquipoId, "5", "ana@hm.pe");
+		expect((await service.emitir(octubre.id, "ana@hm.pe", "2026-10-20")).numero).toBe("0003-2026");
+	});
+
+	it("una nueva valorización del mismo contrato y periodo también conserva el número", async () => {
+		const agosto = await service.crearBorrador(
+			{ contratoId, periodo: "2026-08" },
+			"ana@hm.pe",
+			HOY,
+		);
+		const [fila] = (await service.obtenerPlanilla(agosto.id))?.filas ?? [];
+		await service.actualizarCantidad(agosto.id, fila.contratoEquipoId, "120", "ana@hm.pe");
+		await service.emitir(agosto.id, "ana@hm.pe", "2026-09-02");
+		await service.anular(agosto.id, "Error de periodo", "ana@hm.pe", "ADMIN");
+
+		const nueva = await service.crearBorrador({ contratoId, periodo: "2026-08" }, "ana@hm.pe", HOY);
+		await service.actualizarCantidad(nueva.id, fila.contratoEquipoId, "80", "ana@hm.pe");
+
+		expect((await service.emitir(nueva.id, "ana@hm.pe", "2026-09-05")).numero).toBe("0001-2026");
+		// Ya reemitida, una segunda anulación y corrección vuelve a usar el mismo número.
+		await service.anular(nueva.id, "Error de cantidad", "ana@hm.pe", "ADMIN");
+		const otra = await service.reemitir(nueva.id, "ana@hm.pe");
+		await service.actualizarCantidad(otra.id, fila.contratoEquipoId, "90", "ana@hm.pe");
+		expect((await service.emitir(otra.id, "ana@hm.pe", "2026-09-06")).numero).toBe("0001-2026");
+	});
+
+	it("solo se reemite una anulada, aunque el contrato ya haya vencido", async () => {
+		const agosto = await service.crearBorrador(
+			{ contratoId, periodo: "2026-08" },
+			"ana@hm.pe",
+			HOY,
+		);
+		await expect(service.reemitir(agosto.id, "ana@hm.pe")).rejects.toBeInstanceOf(NoAnuladaError);
+		const [fila] = (await service.obtenerPlanilla(agosto.id))?.filas ?? [];
+		await service.actualizarCantidad(agosto.id, fila.contratoEquipoId, "120", "ana@hm.pe");
+		await service.emitir(agosto.id, "ana@hm.pe", "2026-09-02");
+		await service.anular(agosto.id, "Error de contrato", "ana@hm.pe", "ADMIN");
+		await database.contratos.update(contratoId, { fechaFin: "2026-08-31" });
+
+		await expect(service.reemitir(agosto.id, "ana@hm.pe")).resolves.toMatchObject({
+			estado: "BORRADOR",
+			reemplazaA: agosto.id,
+		});
 	});
 });

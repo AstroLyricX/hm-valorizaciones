@@ -334,6 +334,31 @@ test("al anular con «Otro motivo» hay que escribirlo", async () => {
 	).toBeInTheDocument();
 });
 
+test("corrige una anulada y la reemite con el mismo número", async () => {
+	const user = userEvent.setup();
+	const emitida = await agostoEmitido();
+	await valorizacionService.anular(emitida.id, "Error de cantidad", "ana@hm.pe", "ADMIN");
+	renderRoute(`/valorizaciones/${emitida.id}`);
+
+	await user.click(await screen.findByRole("button", { name: "Corregir y reemitir" }));
+
+	expect(
+		await screen.findByText(
+			"Corrige la valorización anulada: al emitirla conservará el N.° 0002-2026.",
+		),
+	).toBeInTheDocument();
+	// Trae las horas de la anulada.
+	expect(screen.getAllByLabelText("Horas del periodo del ítem 1")[0]).toHaveValue("53.23");
+	await user.click(screen.getByRole("button", { name: "Emitir valorización" }));
+	const confirmacion = await screen.findByRole("alertdialog");
+	expect(confirmacion).toHaveTextContent(
+		"Se emitirá con el N.° 0002-2026 de la valorización anulada",
+	);
+	await user.click(within(confirmacion).getByRole("button", { name: "Emitir" }));
+
+	expect(await screen.findByText("Valorización 0002-2026 emitida.")).toBeInTheDocument();
+});
+
 test("un operador no ve el botón para anular", async () => {
 	const emitida = await agostoEmitido();
 	signInAs({ name: "Luis Mamani", email: "luis@hm.pe", rol: "OPERADOR" });

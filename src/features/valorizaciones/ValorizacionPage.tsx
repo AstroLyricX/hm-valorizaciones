@@ -7,6 +7,7 @@ import {
 	CloudCheck,
 	LoaderCircle,
 	Lock,
+	RotateCcw,
 	Send,
 	Trash2,
 	TriangleAlert,
@@ -373,8 +374,38 @@ function Editor({ planilla }: { planilla: Planilla }) {
 								: "—"}
 						</span>
 						<span>Motivo: {valorizacion.motivoAnulacion}</span>
+						{planilla.correccion?.estado === "EMITIDA" ? (
+							<Link
+								to={`/valorizaciones/${planilla.correccion.id}`}
+								className="w-fit font-medium underline underline-offset-2"
+							>
+								Reemitida con el mismo número
+							</Link>
+						) : (
+							<Button
+								variant="outline"
+								className="mt-2 h-9 w-fit border-red-200 bg-white px-3.5 text-red-700 hover:bg-red-100"
+								onClick={() => {
+									valorizacionService
+										.reemitir(valorizacion.id, usuario)
+										.then((borrador) => navigate(`/valorizaciones/${borrador.id}`))
+										.catch(() => {
+											toast.error("No se pudo crear la corrección. Inténtalo de nuevo.");
+										});
+								}}
+							>
+								<RotateCcw />
+								{planilla.correccion ? "Continuar la corrección" : "Corregir y reemitir"}
+							</Button>
+						)}
 					</div>
 				</div>
+			)}
+			{editable && planilla.numeroReemision && (
+				<p className="flex items-center gap-2 text-sm text-navy-600">
+					<RotateCcw className="size-4 shrink-0" aria-hidden="true" />
+					Corrige la valorización anulada: al emitirla conservará el N.° {planilla.numeroReemision}.
+				</p>
 			)}
 			{!editable && valorizacion.fechaEmision && (
 				<p className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -534,7 +565,7 @@ function Editor({ planilla }: { planilla: Planilla }) {
 				onOpenChange={setEmitiendo}
 				tono="primario"
 				title={`¿Emitir la valorización de ${formatearPeriodo(valorizacion.periodo)}?`}
-				description={`Se le asignará el siguiente número del año y quedará cerrada: ya no podrás cambiar las horas. Total de la factura: ${formatearMoneda(calculo.actual.total, moneda)}.`}
+				description={`${planilla.numeroReemision ? `Se emitirá con el N.° ${planilla.numeroReemision} de la valorización anulada` : "Se le asignará el siguiente número del año"} y quedará cerrada: ya no podrás cambiar las horas. Total de la factura: ${formatearMoneda(calculo.actual.total, moneda)}.`}
 				confirmLabel="Emitir"
 				onConfirm={() => {
 					void (async () => {

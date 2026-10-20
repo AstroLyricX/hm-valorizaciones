@@ -39,7 +39,7 @@ export function AnularDialog({
 			open={open}
 			onOpenChange={onOpenChange}
 			title={`Anular valorización ${numero}`}
-			description="La valorización anulada conserva su número y deja de sumar horas."
+			description="Deja de sumar horas. Su corrección se emite con el mismo número."
 			icon={Ban}
 			submitLabel="Anular"
 			isSubmitting={anulando}
