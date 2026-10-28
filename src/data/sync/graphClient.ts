@@ -80,7 +80,7 @@ export class GraphClient {
 		this.esperar = esperar;
 	}
 
-	// Biblioteca de documentos del sitio: "hmcontratistas.sharepoint.com:/sites/SistemaHM".
+	// Biblioteca de documentos del sitio: "maquinariashm.sharepoint.com:/sites/SistemaHM".
 	async driveDelSitio(sitio: string): Promise<string> {
 		const { id } = await this.json<{ id: string }>("GET", `/sites/${sitio}`);
 		const drive = await this.json<{ id: string }>("GET", `/sites/${id}/drive`);

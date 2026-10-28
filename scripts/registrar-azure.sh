@@ -55,7 +55,7 @@ if [[ -z "$principal" ]]; then
 	principal="$(az ad sp create --id "$app_id" --query id -o tsv)"
 fi
 
-echo "Asignando el rol ADMIN a $cuenta…"
+echo "Asignando el rol ADMIN a ${cuenta}…"
 yo="$(az ad signed-in-user show --query id -o tsv)"
 rol_admin="$(az ad app show --id "$app_id" --query "appRoles[?value=='ADMIN'].id | [0]" -o tsv)"
 ya_asignado="$(az rest --method GET \

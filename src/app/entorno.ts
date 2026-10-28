@@ -6,7 +6,7 @@ export const entorno = {
 	msalAuthority:
 		(import.meta.env.VITE_MSAL_AUTHORITY as string | undefined) ??
 		"https://login.microsoftonline.com/common",
-	// Sitio de SharePoint de H&M para sincronizar: "hmcontratistas.sharepoint.com:/sites/SistemaHM".
+	// Sitio de SharePoint de H&M para sincronizar: "maquinariashm.sharepoint.com:/sites/SistemaHM".
 	// Vacío: los datos quedan solo en el dispositivo.
 	sharepointSitio: (import.meta.env.VITE_SHAREPOINT_SITIO as string | undefined) ?? "",
 	// Worker de consulta de RUC (worker/ruc): "https://hm-ruc.<cuenta>.workers.dev". Vacío: carga manual.
