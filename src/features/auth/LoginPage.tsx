@@ -1,7 +1,7 @@
 import { Calculator, FileText, LoaderCircle, WifiOff } from "lucide-react";
 import { Navigate, useLocation, useNavigate } from "react-router";
 
-import { ruta } from "@/app/entorno";
+import { entorno, ruta } from "@/app/entorno";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useOnlineStatus } from "@/shared/hooks/useOnlineStatus";
@@ -59,7 +59,16 @@ export function LoginPage() {
 									Iniciar sesión
 								</h1>
 								<p className="text-sm text-balance text-muted-foreground">
-									Accede al sistema de valorizaciones de H&amp;M con tu cuenta de Microsoft.
+									Ingresa con tu cuenta de H&amp;M
+									{entorno.msalDominio && (
+										<>
+											{" "}
+											<span className="font-medium whitespace-nowrap text-slate-700 dark:text-slate-200">
+												(@{entorno.msalDominio.toLowerCase()})
+											</span>
+										</>
+									)}
+									.
 								</p>
 							</div>
 						</div>
@@ -105,7 +114,8 @@ export function LoginPage() {
 						</div>
 
 						<p className="mt-8 border-t border-slate-200/70 pt-6 text-center text-xs text-balance text-muted-foreground dark:border-white/10">
-							¿No tienes acceso? Solicítalo al administrador de H&amp;M.
+							Solo pueden entrar las cuentas de H&amp;M y las personas invitadas por la empresa. ¿No
+							tienes acceso? Pídelo al administrador.
 						</p>
 						{modo === "prueba" && (
 							<p className="mt-3 text-center text-xs font-medium text-amber-700">

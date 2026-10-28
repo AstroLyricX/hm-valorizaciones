@@ -118,6 +118,7 @@ test("iniciar sesión redirige a Microsoft pidiendo los permisos y la ruta de vu
 		scopes: ["User.Read"],
 		state: "/contratos",
 		prompt: "select_account",
+		domainHint: "maquinariashym.com",
 	});
 });
 

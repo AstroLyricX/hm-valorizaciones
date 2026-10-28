@@ -6,6 +6,9 @@ export const entorno = {
 	msalAuthority:
 		(import.meta.env.VITE_MSAL_AUTHORITY as string | undefined) ??
 		"https://login.microsoftonline.com/common",
+	// Dominio de las cuentas de H&M ("maquinariashym.com"): se muestra en el login y se sugiere a
+	// Microsoft. Vacío: no se menciona ningún dominio.
+	msalDominio: (import.meta.env.VITE_MSAL_DOMINIO as string | undefined) ?? "",
 	// Sitio de SharePoint de H&M para sincronizar: "maquinariashm.sharepoint.com:/sites/SistemaHM".
 	// Vacío: los datos quedan solo en el dispositivo.
 	sharepointSitio: (import.meta.env.VITE_SHAREPOINT_SITIO as string | undefined) ?? "",

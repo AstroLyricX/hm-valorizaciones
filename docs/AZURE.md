@@ -76,10 +76,11 @@ Copiar `.env.example` como `.env.local` (no se sube a Git) y completar:
 ```
 VITE_MSAL_CLIENT_ID=<Id. de aplicación (cliente)>
 VITE_MSAL_AUTHORITY=https://login.microsoftonline.com/<Id. de directorio (inquilino)>
+VITE_MSAL_DOMINIO=<dominio de las cuentas, por ejemplo maquinariashym.com>
 VITE_SHAREPOINT_SITIO=<empresa>.sharepoint.com:/sites/SistemaHM
 ```
 
-En GitHub Pages, los mismos tres valores van en el repositorio: **Settings** → **Secrets and
+En GitHub Pages, los mismos cuatro valores van en el repositorio: **Settings** → **Secrets and
 variables** → **Actions** → **Variables**.
 
 Reiniciar `npm start` (o volver a ejecutar `npm run build`) para que tome los valores.

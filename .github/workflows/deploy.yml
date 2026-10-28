@@ -39,6 +39,7 @@ jobs:
           BASE_PATH: /${{ github.event.repository.name }}/
           # Login con Microsoft: definir en Settings → Secrets and variables → Actions → Variables.
           VITE_MSAL_CLIENT_ID: ${{ vars.VITE_MSAL_CLIENT_ID }}
+          VITE_MSAL_DOMINIO: ${{ vars.VITE_MSAL_DOMINIO }}
           VITE_MSAL_AUTHORITY: ${{ vars.VITE_MSAL_AUTHORITY || 'https://login.microsoftonline.com/common' }}
           # Sincronización: sitio de SharePoint de H&M (ver docs/AZURE.md).
           VITE_SHAREPOINT_SITIO: ${{ vars.VITE_SHAREPOINT_SITIO }}

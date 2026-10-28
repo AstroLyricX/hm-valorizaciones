@@ -1,7 +1,7 @@
 import { InteractionRequiredAuthError, type IPublicClientApplication } from "@azure/msal-browser";
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 
-import { ruta } from "@/app/entorno";
+import { entorno, ruta } from "@/app/entorno";
 
 import { PERMISOS_LOGIN, PERMISOS_SYNC } from "./permisos";
 import { usuarioDesdeCuenta } from "./roles";
@@ -81,6 +81,8 @@ export function MsalSessionProvider({
 					scopes: PERMISOS_LOGIN,
 					state: ruta,
 					prompt: "select_account",
+					// Orienta a Microsoft hacia las cuentas de H&M; las de otra organización no entran.
+					...(entorno.msalDominio && { domainHint: entorno.msalDominio }),
 				});
 			} catch (error) {
 				console.error(error);

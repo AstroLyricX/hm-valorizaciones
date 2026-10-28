@@ -41,3 +41,10 @@ test("recuerda la sesión iniciada", async () => {
 
 	expect(await screen.findByText(/Hola, Ana/)).toBeInTheDocument();
 });
+
+test("indica que se entra con la cuenta de H&M", async () => {
+	renderRoute("/login");
+
+	expect(await screen.findByText("(@maquinariashym.com)")).toBeInTheDocument();
+	expect(screen.getByText(/Solo pueden entrar las cuentas de H&M/)).toBeInTheDocument();
+});

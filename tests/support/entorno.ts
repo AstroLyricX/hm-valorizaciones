@@ -2,6 +2,7 @@
 export const entorno = {
 	msalClientId: "",
 	msalAuthority: "https://login.microsoftonline.com/common",
+	msalDominio: "maquinariashym.com",
 	sharepointSitio: "",
 	rucApiUrl: "",
 	avisosApiUrl: "",
