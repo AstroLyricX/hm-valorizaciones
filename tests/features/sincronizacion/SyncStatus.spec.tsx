@@ -6,6 +6,7 @@ import { db } from "../../../src/data/db";
 import type { ResultadoSync } from "../../../src/data/sync/syncEngine";
 import { DemoSessionProvider } from "../../../src/features/auth/DemoSessionProvider";
 import { ReautenticacionRequeridaError } from "../../../src/features/auth/SessionContext";
+import { useSincronizacion } from "../../../src/features/sincronizacion/SyncContext";
 import { type Motor, SyncProvider } from "../../../src/features/sincronizacion/SyncProvider";
 import { SyncStatus } from "../../../src/features/sincronizacion/SyncStatus";
 
@@ -136,4 +137,64 @@ test("un error inesperado permite reintentar", async () => {
 	renderizar(motor(async () => Promise.reject(new Error("500"))));
 
 	expect(await screen.findByText("No se pudo sincronizar. Reintentar")).toBeInTheDocument();
+});
+
+test("mientras la app está a la vista consulta SharePoint cada 30 segundos", async () => {
+	jest.useFakeTimers();
+	try {
+		const simulado = motor();
+		renderizar(simulado);
+		await act(async () => {
+			await jest.advanceTimersByTimeAsync(0);
+		});
+		expect(simulado.sincronizar).toHaveBeenCalledTimes(1);
+
+		await act(async () => {
+			await jest.advanceTimersByTimeAsync(30_000);
+		});
+		expect(simulado.sincronizar).toHaveBeenCalledTimes(2);
+	} finally {
+		jest.useRealTimers();
+	}
+});
+
+function Descarga() {
+	return <p>{useSincronizacion().descargando ? "Descargando" : "Listo"}</p>;
+}
+
+test("en un dispositivo nuevo espera la primera descarga antes de mostrar los datos", async () => {
+	let terminar = (_resultado: ResultadoSync) => {};
+	const simulado = motor(
+		async () =>
+			new Promise<ResultadoSync>((resolve) => {
+				terminar = resolve;
+			}),
+	);
+	render(
+		<DemoSessionProvider>
+			<SyncProvider motor={simulado}>
+				<Descarga />
+			</SyncProvider>
+		</DemoSessionProvider>,
+	);
+
+	expect(await screen.findByText("Descargando")).toBeInTheDocument();
+	await act(async () => {
+		terminar(SIN_CAMBIOS);
+		await Promise.resolve();
+	});
+	expect(await screen.findByText("Listo")).toBeInTheDocument();
+});
+
+test("si el dispositivo ya se sincronizó antes, muestra los datos de inmediato", async () => {
+	await db.syncMeta.put({ clave: "ultimaSincronizacion", valor: "2026-10-30T10:00:00.000Z" });
+	render(
+		<DemoSessionProvider>
+			<SyncProvider motor={motor(async () => new Promise<ResultadoSync>(() => {}))}>
+				<Descarga />
+			</SyncProvider>
+		</DemoSessionProvider>,
+	);
+
+	expect(await screen.findByText("Listo")).toBeInTheDocument();
 });

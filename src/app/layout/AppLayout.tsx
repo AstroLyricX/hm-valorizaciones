@@ -1,9 +1,11 @@
+import { LoaderCircle } from "lucide-react";
 import { Outlet, ScrollRestoration, useLocation } from "react-router";
 
 import { ruta } from "@/app/entorno";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AvisosButton } from "@/features/avisos/ui/AvisosButton";
 import { usePublicarAvisos } from "@/features/avisos/ui/usePublicarAvisos";
+import { useSincronizacion } from "@/features/sincronizacion/SyncContext";
 import { SyncStatus } from "@/features/sincronizacion/SyncStatus";
 import { OfflineBanner } from "@/shared/components/OfflineBanner";
 
@@ -11,12 +13,29 @@ import { findNavItem, NUEVA_VALORIZACION_PATH } from "../navigation";
 import { AppSidebar } from "./AppSidebar";
 import { MobileNav } from "./MobileNav";
 
+// Primera vez en este dispositivo: se bajan los datos de SharePoint antes de mostrar las páginas.
+function DescargandoDatos() {
+	return (
+		<div
+			role="status"
+			className="flex flex-col items-center justify-center gap-3 py-24 text-center text-navy-700"
+		>
+			<LoaderCircle className="size-8 animate-spin text-brand-600" aria-hidden="true" />
+			<p className="font-medium text-navy-900">Descargando los datos de la empresa…</p>
+			<p className="max-w-xs text-sm text-muted-foreground">
+				Es solo la primera vez en este dispositivo. Luego todo se actualiza solo.
+			</p>
+		</div>
+	);
+}
+
 export function AppLayout() {
 	const { pathname } = useLocation();
 	const isNuevaValorizacion = pathname === NUEVA_VALORIZACION_PATH;
 	const seccion = findNavItem(pathname);
 	const titulo = isNuevaValorizacion ? "Nueva valorización" : (seccion?.label ?? "");
 	usePublicarAvisos();
+	const { descargando } = useSincronizacion();
 
 	return (
 		<SidebarProvider>
@@ -41,7 +60,7 @@ export function AppLayout() {
 				<OfflineBanner className="md:hidden" />
 
 				<main className="mx-auto w-full min-w-0 max-w-6xl flex-1 px-4 pt-6 pb-24 md:px-8 md:pt-8 md:pb-12">
-					<Outlet />
+					{descargando ? <DescargandoDatos /> : <Outlet />}
 				</main>
 
 				<MobileNav />

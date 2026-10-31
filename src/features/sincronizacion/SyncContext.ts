@@ -14,6 +14,8 @@ export type EstadoSync =
 export interface Sincronizacion {
 	estado: EstadoSync;
 	activa: boolean;
+	// Primera descarga de los datos de la empresa en este dispositivo.
+	descargando: boolean;
 	// Cambios y PDFs de este dispositivo que aún no llegan a SharePoint.
 	pendientes: number;
 	ultima: string | null;
@@ -24,6 +26,7 @@ export interface Sincronizacion {
 const INACTIVA: Sincronizacion = {
 	estado: "desactivada",
 	activa: false,
+	descargando: false,
 	pendientes: 0,
 	ultima: null,
 	sincronizar: async () => Promise.resolve(),

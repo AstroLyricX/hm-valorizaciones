@@ -92,6 +92,11 @@ Reiniciar `npm start` (o volver a ejecutar `npm run build`) para que tome los va
 - Al cerrar sesión con conexión se cierra también la sesión de Microsoft; sin conexión solo se
   borra la cuenta del dispositivo.
 - Cada cambio guarda el correo del usuario (`updatedBy`).
-- La sincronización corre al abrir la app, al recuperar la conexión, al volver a la app, cada 5
-  minutos y poco después de cada cambio. Si dos personas cambian el mismo registro, gana el
+- La sincronización corre al abrir la app, al recuperar la conexión, al volver a la app, cada 30
+  segundos mientras la app está a la vista y un segundo después de cada cambio: lo que registra
+  una persona lo ven las demás casi al instante.
+- En un dispositivo nuevo, la app descarga primero los datos de la empresa y recién entonces
+  muestra las páginas.
+- Antes de emitir una valorización se trae lo último de SharePoint, para no repetir un número que
+  otra persona acaba de emitir. Si dos personas cambian el mismo registro, gana el
   cambio más reciente y la app avisa cuando fue una valorización.

@@ -575,6 +575,9 @@ function Editor({ planilla }: { planilla: Planilla }) {
 								cabeceraGuardado.vaciar(),
 								adicionalesGuardado.vaciar(),
 							]);
+							// Trae lo último de SharePoint para que el número no repita uno que otra
+							// persona acaba de emitir.
+							await sincronizacion.sincronizar();
 							const emitida = await valorizacionService.emitir(valorizacion.id, usuario);
 							toast.success(`Valorización ${emitida.numero ?? ""} emitida.`);
 							// Con sincronización, el PDF también se guarda en SharePoint (P9).
