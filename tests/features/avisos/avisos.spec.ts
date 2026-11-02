@@ -9,10 +9,8 @@ import {
 	contratoRepository,
 	contratoService,
 } from "../../../src/features/contratos/application/contratoService.instance";
-import { mensajeContrato } from "../../../src/features/contratos/domain/contrato";
 import { equipoService } from "../../../src/features/equipos/application/equipoService.instance";
 import { valorizacionService } from "../../../src/features/valorizaciones/application/valorizacionService.instance";
-import { mensajeValorizacion } from "../../../src/features/valorizaciones/domain/valorizacion";
 import { enlaceWhatsApp, numeroWhatsApp } from "../../../src/shared/lib/whatsapp";
 import { CLIENTE, excavadora, volquete } from "../../support/fixtures";
 import { contratoDatos, equipoDelContrato } from "../contratos/fixtures";
@@ -182,31 +180,5 @@ describe("WhatsApp", () => {
 			"https://wa.me/51987654321?text=Hola%20H%26M",
 		);
 		expect(enlaceWhatsApp("Hola")).toBe("https://wa.me/?text=Hola");
-	});
-
-	it("resume la valorización emitida y el contrato", async () => {
-		const agosto = await emitir("2026-08", "53.23", "2026-09-17");
-		const contrato = await contratoRepository.obtener(osur);
-		if (!contrato) {
-			throw new Error("Falta el contrato");
-		}
-
-		expect(mensajeValorizacion(agosto, contrato)).toBe(
-			[
-				`*Valorización N.° ${agosto.numero ?? ""}* · H&M`,
-				"Contrato CTR-001 · GESTIÓN GENERAL DE SUBCONTRATOS - OSUR",
-				"Periodo: Agosto 2026",
-				"Total: USD 2,952.14",
-				"Neto a pagar: USD 2,952.14",
-			].join("\n"),
-		);
-		expect(mensajeContrato(contrato)).toBe(
-			[
-				"*Contrato CTR-001* · H&M",
-				"GESTIÓN GENERAL DE SUBCONTRATOS - OSUR · ASILLO - SAN ANTÓN",
-				"Vigencia: 01/08/2026 al 31/12/2026",
-				"Monto contractual: USD 7,050.00",
-			].join("\n"),
-		);
 	});
 });

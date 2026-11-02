@@ -26,7 +26,6 @@ import { useSincronizacion } from "@/features/sincronizacion/SyncContext";
 import { formatearMoneda } from "@/lib/dinero";
 import { formatearFechaNumerica } from "@/lib/fechas";
 import { cn } from "@/lib/utils";
-import { CompartirWhatsApp } from "@/shared/components/CompartirWhatsApp";
 import { ConfirmDialog } from "@/shared/components/ConfirmDialog";
 import { EmptyState } from "@/shared/components/EmptyState";
 import { Pill } from "@/shared/components/Pill";
@@ -40,7 +39,6 @@ import {
 	ETIQUETA_TIPO_VALORIZACION,
 	formatearPeriodo,
 	type ItemAdicional,
-	mensajeValorizacion,
 	type ValorizacionCabecera,
 } from "./domain/valorizacion";
 import { encolarPdf } from "./pdf/encolarPdf";
@@ -306,12 +304,6 @@ function Editor({ planilla }: { planilla: Planilla }) {
 							/>
 						)}
 						<AccionesPdf datos={datosPdf} />
-						{valorizacion.estado === "EMITIDA" && (
-							<CompartirWhatsApp
-								texto={mensajeValorizacion(valorizacion, contrato)}
-								telefono={proveedor?.representanteTelefono}
-							/>
-						)}
 						{editable && (
 							<>
 								<Button
