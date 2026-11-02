@@ -20,6 +20,7 @@ const ESPERA_TRAS_CAMBIO = 1000;
 
 export interface Motor {
 	sincronizar: () => Promise<ResultadoSync>;
+	descargar?: (ruta: string) => Promise<Blob>;
 }
 
 function avisarResultado(resultado: ResultadoSync): void {
@@ -57,8 +58,12 @@ export function SyncProvider({
 		async () => (await db.syncMeta.get("ultimaSincronizacion")) ?? null,
 	);
 	const pendientes =
-		useLiveQuery(async () => (await db.outbox.count()) + (await db.archivosPendientes.count())) ??
-		0;
+		useLiveQuery(
+			async () =>
+				(await db.outbox.count()) +
+				(await db.archivosPendientes.count()) +
+				(await db.archivosDocumento.where("pendiente").equals(1).count()),
+		) ?? 0;
 
 	const motor = useMemo<Motor | null>(() => {
 		if (motorDePrueba) {
@@ -154,6 +159,8 @@ export function SyncProvider({
 	// nadie registre de nuevo lo que ya existe). Sin conexión se trabaja con lo que haya.
 	const descargando = motor !== null && enLinea && sincronizadoAntes === null && !primeraIntentada;
 
+	const descargarArchivo = useMemo(() => motor?.descargar?.bind(motor), [motor]);
+
 	const valor = useMemo<Sincronizacion>(
 		() => ({
 			estado,
@@ -163,8 +170,9 @@ export function SyncProvider({
 			ultima,
 			sincronizar,
 			reautenticar,
+			descargarArchivo,
 		}),
-		[estado, motor, descargando, pendientes, ultima, sincronizar, reautenticar],
+		[estado, motor, descargando, pendientes, ultima, sincronizar, reautenticar, descargarArchivo],
 	);
 
 	return <SyncContext value={valor}>{children}</SyncContext>;

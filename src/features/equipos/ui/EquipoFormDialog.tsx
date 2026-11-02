@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useSession } from "@/features/auth/useSession";
 import { sugerirPrefijo, type Tercero } from "@/features/clientes/domain/tercero";
+import { DocumentosAdjuntos } from "@/features/documentos/ui/DocumentosAdjuntos";
 import { FormDialog } from "@/shared/components/FormDialog";
 import { FormField } from "@/shared/components/FormField";
 import { FormSeccion } from "@/shared/components/FormSeccion";
@@ -391,6 +392,20 @@ function Formulario({
 					)}
 				</FormField>
 			</FormSeccion>
+
+			{/* Los documentos se guardan solos, aparte del botón Guardar del formulario. */}
+			{equipo ? (
+				<DocumentosAdjuntos
+					entidad="equipos"
+					registroId={equipo.id}
+					descripcion="Tarjeta de propiedad, SOAT, revisión técnica, certificados…"
+					className="mt-6"
+				/>
+			) : (
+				<p className="mt-6 rounded-lg bg-navy-50 px-4 py-3 text-[13px] text-muted-foreground">
+					Podrás adjuntar documentos (tarjeta de propiedad, SOAT…) después de guardar el equipo.
+				</p>
+			)}
 		</FormDialog>
 	);
 }

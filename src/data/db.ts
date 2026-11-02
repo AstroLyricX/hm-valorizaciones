@@ -4,6 +4,7 @@ import { sugerirPrefijo, type Tercero } from "@/features/clientes/domain/tercero
 import type { Empresa } from "@/features/configuracion/domain/empresa";
 import type { Adenda } from "@/features/contratos/domain/adenda";
 import type { Contrato, ContratoEquipo } from "@/features/contratos/domain/contrato";
+import type { Documento } from "@/features/documentos/domain/documento";
 import { type Equipo, estadoDeProveedor } from "@/features/equipos/domain/equipo";
 import type { Valorizacion, ValorizacionItem } from "@/features/valorizaciones/domain/valorizacion";
 
@@ -41,6 +42,14 @@ export interface ArchivoPendiente {
 	createdAt: string;
 }
 
+// Archivo de un documento adjunto guardado en el dispositivo: sirve sin conexión y espera
+// subirse a SharePoint (pendiente = 1). Los de otros dispositivos se bajan al abrirlos.
+export interface ArchivoDocumento {
+	documentoId: string;
+	archivo: Blob;
+	pendiente: 0 | 1;
+}
+
 // Consultas de RUC ya hechas: sirven sin conexión y ahorran consultas a la API (fase 13).
 export interface RucConsultado {
 	ruc: string;
@@ -65,6 +74,8 @@ export class HmDatabase extends Dexie {
 	syncArchivos!: EntityTable<SyncArchivo, "clave">;
 	archivosPendientes!: EntityTable<ArchivoPendiente, "id">;
 	rucConsultados!: EntityTable<RucConsultado, "ruc">;
+	documentos!: EntityTable<Documento, "id">;
+	archivosDocumento!: EntityTable<ArchivoDocumento, "documentoId">;
 
 	constructor(name = "hm-valorizaciones") {
 		super(name);
@@ -235,6 +246,11 @@ export class HmDatabase extends Dexie {
 		});
 		// Adendas del contrato: fecha y motivo de cada modificación.
 		this.version(18).stores({ adendas: "id, contratoId" });
+		// Documentos adjuntos (PDF y otros) de equipos, contratos y valorizaciones.
+		this.version(19).stores({
+			documentos: "id, [entidad+registroId]",
+			archivosDocumento: "documentoId, pendiente",
+		});
 	}
 }
 

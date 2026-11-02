@@ -15,6 +15,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { terceroRepository } from "@/features/clientes/application/terceroService.instance";
 import { useIgvPorcentaje } from "@/features/configuracion/useIgv";
+import { DocumentosAdjuntos } from "@/features/documentos/ui/DocumentosAdjuntos";
 import { equipoRepository } from "@/features/equipos/application/equipoService.instance";
 import { type Equipo, nombreEquipo } from "@/features/equipos/domain/equipo";
 import { valorizacionRepository } from "@/features/valorizaciones/application/valorizacionService.instance";
@@ -403,6 +404,12 @@ export function ContratoDetallePage() {
 			</section>
 
 			<Adendas adendas={datos.adendas} onAgregar={() => setAgregandoAdenda(true)} />
+
+			<DocumentosAdjuntos
+				entidad="contratos"
+				registroId={contrato.id}
+				descripcion="Contrato firmado, adendas, órdenes de servicio…"
+			/>
 
 			<TablaEquipos contrato={contrato} filas={filas} equipos={datos.equipos} />
 

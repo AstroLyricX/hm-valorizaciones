@@ -21,6 +21,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { puede } from "@/features/auth/roles";
 import { useSession } from "@/features/auth/useSession";
 import { CONTRAPARTE, hoyIso } from "@/features/contratos/domain/contrato";
+import { DocumentosAdjuntos } from "@/features/documentos/ui/DocumentosAdjuntos";
 import { useSincronizacion } from "@/features/sincronizacion/SyncContext";
 import { formatearMoneda } from "@/lib/dinero";
 import { formatearFechaNumerica } from "@/lib/fechas";
@@ -559,6 +560,12 @@ function Editor({ planilla }: { planilla: Planilla }) {
 					</dl>
 				</div>
 			</Tarjeta>
+
+			<DocumentosAdjuntos
+				entidad="valorizaciones"
+				registroId={valorizacion.id}
+				descripcion="Valorización firmada, factura, conformidad del servicio…"
+			/>
 
 			<ConfirmDialog
 				open={emitiendo}

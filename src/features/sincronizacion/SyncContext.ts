@@ -21,6 +21,8 @@ export interface Sincronizacion {
 	ultima: string | null;
 	sincronizar: () => Promise<void>;
 	reautenticar: () => Promise<void>;
+	// Baja de SharePoint un archivo adjunto; sin sincronización no hay de dónde bajarlo.
+	descargarArchivo?: (ruta: string) => Promise<Blob>;
 }
 
 const INACTIVA: Sincronizacion = {

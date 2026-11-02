@@ -153,6 +153,16 @@ export class GraphClient {
 		throw new GraphError(500, "Graph no devolvió el deltaLink.");
 	}
 
+	// Baja un archivo (un documento adjunto subido desde otro dispositivo).
+	async descargarArchivo(driveId: string, ruta: string): Promise<Blob> {
+		const respuesta = await this.solicitar(
+			"GET",
+			`/drives/${driveId}/root:/${codificarRuta(ruta)}:/content`,
+		);
+
+		return respuesta.blob();
+	}
+
 	// Sube un archivo (PDF). Hasta 4 MB en una sola solicitud; más grande, por partes.
 	async subirArchivo(driveId: string, ruta: string, archivo: Blob): Promise<ElementoDrive> {
 		const destino = `/drives/${driveId}/root:/${codificarRuta(ruta)}`;

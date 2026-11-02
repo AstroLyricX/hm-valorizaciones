@@ -285,3 +285,31 @@ test("agrega una adenda con su fecha y motivo, y la muestra en la ficha", async 
 	expect(await within(adendas).findByText("Adenda N.° 1")).toBeInTheDocument();
 	expect(within(adendas).getByText("Cambio de ubicación de la obra")).toBeInTheDocument();
 });
+
+test("adjunta un PDF al contrato y rechaza los archivos no permitidos", async () => {
+	const user = userEvent.setup({ applyAccept: false });
+	const { contrato } = await contratoService.crear(
+		contratoDatos(clienteId, excavadoraId),
+		"ana@hm.pe",
+	);
+	renderRoute(`/contratos/${contrato.id}`);
+
+	const documentos = await screen.findByRole("region", { name: "Documentos" });
+	expect(await within(documentos).findByText(/Contrato firmado, adendas/)).toBeInTheDocument();
+	const entrada = within(documentos).getByLabelText("Elegir documentos");
+
+	await user.upload(entrada, new File(["x"], "virus.exe"));
+	expect(
+		await screen.findByText(/solo PDF, imágenes \(JPG o PNG\), Word o Excel/),
+	).toBeInTheDocument();
+
+	await user.upload(
+		entrada,
+		new File(["%PDF-1.7"], "Contrato firmado.pdf", { type: "application/pdf" }),
+	);
+	expect(await within(documentos).findByText("Contrato firmado.pdf")).toBeInTheDocument();
+	expect(within(documentos).getByText(/PDF · 1 KB/)).toBeInTheDocument();
+	expect(
+		within(documentos).getByRole("button", { name: "Ver Contrato firmado.pdf" }),
+	).toBeEnabled();
+});

@@ -67,7 +67,8 @@ Luego, en **Aplicaciones empresariales** → `Valorizaciones H&M` → **Usuarios
    invitados.
 3. La app crea sola la carpeta `SistemaHM` en **Documentos** con una subcarpeta por tabla
    (`terceros`, `equipos`, `contratos`, `valorizaciones`…), un archivo JSON por registro, y los
-   PDFs emitidos en `SistemaHM/pdf/<año>/`. No hace falta tocar esos archivos.
+   PDFs emitidos en `SistemaHM/pdf/<año>/`. Los documentos adjuntos (contratos firmados, SOAT, facturas…) van en
+   `SistemaHM/archivos/<equipos|contratos|valorizaciones>/<id>/`. No hace falta tocar esos archivos.
 
 ## 5. Configurar la app
 

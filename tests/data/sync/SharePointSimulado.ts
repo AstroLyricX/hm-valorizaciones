@@ -83,8 +83,18 @@ export class SharePointSimulado implements GraphParaSync {
 		this.revisarConexion();
 
 		return Promise.resolve(
-			this.guardar(ruta, { bytes: archivo.size }, this.archivos.get(ruta)?.id),
+			this.guardar(ruta, { bytes: archivo.size, archivo }, this.archivos.get(ruta)?.id),
 		);
+	}
+
+	async descargarArchivo(_driveId: string, ruta: string): Promise<Blob> {
+		this.revisarConexion();
+		const guardado = this.archivos.get(ruta)?.contenido as { archivo?: Blob } | undefined;
+		if (!guardado?.archivo) {
+			throw new Error(`No existe ${ruta}`);
+		}
+
+		return Promise.resolve(guardado.archivo);
 	}
 
 	// Lo que guardó otro dispositivo (o alguien a mano en SharePoint).

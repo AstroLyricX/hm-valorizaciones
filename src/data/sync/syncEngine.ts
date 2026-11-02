@@ -7,6 +7,7 @@ import { TerceroSchema } from "@/features/clientes/domain/tercero";
 import { EmpresaSchema } from "@/features/configuracion/domain/empresa";
 import { AdendaSchema } from "@/features/contratos/domain/adenda";
 import { ContratoEquipoSchema, ContratoSchema } from "@/features/contratos/domain/contrato";
+import { DocumentoSchema } from "@/features/documentos/domain/documento";
 import { EquipoSchema } from "@/features/equipos/domain/equipo";
 import {
 	ValorizacionItemSchema,
@@ -41,6 +42,7 @@ const TABLAS = {
 	adendas: AdendaSchema,
 	valorizaciones: ValorizacionSchema,
 	valorizacionItems: ValorizacionItemSchema,
+	documentos: DocumentoSchema,
 } satisfies Record<string, z.ZodType>;
 
 export type TablaSincronizada = keyof typeof TABLAS;
@@ -62,7 +64,13 @@ export interface ResultadoSync {
 
 export type GraphParaSync = Pick<
 	GraphClient,
-	"driveDelSitio" | "escribirJson" | "leerJson" | "delta" | "contenido" | "subirArchivo"
+	| "driveDelSitio"
+	| "escribirJson"
+	| "leerJson"
+	| "delta"
+	| "contenido"
+	| "subirArchivo"
+	| "descargarArchivo"
 >;
 
 function esTabla(nombre: string): nombre is TablaSincronizada {
@@ -94,6 +102,11 @@ export class SyncEngine {
 		return this.enCurso;
 	}
 
+	// Archivo de un documento adjunto, para abrirlo en este dispositivo.
+	async descargar(ruta: string): Promise<Blob> {
+		return this.graph.descargarArchivo(await this.drive(), ruta);
+	}
+
 	private async ejecutar(): Promise<ResultadoSync> {
 		const resultado: ResultadoSync = {
 			subidos: 0,
@@ -106,6 +119,8 @@ export class SyncEngine {
 
 		await this.bajar(driveId, resultado);
 		await this.subirArchivos(driveId, resultado);
+		// Los archivos van antes que sus registros: quien recibe el registro ya puede abrirlo.
+		await this.subirDocumentos(driveId, resultado);
 		await this.subir(driveId, resultado);
 		await this.revisarNumeros(resultado);
 		await this.database.syncMeta.put({ clave: "ultimaSincronizacion", valor: ahoraIso() });
@@ -329,6 +344,23 @@ export class SyncEngine {
 					await this.database.archivosPendientes.delete(pendiente.id ?? 0);
 				},
 			);
+			resultado.archivos++;
+		}
+	}
+
+	// Documentos adjuntos guardados en este dispositivo que aún no están en SharePoint.
+	private async subirDocumentos(driveId: string, resultado: ResultadoSync): Promise<void> {
+		for (const pendiente of await this.database.archivosDocumento
+			.where("pendiente")
+			.equals(1)
+			.toArray()) {
+			const documento = await this.database.documentos.get(pendiente.documentoId);
+			if (!documento || documento.deletedAt !== null) {
+				await this.database.archivosDocumento.delete(pendiente.documentoId);
+				continue;
+			}
+			await this.graph.subirArchivo(driveId, documento.ruta, pendiente.archivo);
+			await this.database.archivosDocumento.update(pendiente.documentoId, { pendiente: 0 });
 			resultado.archivos++;
 		}
 	}

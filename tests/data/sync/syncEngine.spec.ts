@@ -4,6 +4,8 @@ import { rutaPdf, SyncEngine } from "../../../src/data/sync/syncEngine";
 import { TerceroService } from "../../../src/features/clientes/application/TerceroService";
 import type { Tercero } from "../../../src/features/clientes/domain/tercero";
 import { TerceroRepository } from "../../../src/features/clientes/infrastructure/TerceroRepository";
+import { DocumentoService } from "../../../src/features/documentos/application/DocumentoService";
+import { DocumentoRepository } from "../../../src/features/documentos/infrastructure/DocumentoRepository";
 import { CLIENTE, HUISE } from "../../support/fixtures";
 import { SharePointSimulado } from "./SharePointSimulado";
 
@@ -281,5 +283,32 @@ describe("SyncEngine", () => {
 		expect(resultado.avisos).toContain(
 			"Hay 2 valorizaciones emitidas con el número 0002-2026. Anula la que sobra y vuelve a emitirla.",
 		);
+	});
+});
+
+describe("documentos adjuntos", () => {
+	it("sube el archivo a SharePoint y otro dispositivo lo ve y lo baja", async () => {
+		const oficina = dispositivo();
+		const obra = dispositivo();
+		const documentos = new DocumentoService(new DocumentoRepository(oficina.database));
+		const documento = await documentos.subir(
+			"contratos",
+			"c1",
+			new File(["%PDF-1.7 contrato"], "Contrato.pdf", { type: "application/pdf" }),
+			"ana@hm.pe",
+		);
+
+		const resultado = await oficina.sync.sincronizar();
+		expect(resultado.archivos).toBe(1);
+		expect((await oficina.database.archivosDocumento.get(documento.id))?.pendiente).toBe(0);
+		expect(sharepoint.leer(documento.ruta)).toBeDefined();
+
+		await obra.sync.sincronizar();
+		const enObra = new DocumentoService(new DocumentoRepository(obra.database));
+		const [recibido] = await enObra.listar("contratos", "c1");
+		expect(recibido).toMatchObject({ nombre: "Contrato.pdf", subidoPor: "ana@hm.pe" });
+		const descargar = jest.fn(async (ruta: string) => obra.sync.descargar(ruta));
+		expect(await enObra.archivo(recibido, descargar)).toBeDefined();
+		expect(descargar).toHaveBeenCalledWith(documento.ruta);
 	});
 });
