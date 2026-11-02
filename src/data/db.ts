@@ -2,6 +2,7 @@ import Dexie, { type EntityTable } from "dexie";
 
 import { sugerirPrefijo, type Tercero } from "@/features/clientes/domain/tercero";
 import type { Empresa } from "@/features/configuracion/domain/empresa";
+import type { Adenda } from "@/features/contratos/domain/adenda";
 import type { Contrato, ContratoEquipo } from "@/features/contratos/domain/contrato";
 import { type Equipo, estadoDeProveedor } from "@/features/equipos/domain/equipo";
 import type { Valorizacion, ValorizacionItem } from "@/features/valorizaciones/domain/valorizacion";
@@ -56,6 +57,7 @@ export class HmDatabase extends Dexie {
 	equipos!: EntityTable<Equipo, "id">;
 	contratos!: EntityTable<Contrato, "id">;
 	contratoEquipos!: EntityTable<ContratoEquipo, "id">;
+	adendas!: EntityTable<Adenda, "id">;
 	valorizaciones!: EntityTable<Valorizacion, "id">;
 	valorizacionItems!: EntityTable<ValorizacionItem, "id">;
 	outbox!: EntityTable<OutboxEntry, "id">;
@@ -231,6 +233,8 @@ export class HmDatabase extends Dexie {
 					valorizacion.reemplazaA ??= null;
 				});
 		});
+		// Adendas del contrato: fecha y motivo de cada modificación.
+		this.version(18).stores({ adendas: "id, contratoId" });
 	}
 }
 

@@ -2,9 +2,9 @@ import { Ban } from "lucide-react";
 import { useState } from "react";
 
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
 import { FormDialog } from "@/shared/components/FormDialog";
 import { FormField } from "@/shared/components/FormField";
+import { OpcionesMotivo } from "@/shared/components/OpcionesMotivo";
 
 import {
 	AnulacionSchema,
@@ -14,6 +14,12 @@ import {
 	MOTIVOS_ANULACION,
 	textoAnulacion,
 } from "../domain/valorizacion";
+
+const OPCIONES = MOTIVOS_ANULACION.map((motivo) => ({
+	value: motivo,
+	label: ETIQUETA_MOTIVO_ANULACION[motivo],
+	descripcion: DESCRIPCION_MOTIVO_ANULACION[motivo],
+}));
 
 // Pide el motivo antes de anular: uno de la lista u "Otro", que se escribe.
 // La valorización anulada conserva su número.
@@ -60,63 +66,16 @@ export function AnularDialog({
 			}}
 		>
 			<div className="flex flex-col gap-4">
-				<fieldset className="flex flex-col gap-2">
-					<legend className="mb-2 text-[13px] font-medium text-navy-500">
-						Motivo <span className="text-red-500">*</span>
-					</legend>
-					<div
-						role="radiogroup"
-						aria-label="Motivo"
-						aria-invalid={errores.motivo !== undefined}
-						className="grid gap-2 sm:grid-cols-2"
-					>
-						{MOTIVOS_ANULACION.map((opcion) => {
-							const elegido = motivo === opcion;
-
-							return (
-								<label
-									key={opcion}
-									className={cn(
-										"flex cursor-pointer gap-2.5 rounded-lg border px-3 py-2.5 transition-colors",
-										elegido
-											? "border-brand-500 bg-brand-50/60"
-											: "border-navy-100 hover:border-navy-200 hover:bg-navy-50/60",
-									)}
-								>
-									<input
-										type="radio"
-										name="motivo-anulacion"
-										value={opcion}
-										checked={elegido}
-										onChange={() => {
-											setMotivo(opcion);
-											setErrores({});
-										}}
-										className="peer sr-only"
-									/>
-									<span
-										aria-hidden="true"
-										className={cn(
-											"mt-0.5 flex size-[18px] shrink-0 items-center justify-center rounded-full border-2 peer-focus-visible:ring-3 peer-focus-visible:ring-ring/50",
-											elegido ? "border-brand-600" : "border-navy-200 bg-navy-50",
-										)}
-									>
-										{elegido && <span className="size-2 rounded-full bg-brand-600" />}
-									</span>
-									<span className="flex flex-col">
-										<span className="text-sm font-medium text-navy-900">
-											{ETIQUETA_MOTIVO_ANULACION[opcion]}
-										</span>
-										<span className="text-xs text-muted-foreground">
-											{DESCRIPCION_MOTIVO_ANULACION[opcion]}
-										</span>
-									</span>
-								</label>
-							);
-						})}
-					</div>
-					{errores.motivo && <span className="text-xs text-destructive">{errores.motivo}</span>}
-				</fieldset>
+				<OpcionesMotivo
+					name="motivo-anulacion"
+					value={motivo}
+					onChange={(opcion) => {
+						setMotivo(opcion);
+						setErrores({});
+					}}
+					opciones={OPCIONES}
+					error={errores.motivo}
+				/>
 				{otro && (
 					<FormField label="Describe el motivo" required error={errores.detalle}>
 						{(campo) => (

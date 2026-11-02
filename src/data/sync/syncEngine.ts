@@ -5,6 +5,7 @@ import type { z } from "zod";
 
 import { TerceroSchema } from "@/features/clientes/domain/tercero";
 import { EmpresaSchema } from "@/features/configuracion/domain/empresa";
+import { AdendaSchema } from "@/features/contratos/domain/adenda";
 import { ContratoEquipoSchema, ContratoSchema } from "@/features/contratos/domain/contrato";
 import { EquipoSchema } from "@/features/equipos/domain/equipo";
 import {
@@ -37,6 +38,7 @@ const TABLAS = {
 	equipos: EquipoSchema,
 	contratos: ContratoSchema,
 	contratoEquipos: ContratoEquipoSchema,
+	adendas: AdendaSchema,
 	valorizaciones: ValorizacionSchema,
 	valorizacionItems: ValorizacionItemSchema,
 } satisfies Record<string, z.ZodType>;

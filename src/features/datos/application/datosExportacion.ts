@@ -8,21 +8,30 @@ import type { DatosExportacion } from "../domain/libroExcel";
 
 // Todos los registros vigentes del dispositivo, para el respaldo en Excel.
 export async function datosExportacion(): Promise<DatosExportacion> {
-	const [terceros, equipos, contratos, contratoEquipos, valorizaciones, valorizacionItems] =
-		await Promise.all([
-			terceroRepository.listar(),
-			equipoRepository.listar(),
-			contratoRepository.listar(),
-			contratoRepository.todosLosEquipos(),
-			valorizacionRepository.listar(),
-			valorizacionRepository.todosLosItems(),
-		]);
+	const [
+		terceros,
+		equipos,
+		contratos,
+		contratoEquipos,
+		adendas,
+		valorizaciones,
+		valorizacionItems,
+	] = await Promise.all([
+		terceroRepository.listar(),
+		equipoRepository.listar(),
+		contratoRepository.listar(),
+		contratoRepository.todosLosEquipos(),
+		contratoRepository.todasLasAdendas(),
+		valorizacionRepository.listar(),
+		valorizacionRepository.todosLosItems(),
+	]);
 
 	return {
 		terceros,
 		equipos,
 		contratos,
 		contratoEquipos,
+		adendas,
 		valorizaciones,
 		valorizacionItems,
 		hoy: hoyIso(),

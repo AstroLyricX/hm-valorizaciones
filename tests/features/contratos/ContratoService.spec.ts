@@ -4,6 +4,7 @@ import { TerceroRepository } from "../../../src/features/clientes/infrastructure
 import {
 	ClienteNoValidoError,
 	ContratoService,
+	FechaAdendaNoValidaError,
 } from "../../../src/features/contratos/application/ContratoService";
 import { ContratoRepository } from "../../../src/features/contratos/infrastructure/ContratoRepository";
 import { EquipoService } from "../../../src/features/equipos/application/EquipoService";
@@ -111,5 +112,44 @@ describe("ContratoService", () => {
 		await expect(
 			service.crear(contratoDatos(proveedor.id, excavadoraId), "ana@hm.pe"),
 		).rejects.toBeInstanceOf(ClienteNoValidoError);
+	});
+
+	it("registra las adendas del contrato con su número, fecha y motivo", async () => {
+		const { contrato } = await service.crear(contratoDatos(clienteId, excavadoraId), "ana@hm.pe");
+
+		const primera = await service.agregarAdenda(
+			contrato.id,
+			{ fecha: "2026-10-15", motivo: "AMPLIACION_PLAZO", detalle: "" },
+			"ana@hm.pe",
+		);
+		await service.agregarAdenda(
+			contrato.id,
+			{ fecha: "2026-11-02", motivo: "OTRO", detalle: "Cambio de ubicación de la obra" },
+			"ana@hm.pe",
+		);
+
+		expect(primera).toMatchObject({
+			numero: 1,
+			fecha: "2026-10-15",
+			motivo: "Ampliación de plazo",
+		});
+		expect(await service.adendas(contrato.id)).toMatchObject([
+			{ numero: 1 },
+			{ numero: 2, motivo: "Cambio de ubicación de la obra", updatedBy: "ana@hm.pe" },
+		]);
+		// Queda pendiente de sincronizar.
+		expect(await database.outbox.where("entidad").equals("adendas").count()).toBe(2);
+	});
+
+	it("una adenda no puede ser anterior al inicio del contrato", async () => {
+		const { contrato } = await service.crear(contratoDatos(clienteId, excavadoraId), "ana@hm.pe");
+
+		await expect(
+			service.agregarAdenda(
+				contrato.id,
+				{ fecha: "2026-07-31", motivo: "CAMBIO_EQUIPOS", detalle: "" },
+				"ana@hm.pe",
+			),
+		).rejects.toThrow(FechaAdendaNoValidaError);
 	});
 });

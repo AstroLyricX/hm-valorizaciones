@@ -1,5 +1,13 @@
 import { useLiveQuery } from "dexie-react-hooks";
-import { ArrowLeft, ChevronRight, ClipboardList, FileSignature, Pencil, Plus } from "lucide-react";
+import {
+	ArrowLeft,
+	ChevronRight,
+	ClipboardList,
+	FilePlus2,
+	FileSignature,
+	Pencil,
+	Plus,
+} from "lucide-react";
 import { useState } from "react";
 import { Link, useParams } from "react-router";
 
@@ -16,11 +24,13 @@ import {
 } from "@/features/valorizaciones/domain/valorizacion";
 import { EstadoValorizacionPill } from "@/features/valorizaciones/ui/EstadoValorizacionPill";
 import { formatearMoneda } from "@/lib/dinero";
+import { formatearFechaNumerica } from "@/lib/fechas";
 import { cn } from "@/lib/utils";
 import { CompartirWhatsApp } from "@/shared/components/CompartirWhatsApp";
 import { EmptyState } from "@/shared/components/EmptyState";
 
 import { contratoService } from "./application/contratoService.instance";
+import { type Adenda, siguienteNumeroAdenda } from "./domain/adenda";
 import {
 	CONTRAPARTE,
 	type Contrato,
@@ -31,6 +41,7 @@ import {
 	montosConIgv,
 	parcialEquipo,
 } from "./domain/contrato";
+import { AdendaDialog } from "./ui/AdendaDialog";
 import { ContratoFormDialog } from "./ui/ContratoFormDialog";
 import { EstadoContratoPill } from "./ui/EstadoContratoPill";
 import { TipoContratoPill } from "./ui/TipoContratoPill";
@@ -216,25 +227,67 @@ function TablaEquipos({
 	);
 }
 
+// Modificaciones del contrato, de la más reciente a la más antigua.
+function Adendas({ adendas, onAgregar }: { adendas: Adenda[]; onAgregar: () => void }) {
+	return (
+		<section aria-labelledby="adendas-contrato" className={tarjeta}>
+			<div className="flex items-center justify-between gap-3 border-b border-navy-100 px-5 py-3 md:px-6">
+				<h2 id="adendas-contrato" className="text-sm font-semibold text-navy-900">
+					Adendas
+				</h2>
+				<Button variant="outline" className="h-9 px-3.5" onClick={onAgregar}>
+					<FilePlus2 />
+					Agregar adenda
+				</Button>
+			</div>
+			{adendas.length === 0 ? (
+				<p className="px-5 py-4 text-sm text-muted-foreground md:px-6">
+					Sin adendas: el contrato sigue como se firmó.
+				</p>
+			) : (
+				<ol className="divide-y divide-navy-100">
+					{[...adendas].reverse().map((adenda) => (
+						<li
+							key={adenda.id}
+							className="flex flex-col gap-0.5 px-5 py-3 sm:flex-row sm:items-baseline sm:gap-4 md:px-6"
+						>
+							<span className="shrink-0 text-sm font-medium text-navy-900 sm:w-28">
+								Adenda N.° {adenda.numero}
+							</span>
+							<span className="shrink-0 text-[13px] text-muted-foreground tabular-nums sm:w-24">
+								{formatearFechaNumerica(adenda.fecha)}
+							</span>
+							<span className="text-sm text-navy-700">{adenda.motivo}</span>
+						</li>
+					))}
+				</ol>
+			)}
+		</section>
+	);
+}
+
 export function ContratoDetallePage() {
 	const { id = "" } = useParams();
 	const [editando, setEditando] = useState(false);
+	const [agregandoAdenda, setAgregandoAdenda] = useState(false);
 	const datos = useLiveQuery(async () => {
 		const detalle = await contratoService.obtenerDetalle(id);
 		if (!detalle) {
 			return { detalle: null };
 		}
-		const [cliente, equipos, terceros, valorizaciones] = await Promise.all([
+		const [cliente, equipos, terceros, valorizaciones, adendas] = await Promise.all([
 			terceroRepository.obtener(detalle.contrato.terceroId),
 			equipoRepository.listar(),
 			terceroRepository.listar(),
 			valorizacionRepository.delContrato(id),
+			contratoService.adendas(id),
 		]);
 
 		return {
 			detalle,
 			cliente,
 			listaEquipos: equipos,
+			adendas,
 			valorizaciones: valorizaciones.sort((a, b) => b.periodo.localeCompare(a.periodo)),
 			equipos: new Map(equipos.map((equipo) => [equipo.id, equipo])),
 			// Clientes y proveedores activos, más la contraparte del contrato aunque esté inactiva.
@@ -349,6 +402,8 @@ export function ContratoDetallePage() {
 				</dl>
 			</section>
 
+			<Adendas adendas={datos.adendas} onAgregar={() => setAgregandoAdenda(true)} />
+
 			<TablaEquipos contrato={contrato} filas={filas} equipos={datos.equipos} />
 
 			<section aria-labelledby="valorizaciones-contrato" className="flex flex-col gap-3">
@@ -394,6 +449,13 @@ export function ContratoDetallePage() {
 					</ul>
 				)}
 			</section>
+
+			<AdendaDialog
+				open={agregandoAdenda}
+				onOpenChange={setAgregandoAdenda}
+				contrato={contrato}
+				numero={siguienteNumeroAdenda(datos.adendas)}
+			/>
 
 			<ContratoFormDialog
 				open={editando}

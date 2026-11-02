@@ -5,6 +5,7 @@ import {
 	ETIQUETA_ESTADO_CIVIL,
 	type Tercero,
 } from "@/features/clientes/domain/tercero";
+import type { Adenda } from "@/features/contratos/domain/adenda";
 import {
 	type Contrato,
 	type ContratoEquipo,
@@ -45,6 +46,7 @@ export interface DatosExportacion {
 	equipos: readonly Equipo[];
 	contratos: readonly Contrato[];
 	contratoEquipos: readonly ContratoEquipo[];
+	adendas: readonly Adenda[];
 	valorizaciones: readonly Valorizacion[];
 	valorizacionItems: readonly ValorizacionItem[];
 	hoy: string;
@@ -96,8 +98,16 @@ interface DetalleExportado {
 
 // Libro de respaldo con todos los registros vigentes, con las mismas hojas que el xlsm.
 export function libroExcel(datos: DatosExportacion): Hoja[] {
-	const { terceros, equipos, contratos, contratoEquipos, valorizaciones, valorizacionItems, hoy } =
-		datos;
+	const {
+		terceros,
+		equipos,
+		contratos,
+		contratoEquipos,
+		adendas,
+		valorizaciones,
+		valorizacionItems,
+		hoy,
+	} = datos;
 	const porTercero = new Map(terceros.map((tercero) => [tercero.id, tercero]));
 	const porEquipo = new Map(equipos.map((equipo) => [equipo.id, equipo]));
 	const porContrato = new Map(contratos.map((contrato) => [contrato.id, contrato]));
@@ -224,6 +234,23 @@ export function libroExcel(datos: DatosExportacion): Hoja[] {
 		["Horas mínimas", "Costo por hora", "Parcial"],
 	);
 
+	const hojaAdendas = hoja<Adenda>(
+		"ADENDAS",
+		[
+			["Contrato", (adenda) => codigoContrato(adenda.contratoId)],
+			["N.° de adenda", (adenda) => adenda.numero],
+			["Fecha", (adenda) => fecha(adenda.fecha)],
+			["Motivo", (adenda) => adenda.motivo],
+		],
+		[...adendas]
+			.filter((adenda) => porContrato.has(adenda.contratoId))
+			.sort(
+				(a, b) =>
+					codigoContrato(a.contratoId).localeCompare(codigoContrato(b.contratoId)) ||
+					a.numero - b.numero,
+			),
+	);
+
 	const contratoDe = (valorizacion: Valorizacion) => porContrato.get(valorizacion.contratoId);
 	const hojaValorizaciones = hoja<Valorizacion>(
 		"VALORIZACIONES",
@@ -342,6 +369,7 @@ export function libroExcel(datos: DatosExportacion): Hoja[] {
 		hojaEquipos,
 		hojaContratos,
 		hojaEquiposContrato,
+		hojaAdendas,
 		hojaValorizaciones,
 		hojaDetalle,
 	];

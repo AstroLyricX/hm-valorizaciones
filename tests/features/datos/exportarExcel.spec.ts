@@ -27,7 +27,7 @@ function leer(buffer: ArrayBuffer) {
 	return { nombres: libro.SheetNames, hoja, libro };
 }
 
-test("sin datos exporta las siete hojas con sus encabezados", async () => {
+test("sin datos exporta las ocho hojas con sus encabezados", async () => {
 	const { nombres, libro } = leer(escribirExcel(libroExcel(await datosExportacion())));
 
 	expect(nombres).toEqual([
@@ -36,6 +36,7 @@ test("sin datos exporta las siete hojas con sus encabezados", async () => {
 		"EQUIPOS",
 		"CONTRATOS",
 		"EQUIPOS_CONTRATO",
+		"ADENDAS",
 		"VALORIZACIONES",
 		"DET_VALORIZACIONES",
 	]);

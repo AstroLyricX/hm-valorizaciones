@@ -1,6 +1,7 @@
 import type { HmDatabase } from "@/data/db";
 import { agregarAlOutbox, agregarVariosAlOutbox } from "@/data/outbox";
 
+import { type Adenda, AdendaSchema } from "../domain/adenda";
 import {
 	type Contrato,
 	type ContratoEquipo,
@@ -40,6 +41,29 @@ export class ContratoRepository {
 		return (await this.database.contratoEquipos.toArray()).filter(
 			(equipo) => equipo.deletedAt === null,
 		);
+	}
+
+	// Adendas del contrato, de la más antigua a la más reciente.
+	async adendas(contratoId: string): Promise<Adenda[]> {
+		const adendas = await this.database.adendas.where("contratoId").equals(contratoId).toArray();
+
+		return adendas
+			.filter((adenda) => adenda.deletedAt === null)
+			.sort((a, b) => a.numero - b.numero);
+	}
+
+	async todasLasAdendas(): Promise<Adenda[]> {
+		return (await this.database.adendas.toArray()).filter((adenda) => adenda.deletedAt === null);
+	}
+
+	async guardarAdenda(adenda: Adenda): Promise<void> {
+		const registro = AdendaSchema.parse(adenda);
+		const { adendas, outbox } = this.database;
+
+		await this.database.transaction("rw", adendas, outbox, async () => {
+			await adendas.put(registro);
+			await agregarAlOutbox(this.database, "adendas", registro);
+		});
 	}
 
 	async codigos(): Promise<string[]> {

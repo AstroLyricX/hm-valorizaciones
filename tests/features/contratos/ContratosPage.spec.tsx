@@ -257,3 +257,31 @@ test("un contrato se puede pactar en dólares", async () => {
 	).toBeInTheDocument();
 	expect(within(formulario).getByLabelText("Monto contractual")).toHaveTextContent("USD 0.00");
 });
+
+test("agrega una adenda con su fecha y motivo, y la muestra en la ficha", async () => {
+	const user = userEvent.setup();
+	const { contrato } = await contratoService.crear(
+		contratoDatos(clienteId, excavadoraId),
+		"ana@hm.pe",
+	);
+	renderRoute(`/contratos/${contrato.id}`);
+
+	expect(await screen.findByText(/Sin adendas/)).toBeInTheDocument();
+	await user.click(screen.getByRole("button", { name: "Agregar adenda" }));
+	const dialogo = await screen.findByRole("dialog", { name: "Agregar adenda N.° 1" });
+
+	// Sin motivo no se guarda.
+	await user.click(within(dialogo).getByRole("button", { name: "Agregar adenda" }));
+	expect(await within(dialogo).findByText("Elige el motivo de la adenda.")).toBeInTheDocument();
+
+	await user.click(within(dialogo).getByRole("radio", { name: /Otro motivo/ }));
+	await user.type(
+		within(dialogo).getByRole("textbox", { name: /Describe el motivo/ }),
+		"Cambio de ubicación de la obra",
+	);
+	await user.click(within(dialogo).getByRole("button", { name: "Agregar adenda" }));
+
+	const adendas = await screen.findByRole("region", { name: "Adendas" });
+	expect(await within(adendas).findByText("Adenda N.° 1")).toBeInTheDocument();
+	expect(within(adendas).getByText("Cambio de ubicación de la obra")).toBeInTheDocument();
+});

@@ -4,6 +4,13 @@ import type { TerceroRepository } from "@/features/clientes/infrastructure/Terce
 import { ahoraIso } from "@/lib/fechas";
 
 import {
+	type Adenda,
+	type AdendaDatos,
+	AdendaDatosSchema,
+	siguienteNumeroAdenda,
+	textoMotivoAdenda,
+} from "../domain/adenda";
+import {
 	CONTRAPARTE,
 	type Contrato,
 	type ContratoDatos,
@@ -26,6 +33,14 @@ export class ClienteNoValidoError extends Error {
 	constructor() {
 		super("El cliente o proveedor no existe, está inactivo o no corresponde al tipo de contrato.");
 		this.name = "ClienteNoValidoError";
+	}
+}
+
+// Una adenda no puede ser anterior al inicio del contrato.
+export class FechaAdendaNoValidaError extends Error {
+	constructor() {
+		super("La fecha de la adenda no puede ser anterior al inicio del contrato.");
+		this.name = "FechaAdendaNoValidaError";
 	}
 }
 
@@ -79,6 +94,39 @@ export class ContratoService {
 		await this.repository.guardar(contrato, nuevos);
 
 		return { contrato, equipos: nuevos };
+	}
+
+	async adendas(contratoId: string): Promise<Adenda[]> {
+		return this.repository.adendas(contratoId);
+	}
+
+	// Registra la adenda con el siguiente número del contrato.
+	async agregarAdenda(contratoId: string, datos: AdendaDatos, usuario: string): Promise<Adenda> {
+		const actual = await this.obtenerDetalle(contratoId);
+		if (!actual) {
+			throw new Error(`No existe el contrato ${contratoId}.`);
+		}
+		const validos = AdendaDatosSchema.parse(datos);
+		if (validos.fecha < actual.contrato.fechaInicio) {
+			throw new FechaAdendaNoValidaError();
+		}
+
+		const ahora = ahoraIso();
+		const adenda: Adenda = {
+			id: uuidv7(),
+			contratoId,
+			numero: siguienteNumeroAdenda(await this.repository.adendas(contratoId)),
+			fecha: validos.fecha,
+			motivo: textoMotivoAdenda(validos),
+			createdAt: ahora,
+			updatedAt: ahora,
+			updatedBy: usuario,
+			deletedAt: null,
+			version: 1,
+		};
+		await this.repository.guardarAdenda(adenda);
+
+		return adenda;
 	}
 
 	// Actualiza la cabecera y sincroniza los equipos: modifica los existentes, agrega los nuevos
