@@ -21,6 +21,7 @@ import {
 	ConflictoError,
 	type ElementoDrive,
 	type GraphClient,
+	GraphError,
 	SinConexionError,
 } from "./graphClient";
 
@@ -75,6 +76,35 @@ export type GraphParaSync = Pick<
 
 function esTabla(nombre: string): nombre is TablaSincronizada {
 	return Object.hasOwn(TABLAS, nombre);
+}
+
+// Archivos que se bajan a la vez: la primera sincronización de un dispositivo trae todo.
+const DESCARGAS_SIMULTANEAS = 6;
+
+interface PorBajar {
+	tabla: TablaSincronizada;
+	id: string;
+	clave: string;
+	elemento: ElementoDrive;
+}
+
+// Aplica `tarea` a cada elemento con a lo sumo `limite` en curso; respeta el orden del resultado.
+async function enParalelo<T, R>(
+	elementos: readonly T[],
+	limite: number,
+	tarea: (elemento: T) => Promise<R>,
+): Promise<R[]> {
+	const resultados: R[] = new Array<R>(elementos.length);
+	let siguiente = 0;
+	const trabajador = async () => {
+		while (siguiente < elementos.length) {
+			const indice = siguiente++;
+			resultados[indice] = await tarea(elementos[indice]);
+		}
+	};
+	await Promise.all(Array.from({ length: Math.min(limite, elementos.length) }, trabajador));
+
+	return resultados;
 }
 
 function rutaRegistro(tabla: TablaSincronizada, id: string): string {
@@ -172,42 +202,80 @@ export class SyncEngine {
 	}
 
 	private async bajar(driveId: string, resultado: ResultadoSync): Promise<void> {
-		const deltaLink = (await this.database.syncMeta.get("deltaLink"))?.valor;
-		const { elementos, deltaLink: siguiente } = await this.graph.delta(driveId, deltaLink);
+		const { elementos, deltaLink: siguiente } = await this.cambios(driveId);
 
+		const porBajar: PorBajar[] = [];
 		for (const elemento of elementos) {
-			await this.bajarElemento(driveId, elemento, resultado);
+			const candidato = await this.porBajar(elemento);
+			if (candidato) {
+				porBajar.push(candidato);
+			}
+		}
+		// Se bajan varios a la vez y se aplican en orden, de uno en uno.
+		const contenidos = await enParalelo(porBajar, DESCARGAS_SIMULTANEAS, async ({ elemento }) => {
+			try {
+				return await this.graph.contenido<unknown>(driveId, elemento.id);
+			} catch (error) {
+				// Se borró en SharePoint entre /delta y la descarga: no hay nada que traer.
+				if (error instanceof GraphError && error.status === 404) {
+					return undefined;
+				}
+				throw error;
+			}
+		});
+		for (const [indice, candidato] of porBajar.entries()) {
+			if (contenidos[indice] !== undefined) {
+				await this.aplicarBajado(candidato, contenidos[indice], resultado);
+			}
 		}
 		await this.database.syncMeta.put({ clave: "deltaLink", valor: siguiente });
 	}
 
-	private async bajarElemento(
-		driveId: string,
-		elemento: ElementoDrive,
-		resultado: ResultadoSync,
-	): Promise<void> {
+	// Cambios desde la última vez. Si SharePoint venció el deltaLink (410), se pide todo de nuevo:
+	// lo que ya está en el dispositivo se reconoce por su eTag o su updatedAt.
+	private async cambios(driveId: string): ReturnType<GraphParaSync["delta"]> {
+		const deltaLink = (await this.database.syncMeta.get("deltaLink"))?.valor;
+		try {
+			return await this.graph.delta(driveId, deltaLink);
+		} catch (error) {
+			if (deltaLink && error instanceof GraphError && error.status === 410) {
+				return this.graph.delta(driveId);
+			}
+			throw error;
+		}
+	}
+
+	// Registro de SistemaHM/{tabla}/{id}.json que cambió en otro dispositivo, o null si no aplica.
+	private async porBajar(elemento: ElementoDrive): Promise<PorBajar | null> {
 		// Los registros nunca se borran (borrado lógico con deletedAt): un archivo borrado se ignora.
 		if (
 			elemento.deleted !== undefined ||
 			elemento.file === undefined ||
 			!elemento.name.endsWith(".json")
 		) {
-			return;
+			return null;
 		}
 		// Solo los archivos de SistemaHM/{tabla}/ (el delta trae todo el sitio).
 		const carpeta = elemento.parentReference?.path?.split("root:/").at(1) ?? "";
 		const [raiz, tabla = "", ...resto] = carpeta.split("/");
 		if (raiz !== CARPETA || resto.length > 0 || !esTabla(tabla)) {
-			return;
+			return null;
 		}
 		const id = elemento.name.slice(0, -".json".length);
 		const clave = `${tabla}/${id}`;
 		// Es el archivo que subió este mismo dispositivo.
 		if ((await this.database.syncArchivos.get(clave))?.eTag === elemento.eTag) {
-			return;
+			return null;
 		}
 
-		const contenido = await this.graph.contenido<unknown>(driveId, elemento.id);
+		return { tabla, id, clave, elemento };
+	}
+
+	private async aplicarBajado(
+		{ tabla, id, clave, elemento }: PorBajar,
+		contenido: unknown,
+		resultado: ResultadoSync,
+	): Promise<void> {
 		const validado = TABLAS[tabla].safeParse(contenido);
 		if (!validado.success) {
 			resultado.avisos.push(`Se ignoró ${clave}: los datos no tienen el formato esperado.`);
@@ -323,7 +391,9 @@ export class SyncEngine {
 	// PDFs emitidos: se suben y su ruta queda en la valorización (P9), que se sincroniza después.
 	private async subirArchivos(driveId: string, resultado: ResultadoSync): Promise<void> {
 		for (const pendiente of await this.database.archivosPendientes.toArray()) {
-			await this.graph.subirArchivo(driveId, pendiente.ruta, pendiente.archivo);
+			if (!(await this.subirSinFrenar(driveId, pendiente.ruta, pendiente.archivo, resultado))) {
+				continue;
+			}
 			await this.database.transaction(
 				"rw",
 				this.database.valorizaciones,
@@ -348,6 +418,32 @@ export class SyncEngine {
 		}
 	}
 
+	// Sube un archivo. Si SharePoint lo rechaza, avisa y sigue con lo demás (queda pendiente para
+	// la próxima); sin conexión sí se detiene la sincronización.
+	private async subirSinFrenar(
+		driveId: string,
+		ruta: string,
+		archivo: Blob,
+		resultado: ResultadoSync,
+	): Promise<boolean> {
+		try {
+			await this.graph.subirArchivo(driveId, ruta, archivo);
+
+			return true;
+		} catch (error) {
+			if (error instanceof SinConexionError) {
+				throw error;
+			}
+			resultado.avisos.push(
+				`No se pudo subir ${ruta.split("/").at(-1) ?? ruta}: ${
+					error instanceof Error ? error.message : String(error)
+				}`,
+			);
+
+			return false;
+		}
+	}
+
 	// Documentos adjuntos guardados en este dispositivo que aún no están en SharePoint.
 	private async subirDocumentos(driveId: string, resultado: ResultadoSync): Promise<void> {
 		for (const pendiente of await this.database.archivosDocumento
@@ -359,7 +455,9 @@ export class SyncEngine {
 				await this.database.archivosDocumento.delete(pendiente.documentoId);
 				continue;
 			}
-			await this.graph.subirArchivo(driveId, documento.ruta, pendiente.archivo);
+			if (!(await this.subirSinFrenar(driveId, documento.ruta, pendiente.archivo, resultado))) {
+				continue;
+			}
 			await this.database.archivosDocumento.update(pendiente.documentoId, { pendiente: 0 });
 			resultado.archivos++;
 		}

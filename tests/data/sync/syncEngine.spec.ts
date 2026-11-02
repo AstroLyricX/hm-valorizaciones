@@ -1,5 +1,5 @@
 import { HmDatabase } from "../../../src/data/db";
-import { SinConexionError } from "../../../src/data/sync/graphClient";
+import { GraphError, SinConexionError } from "../../../src/data/sync/graphClient";
 import { rutaPdf, SyncEngine } from "../../../src/data/sync/syncEngine";
 import { TerceroService } from "../../../src/features/clientes/application/TerceroService";
 import type { Tercero } from "../../../src/features/clientes/domain/tercero";
@@ -310,5 +310,30 @@ describe("documentos adjuntos", () => {
 		const descargar = jest.fn(async (ruta: string) => obra.sync.descargar(ruta));
 		expect(await enObra.archivo(recibido, descargar)).toBeDefined();
 		expect(descargar).toHaveBeenCalledWith(documento.ruta);
+	});
+});
+
+describe("cuando SharePoint vence el deltaLink", () => {
+	it("vuelve a pedir todo y trae lo que faltaba", async () => {
+		const oficina = dispositivo();
+		const obra = dispositivo();
+		await oficina.terceros.crear(CLIENTE, "ana@hm.pe");
+		await oficina.sync.sincronizar();
+		await obra.database.syncMeta.put({
+			clave: "deltaLink",
+			valor: "https://graph/delta?token=vencido",
+		});
+		const delta = sharepoint.delta.bind(sharepoint);
+		jest
+			.spyOn(sharepoint, "delta")
+			.mockImplementation(async (driveId, deltaLink) =>
+				deltaLink?.includes("vencido")
+					? Promise.reject(new GraphError(410, "resyncRequired"))
+					: delta(driveId, deltaLink),
+			);
+
+		await obra.sync.sincronizar();
+
+		expect(await obra.database.terceros.count()).toBe(1);
 	});
 });

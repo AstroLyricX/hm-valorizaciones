@@ -23,7 +23,8 @@ export interface Motor {
 	descargar?: (ruta: string) => Promise<Blob>;
 }
 
-function avisarResultado(resultado: ResultadoSync): void {
+// Cada aviso se muestra una vez por sesión: la sincronización corre cada 30 s y lo repetiría.
+function avisarResultado(resultado: ResultadoSync, yaAvisados: Set<string>): void {
 	const valorizaciones = resultado.conflictos.filter(
 		(conflicto) => conflicto.tabla === "valorizaciones" || conflicto.tabla === "valorizacionItems",
 	);
@@ -33,7 +34,10 @@ function avisarResultado(resultado: ResultadoSync): void {
 		);
 	}
 	for (const aviso of new Set(resultado.avisos)) {
-		toast.warning(aviso);
+		if (!yaAvisados.has(aviso)) {
+			yaAvisados.add(aviso);
+			toast.warning(aviso);
+		}
 	}
 }
 
@@ -51,6 +55,9 @@ export function SyncProvider({
 	const enLinea = useOnlineStatus();
 	const [estadoInterno, setEstadoInterno] = useState<EstadoSync>("al-dia");
 	const [ultima, setUltima] = useState<string | null>(null);
+	// Causa del último fallo, para mostrarla en el estado.
+	const [detalleError, setDetalleError] = useState<string | null>(null);
+	const yaAvisados = useRef(new Set<string>());
 	// La primera sincronización de esta sesión ya terminó (bien o mal).
 	const [primeraIntentada, setPrimeraIntentada] = useState(false);
 	// undefined: cargando; null: este dispositivo nunca se sincronizó.
@@ -85,7 +92,8 @@ export function SyncProvider({
 			const resultado = await motor.sincronizar();
 			setUltima(new Date().toISOString());
 			setEstadoInterno("al-dia");
-			avisarResultado(resultado);
+			setDetalleError(null);
+			avisarResultado(resultado, yaAvisados.current);
 		} catch (error) {
 			if (error instanceof ReautenticacionRequeridaError) {
 				setEstadoInterno("reautenticar");
@@ -93,6 +101,7 @@ export function SyncProvider({
 				setEstadoInterno("al-dia");
 			} else {
 				console.error(error);
+				setDetalleError(error instanceof Error ? error.message : String(error));
 				setEstadoInterno("error");
 			}
 		} finally {
@@ -165,6 +174,7 @@ export function SyncProvider({
 		() => ({
 			estado,
 			activa: motor !== null,
+			detalleError,
 			descargando,
 			pendientes,
 			ultima,
@@ -172,7 +182,17 @@ export function SyncProvider({
 			reautenticar,
 			descargarArchivo,
 		}),
-		[estado, motor, descargando, pendientes, ultima, sincronizar, reautenticar, descargarArchivo],
+		[
+			estado,
+			motor,
+			detalleError,
+			descargando,
+			pendientes,
+			ultima,
+			sincronizar,
+			reautenticar,
+			descargarArchivo,
+		],
 	);
 
 	return <SyncContext value={valor}>{children}</SyncContext>;

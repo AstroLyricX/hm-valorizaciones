@@ -1,4 +1,4 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Toaster } from "sonner";
 
@@ -134,9 +134,27 @@ test("avisa cuando una valorización también cambió en otro dispositivo", asyn
 
 test("un error inesperado permite reintentar", async () => {
 	jest.spyOn(console, "error").mockImplementation(() => undefined);
-	renderizar(motor(async () => Promise.reject(new Error("500"))));
+	renderizar(motor(async () => Promise.reject(new Error("Graph respondió 403 en GET /sites/hm."))));
 
-	expect(await screen.findByText("No se pudo sincronizar. Reintentar")).toBeInTheDocument();
+	const boton = await screen.findByRole("button", { name: "No se pudo sincronizar. Reintentar" });
+	// La causa queda a la vista al pasar el mouse.
+	expect(boton).toHaveAttribute(
+		"title",
+		"Sincronizar ahora. Último error: Graph respondió 403 en GET /sites/hm.",
+	);
+});
+
+test("un mismo aviso se muestra una sola vez aunque se repita en cada sincronización", async () => {
+	const user = userEvent.setup();
+	const conAviso = motor(async () =>
+		Promise.resolve({ ...SIN_CAMBIOS, avisos: ["No se pudo subir Contrato.pdf: 400"] }),
+	);
+	renderizar(conAviso);
+
+	expect(await screen.findByText("No se pudo subir Contrato.pdf: 400")).toBeInTheDocument();
+	await user.click(await screen.findByRole("button", { name: "Todo sincronizado" }));
+	await waitFor(() => expect(conAviso.sincronizar).toHaveBeenCalledTimes(2));
+	expect(screen.getAllByText("No se pudo subir Contrato.pdf: 400")).toHaveLength(1);
 });
 
 test("mientras la app está a la vista consulta SharePoint cada 30 segundos", async () => {

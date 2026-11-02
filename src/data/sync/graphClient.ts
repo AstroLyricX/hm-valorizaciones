@@ -20,6 +20,8 @@ export interface ElementoDrive {
 	file?: unknown;
 	folder?: unknown;
 	deleted?: unknown;
+	// URL ya autorizada para bajar el archivo (solo al pedir el elemento, no en /delta).
+	"@microsoft.graph.downloadUrl"?: string;
 }
 
 export interface PaginaDelta {
@@ -122,13 +124,13 @@ export class GraphClient {
 			`/drives/${driveId}/root:/${codificarRuta(ruta)}`,
 		);
 
-		return { contenido: await this.contenido<T>(driveId, elemento.id), elemento };
+		return { contenido: (await (await this.bajar(elemento)).json()) as T, elemento };
 	}
 
 	async contenido<T>(driveId: string, itemId: string): Promise<T> {
-		const respuesta = await this.solicitar("GET", `/drives/${driveId}/items/${itemId}/content`);
+		const elemento = await this.json<ElementoDrive>("GET", `/drives/${driveId}/items/${itemId}`);
 
-		return (await respuesta.json()) as T;
+		return (await (await this.bajar(elemento)).json()) as T;
 	}
 
 	// Cambios del drive desde la última consulta; sin deltaLink, trae todo. En SharePoint y OneDrive
@@ -155,12 +157,12 @@ export class GraphClient {
 
 	// Baja un archivo (un documento adjunto subido desde otro dispositivo).
 	async descargarArchivo(driveId: string, ruta: string): Promise<Blob> {
-		const respuesta = await this.solicitar(
+		const elemento = await this.json<ElementoDrive>(
 			"GET",
-			`/drives/${driveId}/root:/${codificarRuta(ruta)}:/content`,
+			`/drives/${driveId}/root:/${codificarRuta(ruta)}`,
 		);
 
-		return respuesta.blob();
+		return (await this.bajar(elemento)).blob();
 	}
 
 	// Sube un archivo (PDF). Hasta 4 MB en una sola solicitud; más grande, por partes.
@@ -196,6 +198,17 @@ export class GraphClient {
 		}
 
 		return (await (respuesta as Response).json()) as ElementoDrive;
+	}
+
+	// /content responde con una redirección a SharePoint que el navegador bloquea (CORS) cuando la
+	// solicitud lleva el token. Se usa la URL de descarga ya autorizada del elemento, sin token.
+	private async bajar(elemento: ElementoDrive): Promise<Response> {
+		const url = elemento["@microsoft.graph.downloadUrl"];
+		if (!url) {
+			throw new GraphError(404, `SharePoint no dio la descarga de ${elemento.name}.`);
+		}
+
+		return this.solicitar("GET", url, { sinToken: true });
 	}
 
 	private async json<T>(

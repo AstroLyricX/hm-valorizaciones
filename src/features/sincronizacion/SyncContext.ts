@@ -14,6 +14,8 @@ export type EstadoSync =
 export interface Sincronizacion {
 	estado: EstadoSync;
 	activa: boolean;
+	// Causa del último fallo (por ejemplo "Graph respondió 403 en GET /sites/…").
+	detalleError: string | null;
 	// Primera descarga de los datos de la empresa en este dispositivo.
 	descargando: boolean;
 	// Cambios y PDFs de este dispositivo que aún no llegan a SharePoint.
@@ -28,6 +30,7 @@ export interface Sincronizacion {
 const INACTIVA: Sincronizacion = {
 	estado: "desactivada",
 	activa: false,
+	detalleError: null,
 	descargando: false,
 	pendientes: 0,
 	ultima: null,

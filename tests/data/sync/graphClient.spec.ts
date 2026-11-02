@@ -153,3 +153,39 @@ describe("GraphClient", () => {
 		});
 	});
 });
+
+describe("GraphClient: descargas", () => {
+	it("baja un archivo con su URL de descarga, sin token ni redirección de /content", async () => {
+		const { graph, llamadas } = cliente([
+			respuesta(200, {
+				id: "i1",
+				name: "a.json",
+				"@microsoft.graph.downloadUrl": "https://hm.sharepoint.com/download.aspx?tempauth=x",
+			}),
+			respuesta(200, { id: "t1", razonSocial: "HUISE" }),
+		]);
+
+		expect(await graph.contenido("d1", "i1")).toEqual({ id: "t1", razonSocial: "HUISE" });
+		expect(llamadas[0].url).toBe("https://graph.microsoft.com/v1.0/drives/d1/items/i1");
+		expect(llamadas[1].url).toBe("https://hm.sharepoint.com/download.aspx?tempauth=x");
+		expect(llamadas[1].init.headers).not.toHaveProperty("Authorization");
+	});
+
+	it("un documento adjunto se baja por su ruta", async () => {
+		const { graph, llamadas } = cliente([
+			respuesta(200, {
+				id: "i2",
+				name: "Contrato.pdf",
+				"@microsoft.graph.downloadUrl": "https://hm.sharepoint.com/d?tempauth=y",
+			}),
+			new Response(new Blob(["%PDF"]), { status: 200 }),
+		]);
+
+		await graph.descargarArchivo("d1", "SistemaHM/archivos/contratos/c1/d1/Contrato firmado.pdf");
+
+		expect(llamadas[0].url).toBe(
+			"https://graph.microsoft.com/v1.0/drives/d1/root:/SistemaHM/archivos/contratos/c1/d1/Contrato%20firmado.pdf",
+		);
+		expect(llamadas[1].url).toBe("https://hm.sharepoint.com/d?tempauth=y");
+	});
+});

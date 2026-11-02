@@ -28,7 +28,7 @@ const ESTILO: Record<Exclude<EstadoSync, "desactivada">, { icono: LucideIcon; to
 
 // Estado de la sincronización en la cabecera. Al tocarlo sincroniza ahora (o pide el login).
 export function SyncStatus({ className }: { className?: string }) {
-	const { estado, pendientes, sincronizar, reautenticar } = useSincronizacion();
+	const { estado, pendientes, detalleError, sincronizar, reautenticar } = useSincronizacion();
 
 	if (estado === "desactivada") {
 		return <ConnectionStatus className={className} />;
@@ -53,7 +53,11 @@ export function SyncStatus({ className }: { className?: string }) {
 			<button
 				type="button"
 				title={
-					estado === "reautenticar" ? "Volver a iniciar sesión con Microsoft" : "Sincronizar ahora"
+					estado === "reautenticar"
+						? "Volver a iniciar sesión con Microsoft"
+						: estado === "error" && detalleError
+							? `Sincronizar ahora. Último error: ${detalleError}`
+							: "Sincronizar ahora"
 				}
 				disabled={estado === "sincronizando" || estado === "sin-conexion"}
 				onClick={() => void (estado === "reautenticar" ? reautenticar() : sincronizar())}
