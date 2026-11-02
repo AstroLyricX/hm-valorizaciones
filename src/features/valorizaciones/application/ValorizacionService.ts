@@ -625,19 +625,39 @@ export class ValorizacionService {
 			: null;
 	}
 
-	// Adicionales de las valorizaciones emitidas de periodos anteriores (las anuladas no cuentan).
-	private async adicionalesAnteriores(valorizacion: Valorizacion): Promise<number> {
-		return (await this.repository.delContrato(valorizacion.contratoId))
-			.filter((otra) => otra.estado === "EMITIDA" && otra.periodo < valorizacion.periodo)
-			.reduce((total, otra) => total + (otra.totales?.adicionales ?? 0), 0);
+	// Valorizaciones EMITIDAS del contrato que van antes de esta: las de periodos anteriores y las
+	// del mismo periodo creadas antes (varias en un mes). Las anuladas no cuentan. La corrección
+	// de una anulada ocupa su lugar: suma lo mismo que sumaba la anulada.
+	private async emitidasAnteriores(valorizacion: Valorizacion): Promise<Valorizacion[]> {
+		const delContrato = await this.repository.delContrato(valorizacion.contratoId);
+		const posicion =
+			delContrato.find((otra) => otra.id === valorizacion.reemplazaA) ?? valorizacion;
+		// Orden de creación; el id (UUIDv7, crece con el tiempo) desempata en el mismo milisegundo.
+		const creadaAntes = (otra: Valorizacion) =>
+			otra.createdAt < posicion.createdAt ||
+			(otra.createdAt === posicion.createdAt && otra.id < posicion.id);
+
+		return delContrato.filter(
+			(otra) =>
+				otra.id !== valorizacion.id &&
+				otra.estado === "EMITIDA" &&
+				(otra.periodo < valorizacion.periodo ||
+					(otra.periodo === valorizacion.periodo && creadaAntes(otra))),
+		);
 	}
 
-	// Cantidad anterior (P5): suma de las horas de las valorizaciones EMITIDAS del contrato
-	// de periodos anteriores, por equipo del contrato. Las anuladas no cuentan.
-	private async horasAnteriores(valorizacion: Valorizacion): Promise<Map<string, string>> {
-		const emitidas = (await this.repository.delContrato(valorizacion.contratoId)).filter(
-			(otra) => otra.estado === "EMITIDA" && otra.periodo < valorizacion.periodo,
+	// Adicionales de las valorizaciones emitidas anteriores.
+	private async adicionalesAnteriores(valorizacion: Valorizacion): Promise<number> {
+		return (await this.emitidasAnteriores(valorizacion)).reduce(
+			(total, otra) => total + (otra.totales?.adicionales ?? 0),
+			0,
 		);
+	}
+
+	// Cantidad anterior (P5): suma de las horas de las valorizaciones emitidas anteriores, por
+	// equipo del contrato.
+	private async horasAnteriores(valorizacion: Valorizacion): Promise<Map<string, string>> {
+		const emitidas = await this.emitidasAnteriores(valorizacion);
 		if (emitidas.length === 0) {
 			return new Map();
 		}

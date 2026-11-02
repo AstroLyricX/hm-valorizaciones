@@ -9,6 +9,7 @@ import { EquipoService } from "../../../src/features/equipos/application/EquipoS
 import { EquipoRepository } from "../../../src/features/equipos/infrastructure/EquipoRepository";
 import {
 	AdicionalesIncompletosError,
+	calcularPlanilla,
 	ContratoNoVigenteError,
 	NoAnuladaError,
 	PeriodoFueraDeVigenciaError,
@@ -197,6 +198,31 @@ describe("ValorizacionService", () => {
 			cantidadAnterior: "114.4",
 			cantidadActual: "53.23",
 		});
+	});
+
+	it("otra valorización del mismo mes suma como anterior la que ya se emitió", async () => {
+		const primera = await service.crearBorrador(
+			{ contratoId, periodo: "2026-08" },
+			"ana@hm.pe",
+			HOY,
+		);
+		const [fila] = (await service.obtenerPlanilla(primera.id))?.filas ?? [];
+		await service.actualizarCantidad(primera.id, fila.contratoEquipoId, "12", "ana@hm.pe");
+		await service.emitir(primera.id, "ana@hm.pe");
+
+		const segunda = await service.crearBorrador(
+			{ contratoId, periodo: "2026-08" },
+			"ana@hm.pe",
+			HOY,
+		);
+		await service.actualizarCantidad(segunda.id, fila.contratoEquipoId, "12", "ana@hm.pe");
+		const planilla = await service.obtenerPlanilla(segunda.id);
+
+		expect(segunda.id).not.toBe(primera.id);
+		expect(planilla?.filas[0]).toMatchObject({ cantidadAnterior: "12", cantidadActual: "12" });
+		expect(planilla && calcularPlanilla(planilla).items[0].cantidadAcumulada).toBe("24");
+		// La primera no cambia: su anterior quedó en 0.
+		expect((await service.obtenerPlanilla(primera.id))?.filas[0].cantidadAnterior).toBe("0");
 	});
 
 	it("rechaza horas inválidas y no modifica una valorización emitida", async () => {
