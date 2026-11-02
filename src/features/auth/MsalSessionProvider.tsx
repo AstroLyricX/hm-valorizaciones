@@ -1,4 +1,9 @@
-import { InteractionRequiredAuthError, type IPublicClientApplication } from "@azure/msal-browser";
+import {
+	BrowserAuthError,
+	CacheLookupPolicy,
+	InteractionRequiredAuthError,
+	type IPublicClientApplication,
+} from "@azure/msal-browser";
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 
 import { entorno, ruta } from "@/app/entorno";
@@ -25,6 +30,9 @@ export type ClienteMsal = Pick<
 	| "acquireTokenSilent"
 	| "acquireTokenRedirect"
 >;
+
+// La renovación en segundo plano no funcionó: hay que pasar por la página de Microsoft.
+const RENOVACION_FALLIDA = new Set(["timed_out", "monitor_window_timeout", "no_tokens_found"]);
 
 // Login con Microsoft (Auth Code + PKCE, por redirección: funciona también en la PWA instalada).
 // La cuenta queda guardada en el dispositivo: sin conexión se sigue trabajando con ella.
@@ -108,18 +116,27 @@ export function MsalSessionProvider({
 		cliente.setActiveAccount(null);
 	}, [cliente]);
 
-	// Token silencioso (de la caché o renovado en segundo plano). Si Microsoft exige volver a
-	// iniciar sesión, no se interrumpe al usuario: la sincronización lo avisa.
+	// Token silencioso: de la caché o renovado con el refresh token (dura 24 h en una SPA). No se
+	// usa el iframe oculto: los navegadores bloquean sus cookies y MSAL espera 10 s hasta fallar
+	// (timed_out). Si hace falta volver a iniciar sesión, la sincronización lo pide.
 	const obtenerToken = useCallback(async () => {
 		const cuenta = cliente.getActiveAccount();
 		if (!cuenta) {
 			throw new ReautenticacionRequeridaError();
 		}
 		try {
-			return (await cliente.acquireTokenSilent({ scopes: PERMISOS_SYNC, account: cuenta }))
-				.accessToken;
+			return (
+				await cliente.acquireTokenSilent({
+					scopes: PERMISOS_SYNC,
+					account: cuenta,
+					cacheLookupPolicy: CacheLookupPolicy.AccessTokenAndRefreshToken,
+				})
+			).accessToken;
 		} catch (error) {
-			if (error instanceof InteractionRequiredAuthError) {
+			if (
+				error instanceof InteractionRequiredAuthError ||
+				(error instanceof BrowserAuthError && RENOVACION_FALLIDA.has(error.errorCode))
+			) {
 				throw new ReautenticacionRequeridaError();
 			}
 			throw error;

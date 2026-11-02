@@ -5,7 +5,11 @@ import { Toaster } from "sonner";
 import { db } from "../../../src/data/db";
 import type { ResultadoSync } from "../../../src/data/sync/syncEngine";
 import { DemoSessionProvider } from "../../../src/features/auth/DemoSessionProvider";
-import { ReautenticacionRequeridaError } from "../../../src/features/auth/SessionContext";
+import {
+	ReautenticacionRequeridaError,
+	type Session,
+	SessionContext,
+} from "../../../src/features/auth/SessionContext";
 import { useSincronizacion } from "../../../src/features/sincronizacion/SyncContext";
 import { type Motor, SyncProvider } from "../../../src/features/sincronizacion/SyncProvider";
 import { SyncStatus } from "../../../src/features/sincronizacion/SyncStatus";
@@ -215,4 +219,37 @@ test("si el dispositivo ya se sincronizó antes, muestra los datos de inmediato"
 	);
 
 	expect(await screen.findByText("Listo")).toBeInTheDocument();
+});
+
+test("al abrir la app renueva sola la sesión de Microsoft vencida, una vez por sesión", async () => {
+	sessionStorage.clear();
+	const reautenticar = jest.fn(async () => Promise.resolve());
+	const sesion: Session = {
+		user: { name: "Ana", email: "ana@hm.pe", rol: "ADMIN" },
+		isLoading: false,
+		isSigningIn: false,
+		destino: null,
+		modo: "microsoft",
+		signIn: async () => Promise.resolve(),
+		signOut: async () => Promise.resolve(),
+		reautenticar,
+	};
+	const vencida = motor(async () => Promise.reject(new ReautenticacionRequeridaError()));
+	const app = (
+		<SessionContext value={sesion}>
+			<SyncProvider motor={vencida}>
+				<SyncStatus />
+			</SyncProvider>
+		</SessionContext>
+	);
+	const { unmount } = render(app);
+
+	expect(await screen.findByText("Inicia sesión de nuevo para sincronizar")).toBeInTheDocument();
+	expect(reautenticar).toHaveBeenCalledTimes(1);
+
+	// Otra apertura en la misma sesión del navegador ya no redirige: queda el botón.
+	unmount();
+	render(app);
+	expect(await screen.findByText("Inicia sesión de nuevo para sincronizar")).toBeInTheDocument();
+	expect(reautenticar).toHaveBeenCalledTimes(1);
 });

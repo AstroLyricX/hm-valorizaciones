@@ -1,6 +1,7 @@
 import {
 	type AccountInfo,
 	type AuthenticationResult,
+	BrowserAuthError,
 	InteractionRequiredAuthError,
 } from "@azure/msal-browser";
 import { render, screen, waitFor } from "@testing-library/react";
@@ -165,13 +166,19 @@ test("da el token de Graph en silencio y pide volver a entrar si Microsoft lo ex
 	});
 
 	expect(await obtener?.()).toBe("token-graph");
+	// Sin el iframe oculto (CacheLookupPolicy.AccessTokenAndRefreshToken = 2).
 	expect(cliente.acquireTokenSilent).toHaveBeenCalledWith({
 		scopes: ["Sites.ReadWrite.All"],
 		account: ANA,
+		cacheLookupPolicy: 2,
 	});
 
 	cliente.acquireTokenSilent.mockRejectedValueOnce(
 		new InteractionRequiredAuthError("login_required", "correlacion-1"),
 	);
+	await expect(obtener?.()).rejects.toBeInstanceOf(ReautenticacionRequeridaError);
+
+	// El navegador bloqueó la renovación en segundo plano: también se pide volver a entrar.
+	cliente.acquireTokenSilent.mockRejectedValueOnce(new BrowserAuthError("timed_out", ""));
 	await expect(obtener?.()).rejects.toBeInstanceOf(ReautenticacionRequeridaError);
 });

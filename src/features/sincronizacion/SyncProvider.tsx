@@ -24,6 +24,24 @@ export interface Motor {
 }
 
 // Cada aviso se muestra una vez por sesión: la sincronización corre cada 30 s y lo repetiría.
+const CLAVE_REAUTENTICACION = "hm-reautenticacion-automatica";
+
+// Al abrir la app, si la sesión de Microsoft para sincronizar venció (dura 24 h), se renueva
+// sola una vez por sesión del navegador: si Microsoft recuerda al usuario es un ir y volver sin
+// contraseña. Más tarde no se hace solo, para no sacar a nadie de lo que está haciendo.
+function reautenticarAlAbrir(): boolean {
+	try {
+		if (sessionStorage.getItem(CLAVE_REAUTENTICACION)) {
+			return false;
+		}
+		sessionStorage.setItem(CLAVE_REAUTENTICACION, "1");
+
+		return true;
+	} catch {
+		return false;
+	}
+}
+
 function avisarResultado(resultado: ResultadoSync, yaAvisados: Set<string>): void {
 	const valorizaciones = resultado.conflictos.filter(
 		(conflicto) => conflicto.tabla === "valorizaciones" || conflicto.tabla === "valorizacionItems",
@@ -58,6 +76,7 @@ export function SyncProvider({
 	// Causa del último fallo, para mostrarla en el estado.
 	const [detalleError, setDetalleError] = useState<string | null>(null);
 	const yaAvisados = useRef(new Set<string>());
+	const primeraDeLaSesion = useRef(true);
 	// La primera sincronización de esta sesión ya terminó (bien o mal).
 	const [primeraIntentada, setPrimeraIntentada] = useState(false);
 	// undefined: cargando; null: este dispositivo nunca se sincronizó.
@@ -88,6 +107,8 @@ export function SyncProvider({
 			return;
 		}
 		setEstadoInterno("sincronizando");
+		const alAbrir = primeraDeLaSesion.current;
+		primeraDeLaSesion.current = false;
 		try {
 			const resultado = await motor.sincronizar();
 			setUltima(new Date().toISOString());
@@ -97,6 +118,9 @@ export function SyncProvider({
 		} catch (error) {
 			if (error instanceof ReautenticacionRequeridaError) {
 				setEstadoInterno("reautenticar");
+				if (alAbrir && reautenticarAlAbrir()) {
+					void reautenticarSesion?.();
+				}
 			} else if (error instanceof SinConexionError) {
 				setEstadoInterno("al-dia");
 			} else {
@@ -107,7 +131,7 @@ export function SyncProvider({
 		} finally {
 			setPrimeraIntentada(true);
 		}
-	}, [motor]);
+	}, [motor, reautenticarSesion]);
 
 	// Disparadores: al iniciar, al volver la conexión, al volver a la app y cada 30 segundos.
 	useEffect(() => {
